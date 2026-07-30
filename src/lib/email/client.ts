@@ -1,4 +1,5 @@
-import { serverEnv } from '@/lib/env';
+import { unsubscribeHeaders } from '@/lib/email/unsubscribe';
+import { publicEnv, serverEnv } from '@/lib/env';
 
 /**
  * Transactional email.
@@ -17,6 +18,12 @@ export interface EmailMessage {
   /** Correlates the send with a notification_deliveries row. */
   tag?: string;
   replyTo?: string;
+  /**
+   * Mint one for any non-essential message. It becomes the List-Unsubscribe
+   * header, which is what lets a mail client offer its own unsubscribe button
+   * — and what bulk senders are increasingly required to provide.
+   */
+  unsubscribeToken?: string;
 }
 
 export interface SendResult {
@@ -43,6 +50,9 @@ async function sendViaResend(
       html: message.html,
       text: message.text,
       reply_to: message.replyTo,
+      headers: message.unsubscribeToken
+        ? unsubscribeHeaders(publicEnv.siteUrl, message.unsubscribeToken)
+        : undefined,
       tags: message.tag ? [{ name: 'category', value: message.tag }] : undefined,
     }),
   });
@@ -77,6 +87,11 @@ async function sendViaPostmark(
       ReplyTo: message.replyTo,
       MessageStream: 'outbound',
       Tag: message.tag,
+      Headers: message.unsubscribeToken
+        ? Object.entries(
+            unsubscribeHeaders(publicEnv.siteUrl, message.unsubscribeToken),
+          ).map(([Name, Value]) => ({ Name, Value }))
+        : undefined,
     }),
   });
 

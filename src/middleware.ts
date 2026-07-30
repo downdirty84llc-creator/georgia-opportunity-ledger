@@ -2,20 +2,26 @@ import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 
 /**
- * Session refresh and route guarding.
+ * Session refresh, route guarding, and pathname propagation.
  *
- * Two jobs:
+ * Three jobs:
  *
  *   1. Refresh the Supabase session cookie. Server Components cannot write
  *      cookies, so without this a session would silently expire mid-visit.
  *   2. Redirect signed-out visitors away from member and admin routes *before*
  *      any protected markup is generated. Spec 23 requires that protected page
  *      authorisation never leaks content ahead of the redirect.
+ *   3. Forward the pathname as a request header. A layout cannot otherwise know
+ *      which route it is wrapping, and the admin layout needs to exempt the
+ *      two-factor setup page from its own two-factor gate — otherwise enrolment
+ *      is unreachable behind a redirect loop.
  *
  * This is a convenience layer, not the security boundary. Every API route
  * re-checks entitlements and row-level security refuses paid rows regardless of
  * what happens here.
  */
+
+export const PATHNAME_HEADER = 'x-ledger-pathname';
 
 const PROTECTED_PREFIXES = [
   '/dashboard',
@@ -28,7 +34,12 @@ const PROTECTED_PREFIXES = [
 ];
 
 export async function middleware(request: NextRequest) {
-  let response = NextResponse.next({ request });
+  const { pathname } = request.nextUrl;
+
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set(PATHNAME_HEADER, pathname);
+
+  let response = NextResponse.next({ request: { headers: requestHeaders } });
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -52,7 +63,7 @@ export async function middleware(request: NextRequest) {
         for (const { name, value } of cookiesToSet) {
           request.cookies.set(name, value);
         }
-        response = NextResponse.next({ request });
+        response = NextResponse.next({ request: { headers: requestHeaders } });
         for (const { name, value, options } of cookiesToSet) {
           response.cookies.set(name, value, {
             ...options,
@@ -71,7 +82,6 @@ export async function middleware(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const { pathname } = request.nextUrl;
   const isProtected = PROTECTED_PREFIXES.some(
     (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
   );

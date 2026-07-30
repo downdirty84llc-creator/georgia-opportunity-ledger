@@ -74,7 +74,7 @@ export default async function ReviewQueuePage() {
                   <tr key={row.id} className="border-b border-ink-100 align-top last:border-0">
                     <td className="max-w-[280px] px-4 py-3">
                       <Link
-                        href={`/opportunities/${row.slug}`}
+                        href={`/admin/opportunities/${row.id}`}
                         className="font-medium hover:underline"
                       >
                         {row.title}

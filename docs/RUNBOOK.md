@@ -73,6 +73,13 @@ Available jobs: `publish-scheduled`, `premium-alerts`, `saved-search-matching`,
 
 ## Operational procedures
 
+### A staff member has lost their authenticator
+
+They are locked out of the admin area, not out of their account — they can still
+use the member side normally. Clear the enrolled factor through Supabase (Auth →
+the user → MFA factors), then have them re-enrol at `/admin/security`. There is
+no in-product reset yet; that gap is recorded in `MILESTONES.md`.
+
 ### A member reports missing access after paying
 
 1. Check `subscriptions` for their `status` and `current_period_end`.
@@ -136,7 +143,13 @@ Spec 28, milestone 10. Every line needs a name against it.
       (spec 28, milestone 3 acceptance).
 - [ ] Email domain authentication: SPF, DKIM and DMARC on the sending domain.
 - [ ] Database backups enabled with point-in-time recovery.
-- [ ] Administrator multi-factor enrolment for every staff account.
+- [ ] Administrator multi-factor enrolment for every staff account. The gate is
+      enforced in code; each person still has to enrol at `/admin/security`.
+- [ ] `EMAIL_UNSUBSCRIBE_SECRET` set to its own value, not falling back to
+      `CRON_SECRET`. Rotating one must not invalidate every unsubscribe link
+      already sitting in inboxes.
+- [ ] Verify one-click unsubscribe end to end: the `List-Unsubscribe` header is
+      present, and the link works while signed out.
 - [ ] Security review: the test list in spec 26 — unauthorised API access,
       access-rank bypass, direct URL access, ID enumeration, invalid webhooks,
       file-upload attacks, XSS, SQL injection, rate-limit enforcement.
@@ -176,6 +189,11 @@ Spec 28, milestone 10. Every line needs a name against it.
 - **`getUser()`, not `getSession()`.** The former validates the token with the
   auth server; the latter trusts the cookie. On pages that decide what paid
   content to render, that difference matters.
+- **Public pages must use the anonymous client.** `src/lib/db/public.ts`, not
+  `createServerSupabaseClient()`. The session client reads cookies, which makes
+  the whole route render per request. A `try/catch` around such a read will also
+  swallow Next.js's dynamic-bailout signal — that bug produced a silently empty
+  homepage once already.
 - **The plan matrix lives in two places.** Changing a limit means changing both
   `subscription_plans.feature_configuration` and `PLAN_FEATURE_DEFAULTS`.
   `tests/unit/access/plan-parity.test.ts` fails if you forget.

@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 
+import { NewReportButton } from '@/components/admin/new-report-button';
 import { EmptyState, Pill } from '@/components/ui/primitives';
 import { createServerSupabaseClient } from '@/lib/db/server';
 import { formatDate, titleCase } from '@/lib/format';
@@ -24,17 +25,24 @@ export default async function AdminReportsPage() {
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6">
-      <h1 className="text-2xl sm:text-3xl">Reports</h1>
-      <p className="mt-1 text-sm text-ink-600">
-        Drafting, approval, scheduling and distribution state for every report.
-      </p>
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h1 className="text-2xl sm:text-3xl">Reports</h1>
+          <p className="mt-1 text-sm text-ink-600">
+            Drafting, approval, scheduling and distribution state for every report.
+          </p>
+        </div>
+        <NewReportButton />
+      </div>
 
       {rows.length === 0 ? (
         <div className="mt-8">
           <EmptyState
             title="No reports yet"
-            description="Reports are created through the API and composed from published records."
-          />
+            description="Create one and compose it from your published records."
+          >
+            <NewReportButton />
+          </EmptyState>
         </div>
       ) : (
         <div className="mt-8 surface overflow-x-auto">
@@ -55,7 +63,7 @@ export default async function AdminReportsPage() {
                 <tr key={row.id} className="border-b border-ink-100 last:border-0">
                   <td className="max-w-[300px] px-4 py-3">
                     <Link
-                      href={`/reports/${row.slug}`}
+                      href={`/admin/reports/${row.id}`}
                       className="font-medium hover:underline"
                     >
                       {row.title}

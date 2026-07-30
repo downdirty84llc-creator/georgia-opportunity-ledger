@@ -222,3 +222,95 @@ Several choices exist to stop the product overstating what it knows:
   review queue; the seven-step form itself is not built.
 - **No report builder UI.** Reports are created and published through the API;
   the drag-and-drop composer in spec 15.4 is not built.
+
+---
+
+## 12. Vendor integrations without vendor SDKs
+
+Two integrations are implemented against the vendor's HTTP API rather than its
+SDK, and the reasoning is the same in both cases.
+
+**Sentry** (`src/lib/observability/report-error.ts`). `@sentry/nextjs` brings a
+build plugin, source-map upload, an instrumentation hook and real bundle cost.
+What the application needs is "post the exception somewhere I will see it", and
+Sentry's envelope endpoint accepts exactly that. The cost is honest and stated
+in the module: no breadcrumbs, no performance tracing, no release health, and
+stack frames are not mapped back through the bundler. Swapping in the official
+SDK later is a contained change, because nothing outside that module knows how
+a report is delivered.
+
+**PostHog** (`src/lib/analytics/posthog.ts`). Events are captured server-side
+from the same scrubbed payload that goes into `analytics_events`, rather than
+from the browser. Two advantages beyond bundle size: an ad blocker cannot
+silently drop a `subscription_purchased` event, and a client-side bug cannot
+leak member-entered text into a third-party store, because the only properties
+that exist by that point have already been through `scrubProperties`.
+
+The general rule: reach for the SDK when it does something genuinely hard.
+Posting JSON is not that.
+
+---
+
+## 13. Unsubscribe that actually unsubscribes
+
+An unsubscribe link behind a login is not an unsubscribe link. Someone who
+cannot easily stop the email marks it as spam instead, which costs the sending
+domain's deliverability for everybody.
+
+`src/lib/email/unsubscribe.ts` mints an HMAC token over the user id and scope.
+The token carries no secret, cannot be forged, and — importantly — only ever
+turns email *off*. Possession of one grants no read access and enables nothing,
+so the usual objection to unauthenticated action links does not apply.
+
+Alert, deadline and weekly-report email carry `List-Unsubscribe` and
+`List-Unsubscribe-Post` headers (RFC 8058), so a mail client can offer its own
+unsubscribe button without the member leaving their inbox. Account and billing
+email deliberately does not: a failed-payment notice is not marketing, and the
+preference page says so plainly rather than implying it can be switched off.
+
+---
+
+## 14. Two-factor as a gate, not a sign-in step
+
+Spec 3.3 requires administrator MFA. It is enforced when entering the admin
+area rather than at sign-in, for two reasons: a staff member is also a member
+and should not be locked out of their own dashboard mid-setup, and enrolment
+needs somewhere to happen.
+
+Supabase models this as an assurance level — `aal1` is "password verified",
+`aal2` is "password plus a second factor this session". Holding an enrolled
+factor is not the same as having used it, so `getMfaStatus` checks both and
+distinguishes "enrol" from "present your code".
+
+Two details worth knowing:
+
+- The check **fails open** on an unexpected error. A Supabase outage should not
+  be indistinguishable from a missing second factor, and row-level security
+  still enforces every permission underneath — so the worst case is a
+  password-only admin session during an outage, not unauthorised access.
+- `/admin/security` is exempt from its own gate, or enrolment sits behind a
+  redirect loop. The layout learns which route it is wrapping from a pathname
+  header set in middleware, because a Next.js layout is not otherwise told.
+
+---
+
+## 15. Public pages and the caching boundary
+
+`src/lib/db/public.ts` exists because of a subtle failure discovered during a
+build: the marketing pages read only public teaser views, but they were doing so
+through the *session-bound* client, which calls `cookies()`. That forces the
+whole route to render per request, defeating the caching spec 23 asks for.
+
+Worse, the `try/catch` in those loaders was swallowing Next.js's
+`DynamicServerError` — the control-flow exception the framework throws to signal
+"bail out of static generation". Catching a framework's control flow and
+returning empty data is the kind of bug that produces a permanently blank
+homepage without ever logging an error.
+
+Public loaders now use an anonymous, cookie-free client. Every projection they
+touch is already granted to `anon` and carries no paid content, so nothing is
+weakened. `sitemap.xml` became genuinely static as a result.
+
+The marketing pages themselves are still rendered per request, because the
+shared header is session-aware. That is a real, known gap against spec 23 and is
+recorded in `MILESTONES.md` rather than papered over.

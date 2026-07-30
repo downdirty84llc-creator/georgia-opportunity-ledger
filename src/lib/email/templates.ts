@@ -34,8 +34,14 @@ function layout(options: {
   bodyHtml: string;
   ctaLabel?: string;
   ctaUrl?: string;
+  unsubscribeToken?: string;
 }): string {
   const base = siteUrl();
+  // With a token the footer unsubscribes in one click and without a login.
+  // Without one it falls back to the preference page, which requires signing in.
+  const unsubscribeUrl = options.unsubscribeToken
+    ? `${base}/api/v1/unsubscribe?token=${options.unsubscribeToken}`
+    : `${base}/account/email-preferences?unsubscribe=1`;
   return `
 <div style="margin:0;padding:0;background:#f5f7f7;">
   <span style="display:none;max-height:0;overflow:hidden;opacity:0;">${escapeHtml(
@@ -83,7 +89,7 @@ function layout(options: {
           <p style="margin:0;">
             <a href="${base}/account/email-preferences" style="color:#4f6b6b;">
               Email preferences</a> &middot;
-            <a href="${base}/account/email-preferences?unsubscribe=1"
+            <a href="${unsubscribeUrl}"
                style="color:#4f6b6b;">Unsubscribe</a> &middot;
             <a href="${base}/legal/privacy" style="color:#4f6b6b;">Privacy</a>
           </p>
@@ -94,15 +100,18 @@ function layout(options: {
 </div>`.trim();
 }
 
-function textFooter(): string {
+function textFooter(unsubscribeToken?: string): string {
   const base = siteUrl();
+  const unsubscribeUrl = unsubscribeToken
+    ? `${base}/api/v1/unsubscribe?token=${unsubscribeToken}`
+    : `${base}/account/email-preferences?unsubscribe=1`;
   return [
     '',
     '---',
     'Research and decision support only. Not investment, legal, brokerage or',
     'appraisal advice. No eligibility, financing or return is guaranteed.',
     `Email preferences: ${base}/account/email-preferences`,
-    `Unsubscribe: ${base}/account/email-preferences?unsubscribe=1`,
+    `Unsubscribe: ${unsubscribeUrl}`,
   ].join('\n');
 }
 
@@ -209,6 +218,7 @@ export interface AlertOpportunity {
 }
 
 export function premiumAlertEmail(input: {
+  unsubscribeToken?: string;
   firstName: string | null;
   opportunity: AlertOpportunity;
   reason: 'new' | 'updated';
@@ -250,6 +260,7 @@ export function premiumAlertEmail(input: {
         <p style="margin:0 0 12px;">${escapeHtml(opportunity.recommendedAction)}</p>`,
       ctaLabel: 'Open the full record',
       ctaUrl: url,
+      unsubscribeToken: input.unsubscribeToken,
     }),
     text: [
       opportunity.title,
@@ -263,12 +274,13 @@ export function premiumAlertEmail(input: {
       opportunity.recommendedAction,
       '',
       `Open the full record: ${url}`,
-      textFooter(),
+      textFooter(input.unsubscribeToken),
     ].join('\n'),
   };
 }
 
 export function deadlineReminderEmail(input: {
+  unsubscribeToken?: string;
   firstName: string | null;
   daysRemaining: number;
   opportunities: ReadonlyArray<{
@@ -314,6 +326,7 @@ export function deadlineReminderEmail(input: {
                style="width:100%;border-collapse:collapse;">${rows}</table>`,
       ctaLabel: 'Open your calendar',
       ctaUrl: `${base}/calendar`,
+      unsubscribeToken: input.unsubscribeToken,
     }),
     text: [
       `Closing ${when}`,
@@ -324,12 +337,13 @@ export function deadlineReminderEmail(input: {
       ),
       '',
       `Your calendar: ${base}/calendar`,
-      textFooter(),
+      textFooter(input.unsubscribeToken),
     ].join('\n'),
   };
 }
 
 export function weeklyReportEmail(input: {
+  unsubscribeToken?: string;
   firstName: string | null;
   reportTitle: string;
   reportSlug: string;
@@ -389,6 +403,7 @@ export function weeklyReportEmail(input: {
         }`,
       ctaLabel: 'Read the full report',
       ctaUrl: url,
+      unsubscribeToken: input.unsubscribeToken,
     }),
     text: [
       input.reportTitle,
@@ -405,7 +420,7 @@ export function weeklyReportEmail(input: {
         ? `${input.lockedCount} further record(s) are above your current plan: ${base}/pricing`
         : '',
       `Read the full report: ${url}`,
-      textFooter(),
+      textFooter(input.unsubscribeToken),
     ]
       .filter(Boolean)
       .join('\n'),

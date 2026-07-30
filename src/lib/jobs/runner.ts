@@ -1,4 +1,5 @@
 import { createAdminClient } from '@/lib/db/admin';
+import { reportError } from '@/lib/observability/report-error';
 
 /**
  * Background job runner (spec 17).
@@ -128,7 +129,10 @@ export async function runJob(
       })
       .eq('id', run.id);
 
-    console.error('[jobs] failed', { job: definition.name, message });
+    await reportError(error, {
+      scope: 'job',
+      tags: { job: definition.name },
+    });
     throw error;
   }
 }

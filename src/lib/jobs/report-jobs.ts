@@ -8,6 +8,7 @@ import {
 import { createAdminClient } from '@/lib/db/admin';
 import { sendEmail } from '@/lib/email/client';
 import { weeklyReportEmail } from '@/lib/email/templates';
+import { mintUnsubscribeToken } from '@/lib/email/unsubscribe';
 import { weeklyKey, type JobDefinition } from '@/lib/jobs/runner';
 
 /**
@@ -176,8 +177,10 @@ export const distributeWeeklyReportJob: JobDefinition = {
           ? `${report.reporting_period_start} to ${report.reporting_period_end}`
           : new Date(report.published_at ?? now).toISOString().slice(0, 10);
 
+      const unsubscribeToken = mintUnsubscribeToken(member.id, 'alerts');
       const rendered = weeklyReportEmail({
         firstName: member.first_name,
+        unsubscribeToken,
         reportTitle: report.title,
         reportSlug: report.slug,
         periodLabel,
@@ -216,6 +219,7 @@ export const distributeWeeklyReportJob: JobDefinition = {
         html: rendered.html,
         text: rendered.text,
         tag: 'weekly-report',
+        unsubscribeToken,
       });
 
       await supabase.from('notification_deliveries').insert({

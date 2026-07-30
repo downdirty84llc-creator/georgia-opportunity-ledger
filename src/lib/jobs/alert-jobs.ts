@@ -14,6 +14,7 @@ import {
 import { createAdminClient } from '@/lib/db/admin';
 import { sendEmail } from '@/lib/email/client';
 import { deadlineReminderEmail, premiumAlertEmail } from '@/lib/email/templates';
+import { mintUnsubscribeToken } from '@/lib/email/unsubscribe';
 import { dailyKey, type JobDefinition } from '@/lib/jobs/runner';
 import { dueReminderInterval } from '@/lib/opportunities/lifecycle';
 import { parseStoredFilters } from '@/lib/search/filters';
@@ -353,9 +354,11 @@ export const premiumAlertsJob: JobDefinition = {
         const email = emails.get(recipient.userId);
         if (!email) continue;
 
+        const unsubscribeToken = mintUnsubscribeToken(recipient.userId, 'alerts');
         const rendered = premiumAlertEmail({
           firstName: null,
           reason: 'new',
+          unsubscribeToken,
           opportunity: {
             title: row.title,
             slug: row.slug,
@@ -374,6 +377,7 @@ export const premiumAlertsJob: JobDefinition = {
           html: rendered.html,
           text: rendered.text,
           tag: 'premium-alert',
+          unsubscribeToken,
         });
         await recordDelivery(notificationId, result);
         if (result.ok) sent += 1;
@@ -492,10 +496,12 @@ export const deadlineRemindersJob: JobDefinition = {
 
         if (claimed.length === 0 || !notificationId) continue;
 
+        const unsubscribeToken = mintUnsubscribeToken(userId, 'alerts');
         const rendered = deadlineReminderEmail({
           firstName: null,
           daysRemaining: interval,
           opportunities: claimed,
+          unsubscribeToken,
         });
 
         const result = await sendEmail({
@@ -504,6 +510,7 @@ export const deadlineRemindersJob: JobDefinition = {
           html: rendered.html,
           text: rendered.text,
           tag: 'deadline-reminder',
+          unsubscribeToken,
         });
         await recordDelivery(notificationId, result);
         if (result.ok) sent += 1;

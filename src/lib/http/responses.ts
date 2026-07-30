@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { ZodError } from 'zod';
 
 import type { Decision } from '@/lib/access/entitlements';
+import { reportError } from '@/lib/observability/report-error';
 
 /**
  * One response shape for the whole API, so a client never has to guess where
@@ -130,12 +131,11 @@ export function withErrorHandling(
     } catch (error) {
       if (error instanceof ZodError) return validationFailed(error);
 
-      const message = error instanceof Error ? error.message : String(error);
-      console.error('[api] unhandled error', {
-        url: request.url,
-        method: request.method,
-        message,
-        stack: error instanceof Error ? error.stack : undefined,
+      // Reported rather than only logged: an unhandled API error is the class
+      // of failure that silently loses a member's work.
+      await reportError(error, {
+        scope: 'api',
+        tags: { method: request.method, path: new URL(request.url).pathname },
       });
       return apiError(
         'internal_error',

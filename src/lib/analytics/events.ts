@@ -1,3 +1,4 @@
+import { captureToPostHog } from '@/lib/analytics/posthog';
 import { createAdminClient } from '@/lib/db/admin';
 
 /**
@@ -95,14 +96,23 @@ export async function track(
     properties?: Record<string, unknown>;
   } = {},
 ): Promise<void> {
+  const properties = scrubProperties(options.properties ?? {});
+
   try {
     const supabase = createAdminClient();
     await supabase.from('analytics_events').insert({
       user_id: options.userId ?? null,
       anonymous_id: options.anonymousId ?? null,
       event_name: event,
-      properties: scrubProperties(options.properties ?? {}),
+      properties,
     });
+
+    // Forward the already-scrubbed properties to the analytics vendor, so a
+    // future change to the scrubbing rules applies to both destinations at once.
+    const distinctId = options.userId ?? options.anonymousId;
+    if (distinctId) {
+      await captureToPostHog(event, distinctId, properties);
+    }
   } catch (error) {
     // Analytics must never break the request it is describing.
     console.error('[analytics] failed to record event', {

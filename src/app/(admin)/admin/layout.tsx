@@ -1,8 +1,11 @@
+import { headers } from 'next/headers';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 
 import { SiteFooter } from '@/components/site/footer';
+import { getMfaStatus, mfaRequiredForRole } from '@/lib/auth/mfa';
 import { getSessionContext } from '@/lib/auth/session';
+import { PATHNAME_HEADER } from '@/middleware';
 
 const ADMIN_LINKS = [
   { href: '/admin', label: 'Dashboard' },
@@ -11,6 +14,7 @@ const ADMIN_LINKS = [
   { href: '/admin/reports', label: 'Reports' },
   { href: '/admin/sources', label: 'Sources' },
   { href: '/admin/audit', label: 'Audit log' },
+  { href: '/admin/security', label: 'Security' },
 ];
 
 export default async function AdminLayout({
@@ -24,6 +28,17 @@ export default async function AdminLayout({
   // (spec 9). A Premium member has rank 30 and no admin access whatsoever.
   if (!viewer.isAuthenticated) redirect('/login?next=/admin');
   if (!viewer.isStaff || viewer.accountStatus !== 'active') redirect('/dashboard');
+
+  // Multi-factor is required of every staff role (spec 3.3, 20). The security
+  // page is exempt from its own gate, or enrolment would be unreachable behind
+  // a redirect loop.
+  const pathname = (await headers()).get(PATHNAME_HEADER) ?? '';
+  if (!pathname.startsWith('/admin/security')) {
+    const mfa = await getMfaStatus(mfaRequiredForRole(viewer.role));
+    if (mfa.state === 'enrolment_required' || mfa.state === 'challenge_required') {
+      redirect('/admin/security');
+    }
+  }
 
   return (
     <div className="flex min-h-screen flex-col bg-white">

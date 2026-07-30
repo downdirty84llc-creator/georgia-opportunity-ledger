@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 
-import { EmptyState, Pill } from '@/components/ui/primitives';
+import { ButtonLink, EmptyState, Pill } from '@/components/ui/primitives';
 import { createServerSupabaseClient } from '@/lib/db/server';
 import { formatDate, formatDeadline, titleCase } from '@/lib/format';
 
@@ -45,10 +45,15 @@ export default async function AdminOpportunitiesPage({ searchParams }: PageProps
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6">
-      <h1 className="text-2xl sm:text-3xl">Opportunity records</h1>
-      <p className="mt-1 text-sm text-ink-600">
-        Every record in the pipeline, most recently touched first.
-      </p>
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h1 className="text-2xl sm:text-3xl">Opportunity records</h1>
+          <p className="mt-1 text-sm text-ink-600">
+            Every record in the pipeline, most recently touched first.
+          </p>
+        </div>
+        <ButtonLink href="/admin/opportunities/new">New record</ButtonLink>
+      </div>
 
       <nav aria-label="Workflow filter" className="mt-5 flex flex-wrap gap-2">
         <Link
@@ -80,8 +85,10 @@ export default async function AdminOpportunitiesPage({ searchParams }: PageProps
         <div className="mt-8">
           <EmptyState
             title="No records here"
-            description="Nothing matches this workflow filter. Records are created through the API or the editor."
-          />
+            description="Nothing matches this workflow filter. Start a new record to add one."
+          >
+            <ButtonLink href="/admin/opportunities/new">New record</ButtonLink>
+          </EmptyState>
         </div>
       ) : (
         <div className="mt-6 surface overflow-x-auto">
@@ -107,7 +114,7 @@ export default async function AdminOpportunitiesPage({ searchParams }: PageProps
                   <tr key={row.id} className="border-b border-ink-100 last:border-0">
                     <td className="max-w-[300px] px-4 py-3">
                       <Link
-                        href={`/opportunities/${row.slug}`}
+                        href={`/admin/opportunities/${row.id}`}
                         className="font-medium hover:underline"
                       >
                         {row.title}

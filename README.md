@@ -99,8 +99,10 @@ member has rank 30 and no administrative access whatsoever.
 src/
   app/
     (marketing)/        Public pages: home, pricing, landing, legal, auth
-    (member)/           Dashboard, search, detail, saved, calendar, reports, account
-    (admin)/            Admin dashboard, review queue, records, sources, audit
+    (member)/           Dashboard, search, detail, saved, calendar, reports,
+                        account (profile, preferences, billing, email)
+    (admin)/            Dashboard, review queue, seven-step opportunity editor,
+                        report builder, sources, audit log, MFA setup
     api/v1/             Versioned API (spec section 10)
   components/           UI primitives and feature components
   lib/
@@ -108,10 +110,11 @@ src/
     alerts/             Alert matching and suppression
     billing/            Stripe client, subscription-status resolution
     db/                 Supabase clients (session-scoped, service-role, browser)
-    email/              Provider abstraction and transactional templates
+    email/              Provider abstraction, templates, unsubscribe tokens
     exports/            CSV generation and export jobs
     jobs/               Background jobs and the idempotent runner
     opportunities/      Lifecycle, workflow, query, serialisation
+    observability/      Error reporting (Sentry envelope API, no SDK)
     reports/            Dependency-free PDF writer
     scoring/            The 100-point score
     search/             Filter schema, sorting, cursor pagination
@@ -160,21 +163,32 @@ See `docs/RUNBOOK.md` for the launch checklist and operational procedures.
 
 ## Testing
 
-`npm test` runs 140 unit tests covering the parts where a quiet mistake costs
+`npm test` runs 148 unit tests covering the parts where a quiet mistake costs
 money or leaks paid content: score arithmetic and classification bands,
 subscription-status resolution including the past-due grace window, entitlement
 decisions per tier, alert matching and suppression keys, deadline lifecycle
-transitions, CSV escaping and formula-injection defence, and filter parsing.
+transitions, CSV escaping and formula-injection defence, filter parsing, and
+unsubscribe token signing and tampering.
 
 `npm run test:e2e` runs Playwright against a built app across desktop, iPhone,
 Android and tablet viewports.
 
 ---
 
+## Administrator two-factor
+
+Every staff role must enrol a TOTP factor before the admin area opens, and must
+have presented it in the current session. Enrolment lives at `/admin/security`,
+which is exempt from its own gate. The check fails open on an unexpected error —
+a Supabase outage should not be indistinguishable from a missing second factor,
+and row-level security still enforces every permission underneath.
+
+---
+
 ## Status
 
 Milestones 2 through 9 of the specification are implemented; see
-`docs/MILESTONES.md` for the per-milestone breakdown and what remains before a
-production launch. The legal documents in `src/lib/legal/documents.ts` describe
-how the service actually behaves and are marked as requiring counsel review —
-that review is a launch blocker.
+`docs/MILESTONES.md` for the per-milestone breakdown and the six things that
+remain. Two are hard launch blockers: legal review of the twelve documents in
+`src/lib/legal/documents.ts`, and creating the Stripe products and prices so the
+tier-by-tier payment matrix can be run.

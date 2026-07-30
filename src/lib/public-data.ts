@@ -1,4 +1,4 @@
-import { createServerSupabaseClient } from '@/lib/db/server';
+import { createPublicSupabaseClient } from '@/lib/db/public';
 import type { ScoreClassification } from '@/lib/scoring/score';
 
 /**
@@ -6,8 +6,15 @@ import type { ScoreClassification } from '@/lib/scoring/score';
  *
  * Everything here reads the teaser projections that are safe for signed-out
  * visitors, so a marketing page can never accidentally render paid content.
+ *
+ * All of it goes through the *anonymous* client rather than the session-bound
+ * one. That is deliberate: the session client reads cookies, which would force
+ * every landing page to render per request and defeat the caching spec 23 asks
+ * for. Nothing here needs to know who is asking.
+ *
  * Each helper degrades to an empty result rather than throwing: a database
- * hiccup should soften the home page, not 500 it.
+ * hiccup should soften the home page, not return a 500 to a prospective
+ * subscriber.
  */
 
 export interface PublicStats {
@@ -19,7 +26,7 @@ export interface PublicStats {
 
 export async function loadPublicStats(): Promise<PublicStats> {
   try {
-    const supabase = await createServerSupabaseClient();
+    const supabase = createPublicSupabaseClient();
     const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
       .toISOString()
       .slice(0, 10);
@@ -114,7 +121,7 @@ export async function loadPreviewOpportunities(options: {
   closingSoon?: boolean;
 } = {}): Promise<PreviewOpportunity[]> {
   try {
-    const supabase = await createServerSupabaseClient();
+    const supabase = createPublicSupabaseClient();
     let query = supabase
       .from('opportunity_previews')
       .select('*')
@@ -149,7 +156,7 @@ export interface PlanSummary {
 
 export async function loadPlans(): Promise<PlanSummary[]> {
   try {
-    const supabase = await createServerSupabaseClient();
+    const supabase = createPublicSupabaseClient();
     const { data, error } = await supabase
       .from('subscription_plans')
       .select(
@@ -196,7 +203,7 @@ export async function loadIndicatorPreviews(
   limit = 6,
 ): Promise<IndicatorPreview[]> {
   try {
-    const supabase = await createServerSupabaseClient();
+    const supabase = createPublicSupabaseClient();
     const { data, error } = await supabase
       .from('market_indicator_previews')
       .select('*')
@@ -229,7 +236,7 @@ export async function loadCountiesWithCounts(): Promise<
   Array<{ slug: string; name: string; count: number }>
 > {
   try {
-    const supabase = await createServerSupabaseClient();
+    const supabase = createPublicSupabaseClient();
     const { data, error } = await supabase.rpc('opportunity_facets');
     if (error) throw new Error(error.message);
 
