@@ -76,7 +76,9 @@ export const PATCH = withErrorHandling(
       .update(update)
       .eq('id', id)
       .eq('user_id', viewer.userId)
-      .select('id, name, filter_configuration, minimum_score, alert_enabled, alert_frequency')
+      .select(
+        'id, name, filter_configuration, minimum_score, alert_enabled, alert_frequency',
+      )
       .maybeSingle();
 
     if (error) throw new Error(error.message);

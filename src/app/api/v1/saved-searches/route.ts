@@ -110,14 +110,20 @@ export const POST = withErrorHandling(
 
     if (error) {
       if (error.code === '23505') {
-        return apiError('conflict', 'You already have a search with that name.');
+        return apiError(
+          'conflict',
+          'You already have a search with that name.',
+        );
       }
       throw new Error(error.message);
     }
 
     await track('saved_search_created', {
       userId: viewer.userId,
-      properties: { plan: viewer.planCode, alertFrequency: parsed.data.alertFrequency },
+      properties: {
+        plan: viewer.planCode,
+        alertFrequency: parsed.data.alertFrequency,
+      },
     });
 
     return created(data);

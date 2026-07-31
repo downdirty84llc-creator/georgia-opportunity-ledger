@@ -2,10 +2,7 @@ import type { NextResponse } from 'next/server';
 
 import { getViewer } from '@/lib/auth/session';
 import { createServerSupabaseClient } from '@/lib/db/server';
-import {
-  checkRateLimit,
-  rateLimitIdentity,
-} from '@/lib/http/rate-limit';
+import { checkRateLimit, rateLimitIdentity } from '@/lib/http/rate-limit';
 import { apiError, ok, rateLimited } from '@/lib/http/responses';
 import {
   checkWorkflowAction,
@@ -13,7 +10,10 @@ import {
   type WorkflowAction,
   type WorkflowStatus,
 } from '@/lib/opportunities/workflow';
-import { evaluateLifecycle, type OpportunityStatus } from '@/lib/opportunities/lifecycle';
+import {
+  evaluateLifecycle,
+  type OpportunityStatus,
+} from '@/lib/opportunities/lifecycle';
 
 /**
  * Shared implementation for the workflow endpoints
@@ -57,7 +57,10 @@ export async function performWorkflowAction(
     action,
   );
   if (!check.allowed) {
-    return apiError('conflict', check.reason ?? 'That action is not available.');
+    return apiError(
+      'conflict',
+      check.reason ?? 'That action is not available.',
+    );
   }
 
   const now = new Date();
@@ -87,8 +90,12 @@ export async function performWorkflowAction(
       // it has already closed.
       const lifecycle = evaluateLifecycle(
         {
-          closingDate: record.closing_date ? new Date(record.closing_date) : null,
-          openingDate: record.opening_date ? new Date(record.opening_date) : null,
+          closingDate: record.closing_date
+            ? new Date(record.closing_date)
+            : null,
+          openingDate: record.opening_date
+            ? new Date(record.opening_date)
+            : null,
           status: record.status as OpportunityStatus,
         },
         now,

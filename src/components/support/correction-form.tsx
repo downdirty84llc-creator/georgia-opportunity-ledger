@@ -63,8 +63,8 @@ export function CorrectionForm() {
     <form onSubmit={submit} className="surface space-y-5 p-6">
       {opportunityId || reportId ? (
         <p className="rounded-lg bg-ink-50 px-3 py-2 text-sm text-ink-700">
-          This correction will be attached to the {opportunityId ? 'record' : 'report'}{' '}
-          you came from.
+          This correction will be attached to the{' '}
+          {opportunityId ? 'record' : 'report'} you came from.
         </p>
       ) : null}
 
@@ -87,7 +87,7 @@ export function CorrectionForm() {
       <div>
         <label htmlFor="supportingUrl" className="block text-sm font-medium">
           Source that supports the correction{' '}
-          <span className="font-normal text-ink-400">(optional)</span>
+          <span className="font-normal text-ink-500">(optional)</span>
         </label>
         <input
           id="supportingUrl"
@@ -100,7 +100,10 @@ export function CorrectionForm() {
       </div>
 
       {status === 'error' ? (
-        <p role="alert" className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-900">
+        <p
+          role="alert"
+          className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-900"
+        >
           {feedback}
         </p>
       ) : null}

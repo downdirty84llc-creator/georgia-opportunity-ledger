@@ -18,7 +18,9 @@ export async function GET(request: Request): Promise<NextResponse> {
 
   const siteUrl = publicEnv.siteUrl.replace(/\/$/, '');
   const safeNext =
-    next && next.startsWith('/') && !next.startsWith('//') ? next : '/dashboard';
+    next && next.startsWith('/') && !next.startsWith('//')
+      ? next
+      : '/dashboard';
 
   if (!code) {
     return NextResponse.redirect(`${siteUrl}/login`);

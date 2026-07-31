@@ -1,0 +1,138 @@
+name: CI
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NEXT_TELEMETRY_DISABLED: '1'
+
+jobs:
+  # Everything that needs neither a database nor a browser. Fast, and the
+  # majority of what actually catches mistakes in this codebase.
+  static:
+    name: Types, lint and unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm run format:check
+      - run: npm test
+
+  # The migrations have to apply in order, from nothing, every time. A
+  # migration that only works against a database that already has the previous
+  # state is a migration that will fail on the next environment.
+  migrations:
+    name: Migrations apply from scratch
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: postgres
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports: ['5432:5432']
+    steps:
+      - uses: actions/checkout@v4
+      - name: Apply every migration in order
+        env:
+          PGPASSWORD: postgres
+        run: |
+          # Supabase-specific roles and schemas the migrations assume exist.
+          psql -h localhost -U postgres -v ON_ERROR_STOP=1 <<'SQL'
+          create schema if not exists extensions;
+          create schema if not exists auth;
+          create schema if not exists storage;
+          do $$ begin
+            create role anon; exception when duplicate_object then null;
+          end $$;
+          do $$ begin
+            create role authenticated; exception when duplicate_object then null;
+          end $$;
+          do $$ begin
+            create role service_role; exception when duplicate_object then null;
+          end $$;
+          SQL
+          for file in supabase/migrations/*.sql; do
+            echo "--- $file"
+            psql -h localhost -U postgres -v ON_ERROR_STOP=1 -f "$file"
+          done
+      - name: Reference data loads
+        env:
+          PGPASSWORD: postgres
+        run: psql -h localhost -U postgres -v ON_ERROR_STOP=1 -f supabase/seed.sql
+      - name: Reference data is idempotent
+        env:
+          PGPASSWORD: postgres
+        run: psql -h localhost -U postgres -v ON_ERROR_STOP=1 -f supabase/seed.sql
+
+  build:
+    name: Production build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+        env:
+          # Deliberately not 'production' or 'staging': those make a failed
+          # database read fail the build, and CI has no database. See the
+          # softFail note in src/lib/public-data.ts.
+          NEXT_PUBLIC_ENVIRONMENT: development
+          NEXT_PUBLIC_SITE_URL: http://127.0.0.1:3000
+          NEXT_PUBLIC_SUPABASE_URL: http://127.0.0.1:54321
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-anon-key
+          SUPABASE_SERVICE_ROLE_KEY: ci-service-role-key
+          STRIPE_SECRET_KEY: sk_test_ci
+          STRIPE_WEBHOOK_SECRET: whsec_ci
+          CRON_SECRET: ci-cron-secret
+
+  # The security and accessibility suites run against a built app. They need no
+  # seeded accounts; the tier-by-tier checks in entitlements.spec.ts skip
+  # themselves when the seed is absent rather than passing vacuously.
+  e2e:
+    name: Security and accessibility
+    runs-on: ubuntu-latest
+    needs: [static]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npx playwright test --project=desktop-chrome
+        env:
+          NEXT_PUBLIC_ENVIRONMENT: development
+          NEXT_PUBLIC_SITE_URL: http://127.0.0.1:3000
+          NEXT_PUBLIC_SUPABASE_URL: http://127.0.0.1:54321
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-anon-key
+          SUPABASE_SERVICE_ROLE_KEY: ci-service-role-key
+          STRIPE_SECRET_KEY: sk_test_ci
+          STRIPE_WEBHOOK_SECRET: whsec_ci
+          CRON_SECRET: ci-cron-secret
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7

@@ -23,7 +23,10 @@ import {
 
 describe('score arithmetic (spec 12)', () => {
   it('component maxima sum to exactly 100', () => {
-    const total = Object.values(SCORE_MAXIMA).reduce((sum, max) => sum + max, 0);
+    const total = Object.values(SCORE_MAXIMA).reduce(
+      (sum, max) => sum + max,
+      0,
+    );
     expect(total).toBe(MAX_SCORE);
   });
 
@@ -103,7 +106,10 @@ describe('financial value derivation', () => {
   it('uses the midpoint of the estimated range', () => {
     // Midpoint 3M → the 1M–5M band.
     expect(
-      scoreFinancialValue({ estimatedValueMin: 1_000_000, estimatedValueMax: 5_000_000 }),
+      scoreFinancialValue({
+        estimatedValueMin: 1_000_000,
+        estimatedValueMax: 5_000_000,
+      }),
     ).toBe(21);
   });
 
@@ -225,7 +231,9 @@ describe('capital requirement derivation', () => {
 
 describe('complexity and risk derivation', () => {
   it('lower complexity scores higher', () => {
-    expect(scoreComplexity('low')).toBeGreaterThan(scoreComplexity('very_high'));
+    expect(scoreComplexity('low')).toBeGreaterThan(
+      scoreComplexity('very_high'),
+    );
   });
   it('lower risk scores higher', () => {
     expect(scoreRisk('low')).toBe(5);

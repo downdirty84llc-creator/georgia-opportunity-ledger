@@ -77,11 +77,15 @@ export default async function AdminDashboardPage() {
       .limit(12),
     supabase
       .from('subscriptions')
-      .select('status, subscription_plans ( code, monthly_price, annual_price )')
+      .select(
+        'status, subscription_plans ( code, monthly_price, annual_price )',
+      )
       .in('status', ['active', 'trialing']),
     supabase
       .from('job_runs')
-      .select('id, job_name, status, started_at, records_processed, records_failed')
+      .select(
+        'id, job_name, status, started_at, records_processed, records_failed',
+      )
       .order('started_at', { ascending: false })
       .limit(10),
   ]);
@@ -96,12 +100,36 @@ export default async function AdminDashboardPage() {
   }, 0);
 
   const metrics = [
-    { label: 'Drafts in progress', value: drafts, href: '/admin/opportunities?workflowStatus=draft' },
-    { label: 'Awaiting review', value: awaitingReview, href: '/admin/review-queue' },
-    { label: 'Approved, not published', value: approved, href: '/admin/opportunities?workflowStatus=approved' },
-    { label: 'Verification overdue', value: verificationOverdue, href: '/admin/opportunities' },
-    { label: 'Closing within 7 days', value: closingWeek, href: '/admin/opportunities' },
-    { label: 'Reports awaiting approval', value: reportsAwaiting, href: '/admin/reports' },
+    {
+      label: 'Drafts in progress',
+      value: drafts,
+      href: '/admin/opportunities?workflowStatus=draft',
+    },
+    {
+      label: 'Awaiting review',
+      value: awaitingReview,
+      href: '/admin/review-queue',
+    },
+    {
+      label: 'Approved, not published',
+      value: approved,
+      href: '/admin/opportunities?workflowStatus=approved',
+    },
+    {
+      label: 'Verification overdue',
+      value: verificationOverdue,
+      href: '/admin/opportunities',
+    },
+    {
+      label: 'Closing within 7 days',
+      value: closingWeek,
+      href: '/admin/opportunities',
+    },
+    {
+      label: 'Reports awaiting approval',
+      value: reportsAwaiting,
+      href: '/admin/reports',
+    },
     { label: 'Failed payments', value: failedPayments, href: '/admin' },
     { label: 'Active subscribers', value: activeSubscribers, href: '/admin' },
   ];
@@ -121,7 +149,9 @@ export default async function AdminDashboardPage() {
               href={metric.href}
               className="surface p-4 transition-colors hover:border-ink-400"
             >
-              <p className="text-2xl font-semibold tabular-nums">{metric.value}</p>
+              <p className="text-2xl font-semibold tabular-nums">
+                {metric.value}
+              </p>
               <p className="mt-1 text-sm text-ink-600">{metric.label}</p>
             </Link>
           ))}
@@ -151,7 +181,9 @@ export default async function AdminDashboardPage() {
                 </dd>
               </div>
               <div className="flex items-baseline justify-between">
-                <dt className="text-sm text-ink-600">Payments needing attention</dt>
+                <dt className="text-sm text-ink-600">
+                  Payments needing attention
+                </dt>
                 <dd className="text-xl font-semibold tabular-nums">
                   {failedPayments}
                 </dd>
@@ -169,15 +201,26 @@ export default async function AdminDashboardPage() {
             <table className="min-w-[420px] text-sm">
               <thead>
                 <tr className="border-b border-ink-200 bg-ink-50 text-left">
-                  <th scope="col" className="px-3 py-2 font-semibold">Job</th>
-                  <th scope="col" className="px-3 py-2 font-semibold">Status</th>
-                  <th scope="col" className="px-3 py-2 font-semibold">Processed</th>
-                  <th scope="col" className="px-3 py-2 font-semibold">Started</th>
+                  <th scope="col" className="px-3 py-2 font-semibold">
+                    Job
+                  </th>
+                  <th scope="col" className="px-3 py-2 font-semibold">
+                    Status
+                  </th>
+                  <th scope="col" className="px-3 py-2 font-semibold">
+                    Processed
+                  </th>
+                  <th scope="col" className="px-3 py-2 font-semibold">
+                    Started
+                  </th>
                 </tr>
               </thead>
               <tbody>
                 {(jobRuns.data ?? []).map((run) => (
-                  <tr key={run.id} className="border-b border-ink-100 last:border-0">
+                  <tr
+                    key={run.id}
+                    className="border-b border-ink-100 last:border-0"
+                  >
                     <td className="px-3 py-2">{run.job_name}</td>
                     <td className="px-3 py-2">
                       <Pill
@@ -195,7 +238,10 @@ export default async function AdminDashboardPage() {
                     <td className="px-3 py-2 tabular-nums">
                       {run.records_processed}
                       {run.records_failed > 0 ? (
-                        <span className="text-red-700"> ({run.records_failed} failed)</span>
+                        <span className="text-red-700">
+                          {' '}
+                          ({run.records_failed} failed)
+                        </span>
                       ) : null}
                     </td>
                     <td className="px-3 py-2 text-ink-500">
@@ -225,14 +271,23 @@ export default async function AdminDashboardPage() {
           <table className="min-w-[560px] text-sm">
             <thead>
               <tr className="border-b border-ink-200 bg-ink-50 text-left">
-                <th scope="col" className="px-3 py-2 font-semibold">Action</th>
-                <th scope="col" className="px-3 py-2 font-semibold">Entity</th>
-                <th scope="col" className="px-3 py-2 font-semibold">When</th>
+                <th scope="col" className="px-3 py-2 font-semibold">
+                  Action
+                </th>
+                <th scope="col" className="px-3 py-2 font-semibold">
+                  Entity
+                </th>
+                <th scope="col" className="px-3 py-2 font-semibold">
+                  When
+                </th>
               </tr>
             </thead>
             <tbody>
               {(recentAudit.data ?? []).map((entry) => (
-                <tr key={entry.id} className="border-b border-ink-100 last:border-0">
+                <tr
+                  key={entry.id}
+                  className="border-b border-ink-100 last:border-0"
+                >
                   <td className="px-3 py-2 font-medium">{entry.action}</td>
                   <td className="px-3 py-2 text-ink-600">
                     {entry.entity_type}
@@ -245,8 +300,8 @@ export default async function AdminDashboardPage() {
               {(recentAudit.data ?? []).length === 0 ? (
                 <tr>
                   <td colSpan={3} className="px-3 py-4 text-ink-500">
-                    No audit events yet. Only a super administrator can read this
-                    table.
+                    No audit events yet. Only a super administrator can read
+                    this table.
                   </td>
                 </tr>
               ) : null}

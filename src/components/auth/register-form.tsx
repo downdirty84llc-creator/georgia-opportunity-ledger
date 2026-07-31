@@ -19,7 +19,10 @@ export function RegisterForm() {
   const [isError, setIsError] = useState(false);
   const [done, setDone] = useState(false);
 
-  function update<K extends keyof typeof form>(key: K, value: (typeof form)[K]) {
+  function update<K extends keyof typeof form>(
+    key: K,
+    value: (typeof form)[K],
+  ) {
     setForm((current) => ({ ...current, [key]: value }));
   }
 
@@ -40,8 +43,7 @@ export function RegisterForm() {
       if (!response.ok) {
         setIsError(true);
         const issues = payload?.error?.details?.issues as
-          | Array<{ message: string }>
-          | undefined;
+          Array<{ message: string }> | undefined;
         setMessage(
           issues?.map((issue) => issue.message).join(' ') ??
             payload?.error?.message ??
@@ -116,7 +118,7 @@ export function RegisterForm() {
 
       <div>
         <label htmlFor="companyName" className="block text-sm font-medium">
-          Company <span className="font-normal text-ink-400">(optional)</span>
+          Company <span className="font-normal text-ink-500">(optional)</span>
         </label>
         <input
           id="companyName"

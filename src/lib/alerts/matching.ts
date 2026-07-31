@@ -13,7 +13,10 @@
  */
 
 import type { OpportunityFilters } from '@/lib/search/filters';
-import { dueReminderInterval, reminderDedupeKey } from '@/lib/opportunities/lifecycle';
+import {
+  dueReminderInterval,
+  reminderDedupeKey,
+} from '@/lib/opportunities/lifecycle';
 
 export interface AlertCandidate {
   opportunityId: string;
@@ -121,10 +124,16 @@ export function matchesFilters(
 
   // A record with no stated capital requirement is not excluded by a capital
   // ceiling — unresearched is not the same as unaffordable.
-  if (filters.capitalMax !== undefined && candidate.capitalRequiredMin !== null) {
+  if (
+    filters.capitalMax !== undefined &&
+    candidate.capitalRequiredMin !== null
+  ) {
     if (candidate.capitalRequiredMin > filters.capitalMax) return false;
   }
-  if (filters.capitalMin !== undefined && candidate.capitalRequiredMin !== null) {
+  if (
+    filters.capitalMin !== undefined &&
+    candidate.capitalRequiredMin !== null
+  ) {
     if (candidate.capitalRequiredMin < filters.capitalMin) return false;
   }
 

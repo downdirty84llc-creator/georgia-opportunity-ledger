@@ -35,9 +35,7 @@ export default async function SampleReportPage() {
   return (
     <div className="mx-auto max-w-4xl px-4 py-14 sm:px-6">
       <Pill>Sample</Pill>
-      <h1 className="mt-3 text-3xl sm:text-4xl">
-        The weekly report, in full
-      </h1>
+      <h1 className="mt-3 text-3xl sm:text-4xl">The weekly report, in full</h1>
       <p className="mt-4 text-lg leading-relaxed text-ink-700">
         This is the structure every weekly report follows. One record is shown
         complete so you can see exactly what members read; the rest are shown as
@@ -51,8 +49,8 @@ export default async function SampleReportPage() {
             The week&rsquo;s ledger is weighted toward deadline pressure rather
             than new inventory: several programs close inside the next fortnight
             and two property registrations close sooner than their sale dates
-            suggest. Where a deadline and a sale date differ, the deadline is the
-            one that binds.
+            suggest. Where a deadline and a sale date differ, the deadline is
+            the one that binds.
           </p>
           <p>
             On pricing, the picture is mixed. Input costs remain the constraint
@@ -112,7 +110,8 @@ export default async function SampleReportPage() {
               >
                 <span className="text-sm font-medium">{item.title}</span>
                 <span className="text-xs text-ink-500">
-                  {item.county ?? 'Georgia'} · {formatDeadline(item.closingDate)}
+                  {item.county ?? 'Georgia'} ·{' '}
+                  {formatDeadline(item.closingDate)}
                 </span>
               </li>
             ))}
@@ -130,31 +129,32 @@ export default async function SampleReportPage() {
           title="Pricing indicators"
           description="Direction is shown to everyone. Levels, history and interpretation are included with Detailed Intelligence."
         />
-        <dl className="surface divide-y divide-ink-100">
-          {indicators.map((indicator) => (
-            <div
-              key={indicator.id}
-              className="flex flex-wrap items-baseline justify-between gap-2 px-5 py-3"
-            >
-              <dt className="text-sm">{indicator.name}</dt>
-              <dd className="text-right">
-                <span className="text-sm font-semibold tabular-nums">
-                  {indicator.percentChange === null
-                    ? '—'
-                    : `${indicator.percentChange > 0 ? '+' : ''}${indicator.percentChange.toFixed(1)}%`}
-                </span>
-                <span className="block text-xs text-ink-500">
-                  Period ending {formatDate(indicator.periodEnd)}
-                </span>
-              </dd>
-            </div>
-          ))}
-          {indicators.length === 0 ? (
-            <p className="px-5 py-6 text-sm text-ink-600">
-              Indicators appear here once observations have been loaded.
-            </p>
-          ) : null}
-        </dl>
+        {indicators.length === 0 ? (
+          <p className="surface px-5 py-6 text-sm text-ink-600">
+            Indicators appear here once observations have been loaded.
+          </p>
+        ) : (
+          <dl className="surface divide-y divide-ink-100">
+            {indicators.map((indicator) => (
+              <div
+                key={indicator.id}
+                className="flex flex-wrap items-baseline justify-between gap-2 px-5 py-3"
+              >
+                <dt className="text-sm">{indicator.name}</dt>
+                <dd className="text-right">
+                  <span className="text-sm font-semibold tabular-nums">
+                    {indicator.percentChange === null
+                      ? '—'
+                      : `${indicator.percentChange > 0 ? '+' : ''}${indicator.percentChange.toFixed(1)}%`}
+                  </span>
+                  <span className="block text-xs text-ink-500">
+                    Period ending {formatDate(indicator.periodEnd)}
+                  </span>
+                </dd>
+              </div>
+            ))}
+          </dl>
+        )}
       </section>
 
       <div className="mt-12">

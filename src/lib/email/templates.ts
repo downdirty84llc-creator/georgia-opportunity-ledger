@@ -1,4 +1,7 @@
-import { classificationLabel, type ScoreClassification } from '@/lib/scoring/score';
+import {
+  classificationLabel,
+  type ScoreClassification,
+} from '@/lib/scoring/score';
 import { publicEnv } from '@/lib/env';
 
 /**
@@ -120,7 +123,9 @@ export function welcomeEmail(input: {
   planName: string;
 }): RenderedEmail {
   const base = siteUrl();
-  const greeting = input.firstName ? `Welcome, ${input.firstName}.` : 'Welcome.';
+  const greeting = input.firstName
+    ? `Welcome, ${input.firstName}.`
+    : 'Welcome.';
 
   return {
     subject: 'Welcome to the Georgia Opportunity Ledger',

@@ -1,0 +1,24 @@
+# Local services that Supabase does not provide.
+#
+#   docker compose up -d
+#
+# Right now that is one thing: a virus scanner. The upload pipeline treats "no
+# scanner configured" as `skipped` rather than `clean`, which is honest but
+# means the interesting half of the pipeline — quarantine, retry, the read
+# policy withholding an unresolved file — never runs locally unless there is
+# something to scan with.
+services:
+  clamav:
+    image: clamav/clamav-rest:latest
+    container_name: ledger-clamav
+    ports:
+      - '9000:9000'
+    restart: unless-stopped
+    healthcheck:
+      # The first start downloads signature definitions and takes a few
+      # minutes. Until that finishes the endpoint answers, but refuses to scan.
+      test: ['CMD', 'curl', '-fsS', 'http://localhost:9000/']
+      interval: 30s
+      timeout: 10s
+      retries: 20
+      start_period: 300s

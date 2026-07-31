@@ -85,15 +85,21 @@ describe('decideOpportunityView (spec 9, 14.3)', () => {
   });
 
   it('Detailed and Premium members read the record in full', () => {
-    expect(decideOpportunityView(detailed, publishedRecord).canViewFull).toBe(true);
-    expect(decideOpportunityView(premium, publishedRecord).canViewFull).toBe(true);
+    expect(decideOpportunityView(detailed, publishedRecord).canViewFull).toBe(
+      true,
+    );
+    expect(decideOpportunityView(premium, publishedRecord).canViewFull).toBe(
+      true,
+    );
   });
 
   it('staff preview everything; suspended staff preview nothing', () => {
     const staff = viewer({ role: 'editor', isStaff: true, accessRank: 100 });
     expect(
-      decideOpportunityView(staff, { ...publishedRecord, workflowStatus: 'draft' })
-        .canViewFull,
+      decideOpportunityView(staff, {
+        ...publishedRecord,
+        workflowStatus: 'draft',
+      }).canViewFull,
     ).toBe(true);
 
     const suspendedStaff = viewer({
@@ -101,9 +107,9 @@ describe('decideOpportunityView (spec 9, 14.3)', () => {
       isStaff: true,
       accountStatus: 'suspended',
     });
-    expect(decideOpportunityView(suspendedStaff, publishedRecord).canViewFull).toBe(
-      false,
-    );
+    expect(
+      decideOpportunityView(suspendedStaff, publishedRecord).canViewFull,
+    ).toBe(false);
   });
 
   it('a suspended member loses full detail', () => {

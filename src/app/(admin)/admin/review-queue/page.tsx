@@ -48,18 +48,34 @@ export default async function ReviewQueuePage() {
           />
         </div>
       ) : (
-        <div className="mt-8 surface overflow-x-auto">
+        <div className="surface mt-8 overflow-x-auto">
           <table className="min-w-[880px] text-sm">
-            <caption className="sr-only">Records awaiting editorial action</caption>
+            <caption className="sr-only">
+              Records awaiting editorial action
+            </caption>
             <thead>
               <tr className="border-b border-ink-200 bg-ink-50 text-left">
-                <th scope="col" className="px-4 py-3 font-semibold">Title</th>
-                <th scope="col" className="px-4 py-3 font-semibold">Category</th>
-                <th scope="col" className="px-4 py-3 font-semibold">Researcher</th>
-                <th scope="col" className="px-4 py-3 font-semibold">Verified</th>
-                <th scope="col" className="px-4 py-3 font-semibold">Score</th>
-                <th scope="col" className="px-4 py-3 font-semibold">Deadline</th>
-                <th scope="col" className="px-4 py-3 font-semibold">Status</th>
+                <th scope="col" className="px-4 py-3 font-semibold">
+                  Title
+                </th>
+                <th scope="col" className="px-4 py-3 font-semibold">
+                  Category
+                </th>
+                <th scope="col" className="px-4 py-3 font-semibold">
+                  Researcher
+                </th>
+                <th scope="col" className="px-4 py-3 font-semibold">
+                  Verified
+                </th>
+                <th scope="col" className="px-4 py-3 font-semibold">
+                  Score
+                </th>
+                <th scope="col" className="px-4 py-3 font-semibold">
+                  Deadline
+                </th>
+                <th scope="col" className="px-4 py-3 font-semibold">
+                  Status
+                </th>
                 <th scope="col" className="px-4 py-3 font-semibold">
                   <span className="sr-only">Actions</span>
                 </th>
@@ -71,7 +87,10 @@ export default async function ReviewQueuePage() {
                   ? row.profiles[0]
                   : row.profiles;
                 return (
-                  <tr key={row.id} className="border-b border-ink-100 align-top last:border-0">
+                  <tr
+                    key={row.id}
+                    className="border-b border-ink-100 align-top last:border-0"
+                  >
                     <td className="max-w-[280px] px-4 py-3">
                       <Link
                         href={`/admin/opportunities/${row.id}`}

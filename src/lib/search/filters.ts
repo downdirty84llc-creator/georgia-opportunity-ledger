@@ -291,10 +291,14 @@ export function describeFilters(filters: OpportunityFilters): string[] {
   const chips: string[] = [];
   if (filters.q) chips.push(`matching “${filters.q}”`);
   if (filters.category?.length) {
-    chips.push(`in ${filters.category.length} categor${filters.category.length === 1 ? 'y' : 'ies'}`);
+    chips.push(
+      `in ${filters.category.length} categor${filters.category.length === 1 ? 'y' : 'ies'}`,
+    );
   }
   if (filters.countyIds?.length) {
-    chips.push(`in ${filters.countyIds.length} count${filters.countyIds.length === 1 ? 'y' : 'ies'}`);
+    chips.push(
+      `in ${filters.countyIds.length} count${filters.countyIds.length === 1 ? 'y' : 'ies'}`,
+    );
   }
   if (filters.propertyTypes?.length) {
     chips.push(`${filters.propertyTypes.length} property type(s)`);

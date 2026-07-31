@@ -58,7 +58,8 @@ export function SupportForm({
       if (!response.ok) {
         setStatus('error');
         setFeedback(
-          payload?.error?.message ?? 'Your message could not be sent. Try again.',
+          payload?.error?.message ??
+            'Your message could not be sent. Try again.',
         );
         return;
       }
@@ -104,13 +105,13 @@ export function SupportForm({
           onChange={(event) => setCategory(event.target.value)}
           className="mt-1 w-full rounded-lg border border-ink-300 px-3 py-2 text-sm"
         >
-          {CATEGORIES.filter(([value]) => !isSuspended || value === 'account').map(
-            ([value, label]) => (
-              <option key={value} value={value}>
-                {label}
-              </option>
-            ),
-          )}
+          {CATEGORIES.filter(
+            ([value]) => !isSuspended || value === 'account',
+          ).map(([value, label]) => (
+            <option key={value} value={value}>
+              {label}
+            </option>
+          ))}
         </select>
       </div>
 
@@ -144,7 +145,10 @@ export function SupportForm({
       </div>
 
       {status === 'error' ? (
-        <p role="alert" className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-900">
+        <p
+          role="alert"
+          className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-900"
+        >
           {feedback}
         </p>
       ) : null}

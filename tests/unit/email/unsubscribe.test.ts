@@ -22,7 +22,9 @@ describe('unsubscribe tokens', () => {
   });
 
   it('defaults to unsubscribing everything', () => {
-    expect(verifyUnsubscribeToken(mintUnsubscribeToken(USER))?.scope).toBe('all');
+    expect(verifyUnsubscribeToken(mintUnsubscribeToken(USER))?.scope).toBe(
+      'all',
+    );
   });
 
   it('rejects a tampered payload', () => {

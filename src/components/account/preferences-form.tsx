@@ -57,7 +57,8 @@ export function PreferencesForm({
     capitalRangeMax: (initial.capital_range_max as number | null) ?? '',
     preferredFrequency: (initial.preferred_frequency as string) ?? 'weekly',
     emailAlertsEnabled: (initial.email_alerts_enabled as boolean) ?? true,
-    marketingEmailEnabled: (initial.marketing_email_enabled as boolean) ?? false,
+    marketingEmailEnabled:
+      (initial.marketing_email_enabled as boolean) ?? false,
     timezone: (initial.timezone as string) ?? 'America/New_York',
     minimumScore: (initial.minimum_score as number) ?? 0,
   });
@@ -138,8 +139,7 @@ export function PreferencesForm({
       if (!response.ok) {
         setStatus('error');
         const issues = payload?.error?.details?.issues as
-          | Array<{ message: string }>
-          | undefined;
+          Array<{ message: string }> | undefined;
         setMessage(
           issues?.map((issue) => issue.message).join(' ') ??
             payload?.error?.message ??
@@ -162,7 +162,10 @@ export function PreferencesForm({
         <h2 className="text-base font-semibold">About you</h2>
         <div className="mt-4 space-y-4">
           <div>
-            <label htmlFor="primaryUserType" className="block text-sm font-medium">
+            <label
+              htmlFor="primaryUserType"
+              className="block text-sm font-medium"
+            >
               I am a
             </label>
             <select
@@ -261,7 +264,10 @@ export function PreferencesForm({
           </ul>
         ) : null}
 
-        <label htmlFor="countySearch" className="mt-4 block text-sm font-medium">
+        <label
+          htmlFor="countySearch"
+          className="mt-4 block text-sm font-medium"
+        >
           Find a county
         </label>
         <input
@@ -315,7 +321,9 @@ export function PreferencesForm({
                   <button
                     type="button"
                     aria-pressed={selected}
-                    onClick={() => toggle(industryIds, setIndustryIds, industry.id)}
+                    onClick={() =>
+                      toggle(industryIds, setIndustryIds, industry.id)
+                    }
                     className={cx(
                       'rounded-full border px-3 py-1 text-xs',
                       selected
@@ -341,7 +349,9 @@ export function PreferencesForm({
                   <button
                     type="button"
                     aria-pressed={selected}
-                    onClick={() => toggle(propertyTypes, setPropertyTypes, type)}
+                    onClick={() =>
+                      toggle(propertyTypes, setPropertyTypes, type)
+                    }
                     className={cx(
                       'rounded-full border px-3 py-1 text-xs',
                       selected
@@ -458,7 +468,10 @@ export function PreferencesForm({
               type="checkbox"
               checked={form.marketingEmailEnabled}
               onChange={(event) =>
-                setForm({ ...form, marketingEmailEnabled: event.target.checked })
+                setForm({
+                  ...form,
+                  marketingEmailEnabled: event.target.checked,
+                })
               }
               className="mt-0.5 rounded border-ink-300"
             />

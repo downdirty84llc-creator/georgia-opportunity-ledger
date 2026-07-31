@@ -22,7 +22,9 @@ type PageProps = {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 };
 
-export default async function AdminOpportunitiesPage({ searchParams }: PageProps) {
+export default async function AdminOpportunitiesPage({
+  searchParams,
+}: PageProps) {
   const params = await searchParams;
   const workflowStatus =
     typeof params.workflowStatus === 'string' ? params.workflowStatus : null;
@@ -91,17 +93,31 @@ export default async function AdminOpportunitiesPage({ searchParams }: PageProps
           </EmptyState>
         </div>
       ) : (
-        <div className="mt-6 surface overflow-x-auto">
+        <div className="surface mt-6 overflow-x-auto">
           <table className="min-w-[880px] text-sm">
             <thead>
               <tr className="border-b border-ink-200 bg-ink-50 text-left">
-                <th scope="col" className="px-4 py-3 font-semibold">Title</th>
-                <th scope="col" className="px-4 py-3 font-semibold">Category</th>
-                <th scope="col" className="px-4 py-3 font-semibold">Workflow</th>
-                <th scope="col" className="px-4 py-3 font-semibold">Score</th>
-                <th scope="col" className="px-4 py-3 font-semibold">Deadline</th>
-                <th scope="col" className="px-4 py-3 font-semibold">Verified</th>
-                <th scope="col" className="px-4 py-3 font-semibold">Updated</th>
+                <th scope="col" className="px-4 py-3 font-semibold">
+                  Title
+                </th>
+                <th scope="col" className="px-4 py-3 font-semibold">
+                  Category
+                </th>
+                <th scope="col" className="px-4 py-3 font-semibold">
+                  Workflow
+                </th>
+                <th scope="col" className="px-4 py-3 font-semibold">
+                  Score
+                </th>
+                <th scope="col" className="px-4 py-3 font-semibold">
+                  Deadline
+                </th>
+                <th scope="col" className="px-4 py-3 font-semibold">
+                  Verified
+                </th>
+                <th scope="col" className="px-4 py-3 font-semibold">
+                  Updated
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -111,7 +127,10 @@ export default async function AdminOpportunitiesPage({ searchParams }: PageProps
                   row.reverification_due_at &&
                   new Date(row.reverification_due_at) <= now;
                 return (
-                  <tr key={row.id} className="border-b border-ink-100 last:border-0">
+                  <tr
+                    key={row.id}
+                    className="border-b border-ink-100 last:border-0"
+                  >
                     <td className="max-w-[300px] px-4 py-3">
                       <Link
                         href={`/admin/opportunities/${row.id}`}

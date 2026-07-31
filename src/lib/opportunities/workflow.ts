@@ -36,8 +36,15 @@ export type WorkflowAction =
   | 'archive'
   | 'restore';
 
-const ALLOWED_TRANSITIONS: Readonly<Record<WorkflowStatus, readonly WorkflowStatus[]>> = {
-  draft: ['source_collected', 'verification_pending', 'internal_review', 'archived'],
+const ALLOWED_TRANSITIONS: Readonly<
+  Record<WorkflowStatus, readonly WorkflowStatus[]>
+> = {
+  draft: [
+    'source_collected',
+    'verification_pending',
+    'internal_review',
+    'archived',
+  ],
   source_collected: ['verification_pending', 'internal_review', 'archived'],
   verification_pending: ['analysis_pending', 'internal_review', 'archived'],
   analysis_pending: ['internal_review', 'archived'],
@@ -85,7 +92,10 @@ export function canTransition(
   return ALLOWED_TRANSITIONS[from].includes(to);
 }
 
-export function roleMayPerform(role: UserRole, action: WorkflowAction): boolean {
+export function roleMayPerform(
+  role: UserRole,
+  action: WorkflowAction,
+): boolean {
   return ACTION_ROLES[action].includes(role);
 }
 

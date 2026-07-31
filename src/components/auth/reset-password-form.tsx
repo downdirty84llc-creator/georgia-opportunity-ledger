@@ -124,7 +124,9 @@ export function ResetPasswordForm() {
 
   if (mode === 'checking') {
     return (
-      <p className="surface px-5 py-6 text-sm text-ink-600">Checking your link…</p>
+      <p className="surface px-5 py-6 text-sm text-ink-600">
+        Checking your link…
+      </p>
     );
   }
 

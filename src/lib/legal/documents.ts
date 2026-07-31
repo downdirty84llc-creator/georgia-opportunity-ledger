@@ -104,7 +104,8 @@ export const LEGAL_DOCUMENTS: readonly LegalDocument[] = [
   {
     slug: 'subscription-terms',
     title: 'Subscription Terms',
-    summary: 'Billing, renewal, upgrades, downgrades and what happens on lapse.',
+    summary:
+      'Billing, renewal, upgrades, downgrades and what happens on lapse.',
     requiresReview: true,
     sections: [
       {
@@ -322,6 +323,95 @@ export const LEGAL_DOCUMENTS: readonly LegalDocument[] = [
           'We are not a lender, a loan broker, a grant writer or a financial adviser. We do not originate, arrange, guarantee or influence any funding decision.',
           'Eligibility criteria, amounts, rates and deadlines are reported from program documentation and change without notice. Only the program administrator can tell you whether you qualify, and only their published terms govern.',
           'No funding outcome is promised, implied or guaranteed by anything published here.',
+          REVIEW_NOTICE,
+        ],
+      },
+    ],
+  },
+  {
+    slug: 'acceptable-use',
+    title: 'Acceptable Use Policy',
+    summary:
+      'What you may do with paid content, and the small number of things that will cost you your account.',
+    requiresReview: true,
+    sections: [
+      {
+        heading: 'What your subscription buys',
+        body: [
+          'A subscription is a licence for one person to read and use the ledger for their own research and decisions, including the decisions they make on behalf of their employer or clients. You may quote a record in your own work, cite a figure in a memo, and act on what you find without asking us.',
+          'What it does not buy is the right to republish the compilation. The difference is between using the research and becoming a second source of it.',
+        ],
+      },
+      {
+        heading: 'Sharing and redistribution',
+        body: [
+          'Accounts are individual. Sharing credentials, rotating one login between colleagues, or providing access through a shared inbox is a breach of these terms and of the subscription agreement.',
+          'You may not resell, syndicate, republish or systematically redistribute paid content, whether free of charge or not. Forwarding a weekly report to a colleague who has their own account is fine; forwarding it to a distribution list is not.',
+          'Where a team needs access, ask us about additional seats rather than sharing one.',
+        ],
+      },
+      {
+        heading: 'Automated access',
+        body: [
+          'Scripted or automated collection of paid content — crawling, scraping, bulk downloading, or driving the interface programmatically to extract records at scale — is not permitted. Export exists for the legitimate version of this need and is subject to the limits published on the pricing page.',
+          'Rate limits protect the service for everyone. Attempting to evade them, by rotating accounts or addresses or otherwise, is treated as abuse.',
+          'We do not currently offer a data feed or a public API. If you need one, ask; the answer may be yes, but it will be a commercial conversation rather than something to arrange with a script.',
+        ],
+      },
+      {
+        heading: 'Security research',
+        body: [
+          'We welcome reports of security problems and will not pursue anyone who finds one in good faith, tells us privately, and gives us a reasonable chance to fix it before saying anything publicly.',
+          'That protection does not extend to accessing other members\u2019 data, degrading the service for others, or extracting paid content and calling it research. Test against your own account.',
+        ],
+      },
+      {
+        heading: 'What happens if you breach this',
+        body: [
+          'Most breaches get a warning and a conversation, because most are misunderstandings about seat sharing rather than bad faith.',
+          'Redistribution at scale, automated extraction, and attempts to reach another member\u2019s data do not get a warning. We suspend the account and, where the terms provide for it, end the subscription without a refund for the remaining period.',
+          'A suspended account keeps everything it has saved and may contact support to appeal. Suspension is not deletion.',
+          REVIEW_NOTICE,
+        ],
+      },
+    ],
+  },
+  {
+    slug: 'accessibility',
+    title: 'Accessibility Statement',
+    summary:
+      'How accessible this service is, what we know is imperfect, and how to tell us when we get it wrong.',
+    requiresReview: true,
+    sections: [
+      {
+        heading: 'What we aim for',
+        body: [
+          'This service is built to conform to the Web Content Accessibility Guidelines 2.1 at level AA. That target is a design constraint rather than an afterthought: it shapes the colour palette, the focus styles, the heading structure and the way status is conveyed.',
+          'In particular, no information here is carried by colour alone. Opportunity scores, verification states and deadline urgency all have a text label as well as a colour, because a score band that is only a shade of green is not a score band to a substantial number of people.',
+        ],
+      },
+      {
+        heading: 'What we have built for',
+        body: [
+          'Every interactive element is reachable and operable by keyboard, with a visible focus indicator. A skip link is the first thing a keyboard user reaches on every page.',
+          'Content is structured with real headings, lists and landmarks so that a screen reader can navigate it. Form controls have labels, and errors are announced rather than only shown.',
+          'The interface respects the reduced-motion setting in your operating system. Text can be resized to 200 percent without loss of content or function, and the layout reflows rather than requiring horizontal scrolling.',
+        ],
+      },
+      {
+        heading: 'What we know is not there yet',
+        body: [
+          'Automated testing runs against every change and catches roughly a third of accessibility defects. A full audit by people who use assistive technology has not yet been carried out, and until it has we cannot honestly claim conformance \u2014 only that we have built for it.',
+          'Documents attached to records come from public sources. Many are scanned images with no text layer, and we cannot make a county\u2019s scanned notice readable by a screen reader. Where a source document is inaccessible, the record\u2019s own summary and fields carry the substance in accessible form, and we will read a document to you on request.',
+          'Generated report PDFs are not yet tagged for accessibility. The same content is available as a web page, which is.',
+        ],
+      },
+      {
+        heading: 'Telling us when something does not work',
+        body: [
+          'If any part of this service is unusable for you, tell us through the support form or by email and we will treat it as a defect rather than a request. Say what you were trying to do, what page you were on, and what assistive technology you use if any.',
+          'We aim to respond within two working days and to fix or offer a workable alternative. If a fix will take time, we will say so and say when.',
+          'If you need information that is locked behind an inaccessible document or interface, ask and we will supply it in another format at no cost. That applies whether or not you are a subscriber.',
           REVIEW_NOTICE,
         ],
       },

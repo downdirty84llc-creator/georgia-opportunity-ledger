@@ -25,30 +25,38 @@ refuses to run against production.
 
 ### Stripe
 
-1. Create four products matching the plan codes: `free`, `weekly`, `detailed`,
-   `premium`.
-2. Create monthly and annual prices for the three paid plans (spec 6:
-   $15/$150, $39/$390, $99/$990).
-3. Write the price ids onto `subscription_plans`:
+Run the setup script once per environment. It creates the four products and the
+six paid prices (spec 6: $15/$150, $39/$390, $99/$990), then writes the ids onto
+`subscription_plans`:
 
-   ```sql
-   update public.subscription_plans
-   set stripe_monthly_price_id = 'price_...',
-       stripe_annual_price_id  = 'price_...'
-   where code = 'weekly';
-   ```
+```bash
+STRIPE_SECRET_KEY=sk_test_... npm run stripe:setup   # test catalogue
+STRIPE_SECRET_KEY=sk_live_... npm run stripe:setup   # live catalogue
+```
 
-   The checkout endpoint returns a clear conflict rather than failing inside
-   Stripe when a price id is missing, so this step is safe to verify by trying it.
+The mode is decided entirely by the key. Products are matched on
+`metadata.plan_code` and prices on their lookup key (`gol_weekly_monthly` and so
+on), so running it twice changes nothing. Prices are immutable in Stripe: if an
+amount in the script disagrees with an existing price, the script says so and
+leaves it alone — changing what a current subscriber pays is a deliberate
+migration, not a setup step.
 
-4. Add the webhook endpoint `POST /api/v1/webhooks/stripe` subscribed to
-   `checkout.session.completed`, `customer.subscription.created|updated|deleted`
-   and `invoice.payment_failed`. Put the signing secret in
-   `STRIPE_WEBHOOK_SECRET`.
+No price id is committed to this repository. An id is only meaningful in the
+mode that minted it, and hardcoding one guarantees that somebody eventually
+points a live key at a test price.
 
-5. Pin the API version on the Stripe account. The client deliberately does not
-   pin one in code, so upgrading is a deliberate dashboard action with a
-   test-mode rehearsal rather than a side effect of a dependency bump.
+The checkout endpoint returns a clear conflict rather than failing inside Stripe
+when a price id is missing, so this is safe to verify by trying it.
+
+Two things the script cannot do for you:
+
+- Add the webhook endpoint `POST /api/v1/webhooks/stripe`, subscribed to
+  `checkout.session.completed`,
+  `customer.subscription.created|updated|deleted` and
+  `invoice.payment_failed`. Put the signing secret in `STRIPE_WEBHOOK_SECRET`.
+- Pin the API version on the Stripe account. The client deliberately does not
+  pin one in code, so upgrading is a deliberate dashboard action with a
+  test-mode rehearsal rather than a side effect of a dependency bump.
 
 ### Virus scanning
 
@@ -192,11 +200,14 @@ Spec 28, milestone 10. Every line needs a name against it.
 
 ### Blocking
 
-- [ ] **Legal review of all twelve documents** in `src/lib/legal/documents.ts`.
-      Each is marked `requiresReview: true` and renders an "awaiting legal
-      review" banner until cleared. This is the hard blocker.
-- [ ] Stripe live mode: products, prices, webhook endpoint, price ids written to
-      `subscription_plans`.
+- [ ] **Legal review of the nine documents marked `requiresReview`** in
+      `src/lib/legal/documents.ts`. Each renders an "awaiting legal review"
+      banner until cleared. This is the hard blocker. The other three —
+      editorial standards, corrections, data sources — state our own practice
+      and do not need counsel; the split is pinned in
+      `tests/unit/legal/documents.test.ts`.
+- [ ] Stripe live mode: `npm run stripe:setup` with the live key, then the
+      webhook endpoint. Confirm `subscription_plans` carries all six price ids.
 - [ ] Tier-by-tier test payment verifying each plan grants the correct access
       (spec 28, milestone 3 acceptance).
 - [ ] Email domain authentication: SPF, DKIM and DMARC on the sending domain.
@@ -243,6 +254,34 @@ Spec 28, milestone 10. Every line needs a name against it.
 
 ---
 
+## Continuous integration
+
+`.github/workflows/ci.yml` runs four jobs on every push:
+
+| Job          | What it proves                                                                                                |
+| ------------ | ------------------------------------------------------------------------------------------------------------- |
+| `static`     | Types, lint, formatting, 177 unit tests                                                                       |
+| `migrations` | Every migration applies in order from an empty Postgres, and the reference seed is idempotent (it runs twice) |
+| `build`      | A production build succeeds                                                                                   |
+| `e2e`        | The security and accessibility suites against a built app                                                     |
+
+The `e2e` job has no database, so the checks that need one skip with a stated
+reason rather than passing. That is deliberate: a suite that read a 500 as "the
+endpoint refused me" would report a green tick for an access boundary it never
+exercised. To run those for real, point `E2E_BASE_URL` at an environment with
+migrations applied and `npm run db:seed` loaded.
+
+```bash
+E2E_BASE_URL=https://staging.example.com npm run test:e2e:security
+./scripts/smoke.sh https://staging.example.com
+```
+
+`scripts/smoke.sh` needs no credentials and is safe to run against production at
+any time. It checks that the public pages answer, the access boundary holds, the
+jobs refuse without their secret, and the sitemap advertises nothing private.
+
+---
+
 ## Things that will bite
 
 - **`NEXT_PUBLIC_ENVIRONMENT` controls more than a banner.** It gates indexing
@@ -266,6 +305,15 @@ Spec 28, milestone 10. Every line needs a name against it.
 - **`scan_status = 'skipped'` is downloadable.** It means no scanner is
   configured, not that a file was checked and cleared. That is a deployment
   decision with a line on the checklist above, not a per-file verdict.
+- **Prices are immutable in Stripe.** Changing an amount means minting a new
+  price and migrating subscribers onto it. `stripe:setup` will not do that for
+  you, and should not.
+- **`next build` caches prerenders.** A source change that does not appear in
+  the output is usually a stale `.next`, not a broken edit. `rm -rf .next`
+  before concluding anything about prerendered HTML.
+- **`text-ink-400` is not safe for body copy.** 3.7:1 on white, below the AA
+  floor. `ink-500` is the lightest token that passes; the ladder is documented
+  in `tailwind.config.ts` and the accessibility suite catches regressions.
 - **The plan matrix lives in two places.** Changing a limit means changing both
   `subscription_plans.feature_configuration` and `PLAN_FEATURE_DEFAULTS`.
   `tests/unit/access/plan-parity.test.ts` fails if you forget.

@@ -4,12 +4,18 @@ import { getViewer } from '@/lib/auth/session';
 import { createAdminClient } from '@/lib/db/admin';
 import { createServerSupabaseClient } from '@/lib/db/server';
 import { serverEnv } from '@/lib/env';
+import { checkRateLimit, rateLimitIdentity } from '@/lib/http/rate-limit';
 import {
-  checkRateLimit,
-  rateLimitIdentity,
-} from '@/lib/http/rate-limit';
-import { apiError, ok, rateLimited, withErrorHandling } from '@/lib/http/responses';
-import { renderPdf, reportToBlocks, type ReportForPdf } from '@/lib/reports/pdf';
+  apiError,
+  ok,
+  rateLimited,
+  withErrorHandling,
+} from '@/lib/http/responses';
+import {
+  renderPdf,
+  reportToBlocks,
+  type ReportForPdf,
+} from '@/lib/reports/pdf';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -98,7 +104,8 @@ export const POST = withErrorHandling(
             title: opportunity?.title ?? 'Untitled record',
             county: county?.name ?? null,
             score: opportunity?.score ?? 0,
-            classification: opportunity?.score_classification ?? 'information_only',
+            classification:
+              opportunity?.score_classification ?? 'information_only',
             closingDate: opportunity?.closing_date ?? null,
             commentary: entry.editor_commentary,
           };
@@ -117,7 +124,10 @@ export const POST = withErrorHandling(
       throw new Error(`Report PDF upload failed: ${uploadError.message}`);
     }
 
-    await admin.from('reports').update({ pdf_file_path: filePath }).eq('id', id);
+    await admin
+      .from('reports')
+      .update({ pdf_file_path: filePath })
+      .eq('id', id);
 
     return ok({
       id: report.id,

@@ -91,7 +91,9 @@ describe('plan matrix parity (code vs seed)', () => {
     // "0, 0, 0, 1, false" for free or "15, 150, 10, 2, false" for weekly.
     for (const [code, rank] of Object.entries(PLAN_RANK)) {
       const block = blockFor(code);
-      const priceLine = block.match(/\n\s*([\d.]+), ([\d.]+), (\d+), \d+, (?:true|false)/);
+      const priceLine = block.match(
+        /\n\s*([\d.]+), ([\d.]+), (\d+), \d+, (?:true|false)/,
+      );
       expect(priceLine, `${code} pricing line`).not.toBeNull();
       expect(Number(priceLine?.[3]), `${code} access rank`).toBe(rank);
     }

@@ -87,13 +87,11 @@ export const syncSubscriptionsJob: JobDefinition = {
         const status = fromStripeStatus(remote.status);
 
         const item = remote.items.data[0] as unknown as
-          | Record<string, unknown>
-          | undefined;
+          Record<string, unknown> | undefined;
         const periodEnd =
           (item?.current_period_end as number | undefined) ??
           ((remote as unknown as Record<string, unknown>).current_period_end as
-            | number
-            | undefined) ??
+            number | undefined) ??
           null;
         const remotePeriodEnd = toDate(periodEnd)?.toISOString() ?? null;
 

@@ -164,7 +164,9 @@ async function planForPriceId(priceId: string | null): Promise<{
 
   const { data } = await supabase
     .from('subscription_plans')
-    .select('id, code, access_rank, stripe_monthly_price_id, stripe_annual_price_id')
+    .select(
+      'id, code, access_rank, stripe_monthly_price_id, stripe_annual_price_id',
+    )
     .or(
       `stripe_monthly_price_id.eq.${priceId},stripe_annual_price_id.eq.${priceId}`,
     )
@@ -175,8 +177,7 @@ async function planForPriceId(priceId: string | null): Promise<{
     id: data.id,
     code: data.code,
     access_rank: data.access_rank,
-    interval:
-      data.stripe_annual_price_id === priceId ? 'annual' : 'monthly',
+    interval: data.stripe_annual_price_id === priceId ? 'annual' : 'monthly',
   };
 }
 

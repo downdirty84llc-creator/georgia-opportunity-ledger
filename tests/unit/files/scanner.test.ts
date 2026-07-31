@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import { isDownloadable, scanBytes, type ScannerConfig } from '@/lib/files/scanner';
+import {
+  isDownloadable,
+  scanBytes,
+  type ScannerConfig,
+} from '@/lib/files/scanner';
 import { safeFileName } from '@/lib/files/attachments';
 
 const NONE: ScannerConfig = {

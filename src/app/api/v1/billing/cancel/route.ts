@@ -51,12 +51,11 @@ export const POST = withErrorHandling(async (): Promise<NextResponse> => {
   });
 
   const item = updated.items.data[0] as unknown as
-    | Record<string, unknown>
-    | undefined;
+    Record<string, unknown> | undefined;
   const periodEnd =
     (item?.current_period_end as number | undefined) ??
-    ((updated as unknown as Record<string, unknown>)
-      .current_period_end as number | undefined);
+    ((updated as unknown as Record<string, unknown>).current_period_end as
+      number | undefined);
 
   return ok({
     alreadyScheduled: false,

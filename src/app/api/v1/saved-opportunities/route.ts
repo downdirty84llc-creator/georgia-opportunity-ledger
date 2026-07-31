@@ -26,7 +26,10 @@ const createSchema = z.object({
 export const GET = withErrorHandling(async (): Promise<NextResponse> => {
   const viewer = await getViewer();
   if (!viewer.isAuthenticated) {
-    return apiError('unauthorized', 'Sign in to view your saved opportunities.');
+    return apiError(
+      'unauthorized',
+      'Sign in to view your saved opportunities.',
+    );
   }
 
   const supabase = await createServerSupabaseClient();
@@ -65,8 +68,8 @@ export const GET = withErrorHandling(async (): Promise<NextResponse> => {
       // list can flag "updated since you saved this".
       hasUpdates: Boolean(
         opportunity &&
-          row.opportunity_version_at_save !== null &&
-          new Date(opportunity.updated_at) > new Date(row.saved_at),
+        row.opportunity_version_at_save !== null &&
+        new Date(opportunity.updated_at) > new Date(row.saved_at),
       ),
       opportunity: opportunity
         ? {
@@ -119,7 +122,8 @@ export const POST = withErrorHandling(
         user_id: viewer.userId,
         opportunity_id: parsed.data.opportunityId,
         personal_notes: parsed.data.personalNotes ?? null,
-        follow_up_date: parsed.data.followUpDate?.toISOString().slice(0, 10) ?? null,
+        follow_up_date:
+          parsed.data.followUpDate?.toISOString().slice(0, 10) ?? null,
       })
       .select('id, status, saved_at')
       .single();

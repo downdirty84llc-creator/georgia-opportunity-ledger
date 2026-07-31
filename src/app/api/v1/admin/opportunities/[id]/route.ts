@@ -168,7 +168,8 @@ export const PATCH = withErrorHandling(
 
     // Changing who can see a record is an access decision, not a content edit.
     if (
-      (body.minimumAccessRank !== undefined || body.isRestricted !== undefined) &&
+      (body.minimumAccessRank !== undefined ||
+        body.isRestricted !== undefined) &&
       !roleMayPerform(viewer.role, 'approve')
     ) {
       return apiError(
@@ -201,7 +202,10 @@ export const PATCH = withErrorHandling(
     if (body.score) {
       // Only a reviewer or above may move a score (spec 5, "Reviewer").
       if (!roleMayPerform(viewer.role, 'approve')) {
-        return apiError('forbidden', 'Only a reviewer or editor can change a score.');
+        return apiError(
+          'forbidden',
+          'Only a reviewer or editor can change a score.',
+        );
       }
       if (body.score.manualAdjustment !== 0 && !body.score.adjustmentReason) {
         return apiError(

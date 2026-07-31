@@ -40,7 +40,12 @@ export async function GET(
   const viewer = await getViewer();
   if (!viewer.isAuthenticated || viewer.accountStatus !== 'active') {
     return NextResponse.json(
-      { error: { code: 'unauthorized', message: 'Sign in to export a deadline.' } },
+      {
+        error: {
+          code: 'unauthorized',
+          message: 'Sign in to export a deadline.',
+        },
+      },
       { status: 401 },
     );
   }
@@ -80,7 +85,9 @@ export async function GET(
         'Verify this deadline against the original source before relying on it.',
     )}`,
     `URL:${url}`,
-    ...(county?.name ? [`LOCATION:${escapeIcs(`${county.name} County, Georgia`)}`] : []),
+    ...(county?.name
+      ? [`LOCATION:${escapeIcs(`${county.name} County, Georgia`)}`]
+      : []),
     'BEGIN:VALARM',
     'TRIGGER:-P7D',
     'ACTION:DISPLAY',

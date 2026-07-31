@@ -42,7 +42,14 @@ const entrySchema = z.object({
 const patchSchema = z.object({
   title: z.string().trim().min(4).max(240).optional(),
   reportType: z
-    .enum(['weekly', 'monthly', 'special', 'pricing', 'premium_briefing', 'sample'])
+    .enum([
+      'weekly',
+      'monthly',
+      'special',
+      'pricing',
+      'premium_briefing',
+      'sample',
+    ])
     .optional(),
   periodStart: z.coerce.date().nullable().optional(),
   periodEnd: z.coerce.date().nullable().optional(),
@@ -144,7 +151,10 @@ export const PATCH = withErrorHandling(
     }
 
     if (Object.keys(update).length > 0) {
-      const { error } = await supabase.from('reports').update(update).eq('id', id);
+      const { error } = await supabase
+        .from('reports')
+        .update(update)
+        .eq('id', id);
       if (error) throw new Error(error.message);
     }
 

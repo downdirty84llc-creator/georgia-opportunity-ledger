@@ -192,7 +192,8 @@ export function paidAccessEndsAt(
   if (!currentPeriodEnd) return null;
 
   if (status === 'canceled') return currentPeriodEnd;
-  if (status === 'past_due') return addDays(currentPeriodEnd, PAST_DUE_GRACE_DAYS);
+  if (status === 'past_due')
+    return addDays(currentPeriodEnd, PAST_DUE_GRACE_DAYS);
   if ((status === 'active' || status === 'trialing') && cancelAtPeriodEnd) {
     return currentPeriodEnd;
   }

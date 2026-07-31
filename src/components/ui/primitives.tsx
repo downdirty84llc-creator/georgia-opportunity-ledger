@@ -14,7 +14,9 @@ import {
  * every icon-like element carries text. Spec 22 requires both.
  */
 
-export function cx(...values: Array<string | false | null | undefined>): string {
+export function cx(
+  ...values: Array<string | false | null | undefined>
+): string {
   return values.filter(Boolean).join(' ');
 }
 
@@ -40,7 +42,9 @@ export function Button({
   className,
   type = 'button',
   ...props
-}: React.ButtonHTMLAttributes<HTMLButtonElement> & { variant?: ButtonVariant }) {
+}: React.ButtonHTMLAttributes<HTMLButtonElement> & {
+  variant?: ButtonVariant;
+}) {
   return (
     <button
       type={type}
@@ -269,7 +273,9 @@ export function EmptyState({
         {description}
       </p>
       {children ? (
-        <div className="mt-5 flex flex-wrap justify-center gap-3">{children}</div>
+        <div className="mt-5 flex flex-wrap justify-center gap-3">
+          {children}
+        </div>
       ) : null}
     </div>
   );
@@ -277,13 +283,7 @@ export function EmptyState({
 
 // --- Data display ----------------------------------------------------------
 
-export function DataRow({
-  label,
-  value,
-}: {
-  label: string;
-  value: ReactNode;
-}) {
+export function DataRow({ label, value }: { label: string; value: ReactNode }) {
   return (
     <div className="flex items-baseline justify-between gap-4 border-b border-ink-100 py-2 last:border-0">
       <dt className="text-sm text-ink-600">{label}</dt>
@@ -310,9 +310,9 @@ export function Meter({
     <div>
       <div className="flex items-baseline justify-between gap-3 text-sm">
         <span className="text-ink-700">{label}</span>
-        <span className="font-medium text-ink-900 tabular-nums">
+        <span className="font-medium tabular-nums text-ink-900">
           {value}
-          <span className="text-ink-400"> / {max}</span>
+          <span className="text-ink-500"> / {max}</span>
         </span>
       </div>
       <div

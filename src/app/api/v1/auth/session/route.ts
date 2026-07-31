@@ -1,7 +1,10 @@
 import type { NextResponse } from 'next/server';
 
 import { getSessionContext } from '@/lib/auth/session';
-import { paidAccessEndsAt, needsPaymentAttention } from '@/lib/billing/subscription';
+import {
+  paidAccessEndsAt,
+  needsPaymentAttention,
+} from '@/lib/billing/subscription';
 import { ok, withErrorHandling } from '@/lib/http/responses';
 
 export const dynamic = 'force-dynamic';
@@ -40,7 +43,8 @@ export const GET = withErrorHandling(async (): Promise<NextResponse> => {
       status: context.subscriptionStatus,
       currentPeriodEnd: context.currentPeriodEnd?.toISOString() ?? null,
       cancelAtPeriodEnd: context.cancelAtPeriodEnd,
-      paidAccessEndsAt: paidAccessEndsAt(context.subscription)?.toISOString() ?? null,
+      paidAccessEndsAt:
+        paidAccessEndsAt(context.subscription)?.toISOString() ?? null,
       needsAttention: needsPaymentAttention(context.subscription),
     },
     profile: context.profile,

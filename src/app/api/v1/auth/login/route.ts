@@ -3,10 +3,7 @@ import { z } from 'zod';
 
 import { createServerSupabaseClient } from '@/lib/db/server';
 import { publicEnv } from '@/lib/env';
-import {
-  checkRateLimit,
-  rateLimitIdentity,
-} from '@/lib/http/rate-limit';
+import { checkRateLimit, rateLimitIdentity } from '@/lib/http/rate-limit';
 import {
   apiError,
   ok,
@@ -52,7 +49,8 @@ export const POST = withErrorHandling(
       });
       // Always the same answer, whether or not the address exists.
       return ok({
-        message: 'If that address has an account, a sign-in link is on its way.',
+        message:
+          'If that address has an account, a sign-in link is on its way.',
       });
     }
 

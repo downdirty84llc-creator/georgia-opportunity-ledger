@@ -79,7 +79,8 @@ describe('high-score alert (spec 18)', () => {
 
   it('declines when the member cannot open the record', () => {
     expect(
-      shouldSendHighScoreAlert(candidate(), recipient({ accessRank: 10 })).reason,
+      shouldSendHighScoreAlert(candidate(), recipient({ accessRank: 10 }))
+        .reason,
     ).toBe('insufficient_access_rank');
   });
 
@@ -146,8 +147,9 @@ describe('material update alert (spec 18)', () => {
         .send,
     ).toBe(true);
     expect(
-      shouldSendMaterialUpdateAlert(candidate(), recipient(), ['internal_notes'])
-        .reason,
+      shouldSendMaterialUpdateAlert(candidate(), recipient(), [
+        'internal_notes',
+      ]).reason,
     ).toBe('filters_not_matched');
   });
 });
@@ -166,8 +168,11 @@ describe('closing-soon alert (spec 18)', () => {
 
   it('never alerts on an expired record', () => {
     expect(
-      shouldSendClosingSoonAlert(candidate({ isExpired: true }), recipient(), NOW)
-        .reason,
+      shouldSendClosingSoonAlert(
+        candidate({ isExpired: true }),
+        recipient(),
+        NOW,
+      ).reason,
     ).toBe('expired');
   });
 
@@ -240,9 +245,7 @@ describe('matchesFilters edge cases', () => {
       matchesFilters(
         candidate({ industryIds: ['a', 'b'] }),
         parseStoredFilters({
-          industryIds: [
-            '11111111-1111-4111-8111-111111111111',
-          ],
+          industryIds: ['11111111-1111-4111-8111-111111111111'],
         }),
       ),
     ).toBe(false);

@@ -49,10 +49,10 @@ export function ok<T>(
   meta?: ApiMeta,
   init?: ResponseInit,
 ): NextResponse {
-  return NextResponse.json(
-    meta ? { data, meta } : { data },
-    { status: 200, ...init },
-  );
+  return NextResponse.json(meta ? { data, meta } : { data }, {
+    status: 200,
+    ...init,
+  });
 }
 
 export function created<T>(data: T, init?: ResponseInit): NextResponse {

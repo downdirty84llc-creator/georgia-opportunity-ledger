@@ -27,7 +27,9 @@ export const evaluateDeadlinesJob: JobDefinition = {
 
     const { data, error } = await supabase
       .from('opportunities')
-      .select('id, status, closing_date, opening_date, is_expired, is_closing_soon')
+      .select(
+        'id, status, closing_date, opening_date, is_expired, is_closing_soon',
+      )
       .eq('workflow_status', 'published')
       .not('closing_date', 'is', null);
 

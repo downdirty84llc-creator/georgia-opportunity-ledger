@@ -71,11 +71,14 @@ async function collectRows(
     query = query.in('id', job.opportunity_ids);
   } else {
     const filters = parseStoredFilters(job.filter_configuration);
-    if (filters.category?.length) query = query.in('category', filters.category);
+    if (filters.category?.length)
+      query = query.in('category', filters.category);
     if (filters.status?.length) query = query.in('status', filters.status);
-    if (filters.countyIds?.length) query = query.in('county_id', filters.countyIds);
+    if (filters.countyIds?.length)
+      query = query.in('county_id', filters.countyIds);
     if (filters.cityIds?.length) query = query.in('city_id', filters.cityIds);
-    if (filters.minScore !== undefined) query = query.gte('score', filters.minScore);
+    if (filters.minScore !== undefined)
+      query = query.gte('score', filters.minScore);
     if (filters.capitalMax !== undefined) {
       query = query.lte('capital_required_min', filters.capitalMax);
     }
@@ -142,7 +145,8 @@ export async function runExportJob(
         upsert: false,
       });
 
-    if (uploadError) throw new Error(`Export upload failed: ${uploadError.message}`);
+    if (uploadError)
+      throw new Error(`Export upload failed: ${uploadError.message}`);
 
     await admin
       .from('export_jobs')

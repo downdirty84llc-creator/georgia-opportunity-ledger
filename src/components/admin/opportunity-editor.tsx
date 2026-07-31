@@ -240,7 +240,11 @@ export function OpportunityEditor({
         // The first save of a new record creates the draft; everything after
         // patches it.
         if (!id) {
-          if (!current.title || !current.sourceId || !current.originalSourceUrl) {
+          if (
+            !current.title ||
+            !current.sourceId ||
+            !current.originalSourceUrl
+          ) {
             setSaveState('dirty');
             setSaveMessage(
               'Add a title, a primary source and a source URL to start saving.',
@@ -294,10 +298,11 @@ export function OpportunityEditor({
         if (!response.ok) {
           setSaveState('error');
           const issues = payload?.error?.details?.issues as
-            | Array<{ path: string; message: string }>
-            | undefined;
+            Array<{ path: string; message: string }> | undefined;
           setSaveMessage(
-            issues?.map((issue) => `${issue.path}: ${issue.message}`).join('; ') ??
+            issues
+              ?.map((issue) => `${issue.path}: ${issue.message}`)
+              .join('; ') ??
               payload?.error?.message ??
               'Changes could not be saved.',
           );
@@ -373,8 +378,7 @@ export function OpportunityEditor({
       if (!response.ok) {
         setActionIsError(true);
         const missingFields = payload?.error?.details?.missingFields as
-          | string[]
-          | undefined;
+          string[] | undefined;
         setActionMessage(
           missingFields?.length
             ? `Cannot publish yet — still missing: ${missingFields
@@ -456,9 +460,9 @@ export function OpportunityEditor({
 
       {recovered ? (
         <p className="mt-5 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-          <strong className="font-semibold">Recovered unsaved work.</strong> This
-          browser had changes that never reached the server. They are loaded
-          below — keep editing to save them, or{' '}
+          <strong className="font-semibold">Recovered unsaved work.</strong>{' '}
+          This browser had changes that never reached the server. They are
+          loaded below — keep editing to save them, or{' '}
           <button
             type="button"
             className="font-medium underline"
@@ -639,7 +643,9 @@ export function OpportunityEditor({
                   <select
                     id="industryId"
                     value={draft.industryId}
-                    onChange={(event) => update('industryId', event.target.value)}
+                    onChange={(event) =>
+                      update('industryId', event.target.value)
+                    }
                     className={inputClass}
                   >
                     <option value="">Not industry-specific</option>
@@ -675,7 +681,10 @@ export function OpportunityEditor({
                     id="status"
                     value={draft.status}
                     onChange={(event) =>
-                      update('status', event.target.value as EditorDraft['status'])
+                      update(
+                        'status',
+                        event.target.value as EditorDraft['status'],
+                      )
                     }
                     className={inputClass}
                   >
@@ -697,7 +706,10 @@ export function OpportunityEditor({
                     onChange={(event) =>
                       update('minimumAccessRank', Number(event.target.value))
                     }
-                    className={cx(inputClass, 'disabled:bg-ink-50 disabled:text-ink-400')}
+                    className={cx(
+                      inputClass,
+                      'disabled:bg-ink-50 disabled:text-ink-400',
+                    )}
                   >
                     {ACCESS_RANK_OPTIONS.map((option) => (
                       <option key={option.rank} value={option.rank}>
@@ -738,8 +750,8 @@ export function OpportunityEditor({
                   ))}
                 </select>
                 <p className="mt-1 text-xs text-ink-500">
-                  The source&rsquo;s reliability rating feeds the score. Prefer a
-                  primary government source where one exists.
+                  The source&rsquo;s reliability rating feeds the score. Prefer
+                  a primary government source where one exists.
                 </p>
               </div>
 
@@ -979,7 +991,9 @@ export function OpportunityEditor({
                     <select
                       id="saleType"
                       value={draft.saleType}
-                      onChange={(event) => update('saleType', event.target.value)}
+                      onChange={(event) =>
+                        update('saleType', event.target.value)
+                      }
                       className={inputClass}
                     >
                       {SALE_TYPES.map((value) => (
@@ -1131,7 +1145,10 @@ export function OpportunityEditor({
                     </select>
                   </div>
                   <div>
-                    <label htmlFor="applicationComplexity" className={labelClass}>
+                    <label
+                      htmlFor="applicationComplexity"
+                      className={labelClass}
+                    >
                       Application complexity
                     </label>
                     <select
@@ -1327,7 +1344,9 @@ export function OpportunityEditor({
                   id="riskSummary"
                   rows={4}
                   value={draft.riskSummary}
-                  onChange={(event) => update('riskSummary', event.target.value)}
+                  onChange={(event) =>
+                    update('riskSummary', event.target.value)
+                  }
                   className={inputClass}
                 />
                 <p className="mt-1 text-xs text-ink-500">
@@ -1367,7 +1386,9 @@ export function OpportunityEditor({
                     update('requiredDocuments', event.target.value)
                   }
                   className={inputClass}
-                  placeholder={'One per line\nThree years of tax returns\nProof of funds'}
+                  placeholder={
+                    'One per line\nThree years of tax returns\nProof of funds'
+                  }
                 />
               </div>
             </div>

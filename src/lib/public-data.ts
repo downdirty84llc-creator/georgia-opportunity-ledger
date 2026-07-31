@@ -40,9 +40,7 @@ function softFail(context: string, error: unknown): void {
       process.env.NEXT_PUBLIC_ENVIRONMENT === 'staging');
 
   if (deployable) {
-    throw error instanceof Error
-      ? error
-      : new Error(`public-data: ${context}`);
+    throw error instanceof Error ? error : new Error(`public-data: ${context}`);
   }
 }
 
@@ -143,12 +141,14 @@ function mapPreview(row: Record<string, unknown>): PreviewOpportunity {
   };
 }
 
-export async function loadPreviewOpportunities(options: {
-  limit?: number;
-  category?: string;
-  countySlug?: string;
-  closingSoon?: boolean;
-} = {}): Promise<PreviewOpportunity[]> {
+export async function loadPreviewOpportunities(
+  options: {
+    limit?: number;
+    category?: string;
+    countySlug?: string;
+    closingSoon?: boolean;
+  } = {},
+): Promise<PreviewOpportunity[]> {
   try {
     const supabase = createPublicSupabaseClient();
     let query = supabase
@@ -269,9 +269,20 @@ export async function loadCountiesWithCounts(): Promise<
     const { data, error } = await supabase.rpc('opportunity_facets');
     if (error) throw new Error(error.message);
 
-    return ((data ?? []) as Array<{ facet: string; key: string; label: string; count: number }>)
+    return (
+      (data ?? []) as Array<{
+        facet: string;
+        key: string;
+        label: string;
+        count: number;
+      }>
+    )
       .filter((row) => row.facet === 'county')
-      .map((row) => ({ slug: row.key, name: row.label, count: Number(row.count) }))
+      .map((row) => ({
+        slug: row.key,
+        name: row.label,
+        count: Number(row.count),
+      }))
       .sort((a, b) => b.count - a.count);
   } catch (error) {
     softFail('county facet load failed', error);

@@ -104,14 +104,18 @@ export function ReportBuilder({
   const firstRender = useRef(true);
 
   const byId = new Map(candidates.map((record) => [record.id, record]));
-  const selectedIds = new Set(draft.opportunities.map((entry) => entry.opportunityId));
+  const selectedIds = new Set(
+    draft.opportunities.map((entry) => entry.opportunityId),
+  );
 
   const searchResults = candidates
     .filter((record) => !selectedIds.has(record.id))
     .filter((record) =>
       query.trim()
         ? record.title.toLowerCase().includes(query.trim().toLowerCase()) ||
-          (record.county ?? '').toLowerCase().includes(query.trim().toLowerCase())
+          (record.county ?? '')
+            .toLowerCase()
+            .includes(query.trim().toLowerCase())
         : true,
     )
     .slice(0, 12);
@@ -187,11 +191,14 @@ export function ReportBuilder({
     setActionIsError(false);
 
     try {
-      const response = await fetch(`/api/v1/admin/reports/${reportId}/${path}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body ?? {}),
-      });
+      const response = await fetch(
+        `/api/v1/admin/reports/${reportId}/${path}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body ?? {}),
+        },
+      );
       const payload = await response.json().catch(() => null);
 
       if (!response.ok) {
@@ -421,8 +428,8 @@ export function ReportBuilder({
                   className={inputClass}
                 />
                 <p className="mt-1 text-xs text-ink-500">
-                  Required before publishing. The first 400 characters become the
-                  email headline.
+                  Required before publishing. The first 400 characters become
+                  the email headline.
                 </p>
               </div>
 
@@ -631,7 +638,10 @@ export function ReportBuilder({
             ) : (
               <ol className="mt-4 space-y-3">
                 {draft.sections.map((section, index) => (
-                  <li key={index} className="rounded-lg border border-ink-200 p-3">
+                  <li
+                    key={index}
+                    className="rounded-lg border border-ink-200 p-3"
+                  >
                     <div className="grid gap-3 sm:grid-cols-[1fr,180px]">
                       <div>
                         <label
@@ -645,7 +655,10 @@ export function ReportBuilder({
                           value={section.title}
                           onChange={(event) => {
                             const next = [...draft.sections];
-                            next[index] = { ...section, title: event.target.value };
+                            next[index] = {
+                              ...section,
+                              title: event.target.value,
+                            };
                             setDraft({ ...draft, sections: next });
                           }}
                           className="mt-1 w-full rounded-lg border border-ink-300 px-3 py-2 text-sm"
@@ -692,7 +705,10 @@ export function ReportBuilder({
                       value={section.content}
                       onChange={(event) => {
                         const next = [...draft.sections];
-                        next[index] = { ...section, content: event.target.value };
+                        next[index] = {
+                          ...section,
+                          content: event.target.value,
+                        };
                         setDraft({ ...draft, sections: next });
                       }}
                       className="mt-1 w-full rounded-lg border border-ink-300 px-3 py-2 text-sm"
@@ -819,7 +835,8 @@ export function ReportBuilder({
             {previewRank < draft.minimumAccessRank ? (
               <p className="mt-2 rounded bg-amber-50 px-2 py-1.5 text-xs text-amber-900">
                 This tier cannot open the report at all — the report&rsquo;s own
-                minimum is {titleCase(planCodeForRank(draft.minimumAccessRank))}.
+                minimum is {titleCase(planCodeForRank(draft.minimumAccessRank))}
+                .
               </p>
             ) : null}
           </Card>
@@ -878,8 +895,8 @@ export function ReportBuilder({
                 <span>
                   Email this to members when published.
                   <span className="block text-xs text-ink-500">
-                    The weekly distribution job sends it, personalised per member
-                    and deduplicated so nobody gets it twice.
+                    The weekly distribution job sends it, personalised per
+                    member and deduplicated so nobody gets it twice.
                   </span>
                 </span>
               </label>

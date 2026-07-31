@@ -14,10 +14,7 @@ import { createServerSupabaseClient } from '@/lib/db/server';
  */
 
 export type MfaState =
-  | 'not_required'
-  | 'enrolment_required'
-  | 'challenge_required'
-  | 'satisfied';
+  'not_required' | 'enrolment_required' | 'challenge_required' | 'satisfied';
 
 export interface MfaStatus {
   state: MfaState;

@@ -2,7 +2,10 @@ import type { Metadata } from 'next';
 
 import { OpportunityCard } from '@/components/opportunities/opportunity-card';
 import { ButtonLink, SectionHeading } from '@/components/ui/primitives';
-import { loadIndicatorPreviews, loadPreviewOpportunities } from '@/lib/public-data';
+import {
+  loadIndicatorPreviews,
+  loadPreviewOpportunities,
+} from '@/lib/public-data';
 
 export const revalidate = 900;
 
@@ -54,26 +57,27 @@ export default async function InsightsPage() {
 
       <section className="mt-12">
         <SectionHeading eyebrow="Market movement" title="Direction of travel" />
-        <dl className="surface divide-y divide-ink-100">
-          {indicators.map((indicator) => (
-            <div
-              key={indicator.id}
-              className="flex flex-wrap items-baseline justify-between gap-2 px-5 py-3"
-            >
-              <dt className="text-sm">{indicator.name}</dt>
-              <dd className="text-sm font-semibold tabular-nums">
-                {indicator.percentChange === null
-                  ? '—'
-                  : `${indicator.percentChange > 0 ? '+' : ''}${indicator.percentChange.toFixed(1)}%`}
-              </dd>
-            </div>
-          ))}
-          {indicators.length === 0 ? (
-            <p className="px-5 py-6 text-sm text-ink-600">
-              Indicators appear here once observations are loaded.
-            </p>
-          ) : null}
-        </dl>
+        {indicators.length === 0 ? (
+          <p className="surface px-5 py-6 text-sm text-ink-600">
+            Indicators appear here once observations are loaded.
+          </p>
+        ) : (
+          <dl className="surface divide-y divide-ink-100">
+            {indicators.map((indicator) => (
+              <div
+                key={indicator.id}
+                className="flex flex-wrap items-baseline justify-between gap-2 px-5 py-3"
+              >
+                <dt className="text-sm">{indicator.name}</dt>
+                <dd className="text-sm font-semibold tabular-nums">
+                  {indicator.percentChange === null
+                    ? '—'
+                    : `${indicator.percentChange > 0 ? '+' : ''}${indicator.percentChange.toFixed(1)}%`}
+                </dd>
+              </div>
+            ))}
+          </dl>
+        )}
       </section>
 
       <div className="mt-12 flex flex-wrap gap-3">

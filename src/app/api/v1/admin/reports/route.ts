@@ -16,7 +16,14 @@ export const dynamic = 'force-dynamic';
 const createSchema = z.object({
   title: z.string().trim().min(4).max(240),
   reportType: z
-    .enum(['weekly', 'monthly', 'special', 'pricing', 'premium_briefing', 'sample'])
+    .enum([
+      'weekly',
+      'monthly',
+      'special',
+      'pricing',
+      'premium_briefing',
+      'sample',
+    ])
     .default('weekly'),
   periodStart: z.coerce.date().optional(),
   periodEnd: z.coerce.date().optional(),

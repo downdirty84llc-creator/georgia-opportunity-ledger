@@ -8,10 +8,7 @@ import { createAdminClient } from '@/lib/db/admin';
 import { createServerSupabaseClient } from '@/lib/db/server';
 import { shouldGenerateAsynchronously } from '@/lib/exports/csv';
 import { runExportJob, signExportDownload } from '@/lib/exports/service';
-import {
-  checkRateLimit,
-  rateLimitIdentity,
-} from '@/lib/http/rate-limit';
+import { checkRateLimit, rateLimitIdentity } from '@/lib/http/rate-limit';
 import {
   apiError,
   created,
@@ -85,7 +82,9 @@ export const POST = withErrorHandling(
         saved_search_id: parsed.data.savedSearchId ?? null,
         opportunity_ids: parsed.data.opportunityIds ?? null,
       })
-      .select('id, user_id, format, status, filter_configuration, saved_search_id, opportunity_ids, file_path')
+      .select(
+        'id, user_id, format, status, filter_configuration, saved_search_id, opportunity_ids, file_path',
+      )
       .single();
 
     if (error) throw new Error(error.message);

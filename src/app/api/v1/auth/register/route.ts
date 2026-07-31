@@ -4,10 +4,7 @@ import { z } from 'zod';
 import { track } from '@/lib/analytics/events';
 import { createServerSupabaseClient } from '@/lib/db/server';
 import { publicEnv } from '@/lib/env';
-import {
-  checkRateLimit,
-  rateLimitIdentity,
-} from '@/lib/http/rate-limit';
+import { checkRateLimit, rateLimitIdentity } from '@/lib/http/rate-limit';
 import {
   created,
   rateLimited,

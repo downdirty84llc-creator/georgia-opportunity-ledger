@@ -72,7 +72,10 @@ export function ReviewActions({
         ) : null}
       </div>
       {error ? (
-        <p role="alert" className="max-w-[200px] text-right text-xs text-red-800">
+        <p
+          role="alert"
+          className="max-w-[200px] text-right text-xs text-red-800"
+        >
           {error}
         </p>
       ) : null}

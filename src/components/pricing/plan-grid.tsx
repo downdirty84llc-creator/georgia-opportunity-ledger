@@ -115,7 +115,9 @@ export function PlanGrid({
             >
               <div className="flex items-start justify-between gap-2">
                 <h3 className="text-lg font-semibold">{plan.name}</h3>
-                {plan.isRecommended ? <Pill tone="positive">Recommended</Pill> : null}
+                {plan.isRecommended ? (
+                  <Pill tone="positive">Recommended</Pill>
+                ) : null}
                 {isCurrent ? <Pill>Your plan</Pill> : null}
               </div>
 
@@ -145,7 +147,9 @@ export function PlanGrid({
                     variant="secondary"
                     className="w-full"
                   >
-                    {isAuthenticated ? 'Go to dashboard' : 'Create a free account'}
+                    {isAuthenticated
+                      ? 'Go to dashboard'
+                      : 'Create a free account'}
                   </ButtonLink>
                 ) : isCurrent ? (
                   <ButtonLink
@@ -162,7 +166,9 @@ export function PlanGrid({
                     onClick={() => startCheckout(plan.code)}
                     variant={plan.isRecommended ? 'primary' : 'secondary'}
                   >
-                    {pending === plan.code ? 'Opening checkout…' : `Choose ${plan.name}`}
+                    {pending === plan.code
+                      ? 'Opening checkout…'
+                      : `Choose ${plan.name}`}
                   </Button>
                 ) : (
                   <ButtonLink

@@ -27,82 +27,84 @@ export const dynamic = 'force-dynamic';
  * locked teasers rather than hidden, because the upgrade prompt is the point;
  * the database function does the column-level redaction.
  */
-export const GET = withErrorHandling(async (request: Request): Promise<NextResponse> => {
-  const url = new URL(request.url);
-  const parsed = filterSchema.safeParse(Object.fromEntries(url.searchParams));
-  if (!parsed.success) return validationFailed(parsed.error);
+export const GET = withErrorHandling(
+  async (request: Request): Promise<NextResponse> => {
+    const url = new URL(request.url);
+    const parsed = filterSchema.safeParse(Object.fromEntries(url.searchParams));
+    if (!parsed.success) return validationFailed(parsed.error);
 
-  const viewer = await getViewer();
+    const viewer = await getViewer();
 
-  const limit = await checkRateLimit(
-    'search',
-    rateLimitIdentity(request, viewer.userId),
-  );
-  if (!limit.allowed) return rateLimited(limit.resetAt);
-
-  if (viewer.isAuthenticated && viewer.accountStatus !== 'active') {
-    return apiError(
-      'forbidden',
-      'Your account is suspended. Contact support to appeal.',
+    const limit = await checkRateLimit(
+      'search',
+      rateLimitIdentity(request, viewer.userId),
     );
-  }
+    if (!limit.allowed) return rateLimited(limit.resetAt);
 
-  const supabase = await createServerSupabaseClient();
-  const result = await searchOpportunities(supabase, viewer, parsed.data);
+    if (viewer.isAuthenticated && viewer.accountStatus !== 'active') {
+      return apiError(
+        'forbidden',
+        'Your account is suspended. Contact support to appeal.',
+      );
+    }
 
-  await track('search_performed', {
-    userId: viewer.userId,
-    properties: {
-      resultCount: result.totalCount,
-      sort: parsed.data.sort,
-      hasKeyword: Boolean(parsed.data.q),
-      filterCount: Object.keys(parsed.data).length,
-      plan: viewer.planCode,
-    },
-  });
+    const supabase = await createServerSupabaseClient();
+    const result = await searchOpportunities(supabase, viewer, parsed.data);
 
-  return ok(
-    result.rows.map((row) => ({
-      id: row.id,
-      slug: row.slug,
-      title: row.title,
-      category: row.category,
-      subtype: row.subtype,
-      teaser: row.teaser,
-      summary: row.summary,
-      score: row.score,
-      classification: row.score_classification,
-      scoreExplanation: row.score_explanation,
-      status: row.status,
-      county: row.county_name,
-      countySlug: row.county_slug,
-      city: row.city_name,
-      state: row.state_abbreviation,
-      industry: row.industry_name,
-      propertyType: row.property_type,
-      fundingType: row.funding_type,
-      estimatedValueMin: row.estimated_value_min,
-      estimatedValueMax: row.estimated_value_max,
-      capitalRequiredMin: row.capital_required_min,
-      capitalRequiredMax: row.capital_required_max,
-      closingDate: row.closing_date,
-      isClosingSoon: row.is_closing_soon,
-      isExpired: row.is_expired,
-      isFeatured: row.is_featured,
-      isSample: row.is_sample,
-      verificationStatus: row.verification_status,
-      dateVerified: row.date_verified,
-      publishedAt: row.published_at,
-      minimumAccessRank: row.minimum_access_rank,
-      isLocked: row.is_locked,
-    })),
-    {
-      count: result.totalCount,
-      hasMore: result.hasMore,
-      nextCursor: result.nextCursor,
-      droppedFilters: result.droppedFilters,
-      plan: viewer.planCode,
-    },
-    { headers: rateLimitHeaders(limit) },
-  );
-});
+    await track('search_performed', {
+      userId: viewer.userId,
+      properties: {
+        resultCount: result.totalCount,
+        sort: parsed.data.sort,
+        hasKeyword: Boolean(parsed.data.q),
+        filterCount: Object.keys(parsed.data).length,
+        plan: viewer.planCode,
+      },
+    });
+
+    return ok(
+      result.rows.map((row) => ({
+        id: row.id,
+        slug: row.slug,
+        title: row.title,
+        category: row.category,
+        subtype: row.subtype,
+        teaser: row.teaser,
+        summary: row.summary,
+        score: row.score,
+        classification: row.score_classification,
+        scoreExplanation: row.score_explanation,
+        status: row.status,
+        county: row.county_name,
+        countySlug: row.county_slug,
+        city: row.city_name,
+        state: row.state_abbreviation,
+        industry: row.industry_name,
+        propertyType: row.property_type,
+        fundingType: row.funding_type,
+        estimatedValueMin: row.estimated_value_min,
+        estimatedValueMax: row.estimated_value_max,
+        capitalRequiredMin: row.capital_required_min,
+        capitalRequiredMax: row.capital_required_max,
+        closingDate: row.closing_date,
+        isClosingSoon: row.is_closing_soon,
+        isExpired: row.is_expired,
+        isFeatured: row.is_featured,
+        isSample: row.is_sample,
+        verificationStatus: row.verification_status,
+        dateVerified: row.date_verified,
+        publishedAt: row.published_at,
+        minimumAccessRank: row.minimum_access_rank,
+        isLocked: row.is_locked,
+      })),
+      {
+        count: result.totalCount,
+        hasMore: result.hasMore,
+        nextCursor: result.nextCursor,
+        droppedFilters: result.droppedFilters,
+        plan: viewer.planCode,
+      },
+      { headers: rateLimitHeaders(limit) },
+    );
+  },
+);

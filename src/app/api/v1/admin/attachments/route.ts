@@ -110,7 +110,11 @@ export const POST = withErrorHandling(
 
     const rankValue = form.get('minimumAccessRank');
     const minimumAccessRank = Number(rankValue ?? 0);
-    if (!Number.isInteger(minimumAccessRank) || minimumAccessRank < 0 || minimumAccessRank > 100) {
+    if (
+      !Number.isInteger(minimumAccessRank) ||
+      minimumAccessRank < 0 ||
+      minimumAccessRank > 100
+    ) {
       return apiError('bad_request', 'minimumAccessRank must be 0–100.');
     }
 

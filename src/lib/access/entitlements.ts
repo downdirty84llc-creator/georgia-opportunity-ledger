@@ -131,10 +131,7 @@ function needsAuth(action: string): Decision {
   };
 }
 
-function needsUpgrade(
-  requiredPlan: PlanCode,
-  capability: string,
-): Decision {
+function needsUpgrade(requiredPlan: PlanCode, capability: string): Decision {
   return {
     allowed: false,
     reason: 'upgrade_required',
@@ -292,10 +289,7 @@ export function canExportCsv(viewer: Viewer): Decision {
   return ALLOWED;
 }
 
-export function canSaveSearch(
-  viewer: Viewer,
-  currentCount: number,
-): Decision {
+export function canSaveSearch(viewer: Viewer, currentCount: number): Decision {
   if (!viewer.isAuthenticated) return needsAuth('save a search');
   if (viewer.accountStatus !== 'active') return suspended('saved searches');
 

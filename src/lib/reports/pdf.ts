@@ -27,7 +27,8 @@ interface Line {
 }
 
 export interface ReportBlock {
-  type: 'title' | 'heading' | 'subheading' | 'paragraph' | 'keyValue' | 'divider';
+  type:
+    'title' | 'heading' | 'subheading' | 'paragraph' | 'keyValue' | 'divider';
   text?: string;
   label?: string;
   value?: string;
@@ -67,19 +68,21 @@ function wrap(text: string, size: number, font: FontName): string[] {
 
 /** Escapes the three characters that are special inside a PDF string literal. */
 function escapePdfText(text: string): string {
-  return text
-    .replace(/\\/g, '\\\\')
-    .replace(/\(/g, '\\(')
-    .replace(/\)/g, '\\)')
-    // Characters outside WinAnsi would need an embedded font; replacing the
-    // handful that appear in editorial copy keeps the output readable.
-    .replace(/[‘’]/g, "'")
-    .replace(/[“”]/g, '"')
-    .replace(/—/g, '--')
-    .replace(/–/g, '-')
-    .replace(/…/g, '...')
-    // eslint-disable-next-line no-control-regex
-    .replace(/[^\x20-\x7E]/g, '');
+  return (
+    text
+      .replace(/\\/g, '\\\\')
+      .replace(/\(/g, '\\(')
+      .replace(/\)/g, '\\)')
+      // Characters outside WinAnsi would need an embedded font; replacing the
+      // handful that appear in editorial copy keeps the output readable.
+      .replace(/[‘’]/g, "'")
+      .replace(/[“”]/g, '"')
+      .replace(/—/g, '--')
+      .replace(/–/g, '-')
+      .replace(/…/g, '...')
+      // eslint-disable-next-line no-control-regex
+      .replace(/[^\x20-\x7E]/g, '')
+  );
 }
 
 function blocksToLines(blocks: readonly ReportBlock[]): Line[] {
@@ -145,7 +148,11 @@ function paginate(lines: readonly Line[]): Line[][] {
   return pages.length > 0 ? pages : [[]];
 }
 
-function contentStream(lines: readonly Line[], pageNumber: number, pageCount: number): string {
+function contentStream(
+  lines: readonly Line[],
+  pageNumber: number,
+  pageCount: number,
+): string {
   const parts: string[] = ['BT'];
   let y = PAGE_HEIGHT - MARGIN;
   let currentFont = '';
@@ -318,7 +325,11 @@ export function reportToBlocks(report: ReportForPdf): ReportBlock[] {
         value: `${opportunity.score} (${opportunity.classification.replace(/_/g, ' ')})`,
       });
       if (opportunity.county) {
-        blocks.push({ type: 'keyValue', label: 'County', value: opportunity.county });
+        blocks.push({
+          type: 'keyValue',
+          label: 'County',
+          value: opportunity.county,
+        });
       }
       if (opportunity.closingDate) {
         blocks.push({

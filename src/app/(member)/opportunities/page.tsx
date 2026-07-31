@@ -3,13 +3,12 @@ import Link from 'next/link';
 
 import { OpportunityCard } from '@/components/opportunities/opportunity-card';
 import { SaveSearchButton } from '@/components/opportunities/save-search-button';
+import { ButtonLink, EmptyState, Pill, cx } from '@/components/ui/primitives';
 import {
-  ButtonLink,
-  EmptyState,
-  Pill,
-  cx,
-} from '@/components/ui/primitives';
-import { canExportCsv, canSaveSearch, canUseAdvancedFilters } from '@/lib/access/entitlements';
+  canExportCsv,
+  canSaveSearch,
+  canUseAdvancedFilters,
+} from '@/lib/access/entitlements';
 import { getSessionContext } from '@/lib/auth/session';
 import { createServerSupabaseClient } from '@/lib/db/server';
 import { titleCase } from '@/lib/format';
@@ -35,7 +34,8 @@ function flatten(
   const flat: Record<string, string> = {};
   for (const [key, value] of Object.entries(params)) {
     if (typeof value === 'string') flat[key] = value;
-    else if (Array.isArray(value) && value[0] !== undefined) flat[key] = value.join(',');
+    else if (Array.isArray(value) && value[0] !== undefined)
+      flat[key] = value.join(',');
   }
   return flat;
 }
@@ -158,7 +158,7 @@ export default async function OpportunitiesPage({ searchParams }: PageProps) {
                     className="rounded border-ink-300"
                   />
                   <span className="flex-1">{facet.label}</span>
-                  <span className="text-xs text-ink-400 tabular-nums">
+                  <span className="text-xs tabular-nums text-ink-500">
                     {facet.count}
                   </span>
                 </label>
@@ -169,7 +169,7 @@ export default async function OpportunitiesPage({ searchParams }: PageProps) {
           <label className="mt-5 block text-sm font-medium" htmlFor="minScore">
             Minimum score{' '}
             {!advanced.allowed ? (
-              <span className="font-normal text-ink-400">(Detailed)</span>
+              <span className="font-normal text-ink-500">(Detailed)</span>
             ) : null}
           </label>
           <input
@@ -184,10 +184,13 @@ export default async function OpportunitiesPage({ searchParams }: PageProps) {
             className="mt-1 w-full rounded-lg border border-ink-300 px-3 py-2 text-sm disabled:bg-ink-50 disabled:text-ink-400"
           />
 
-          <label className="mt-4 block text-sm font-medium" htmlFor="capitalMax">
+          <label
+            className="mt-4 block text-sm font-medium"
+            htmlFor="capitalMax"
+          >
             Capital available{' '}
             {!advanced.allowed ? (
-              <span className="font-normal text-ink-400">(Detailed)</span>
+              <span className="font-normal text-ink-500">(Detailed)</span>
             ) : null}
           </label>
           <input

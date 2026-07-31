@@ -21,11 +21,7 @@ import { isProduction } from '@/lib/env';
  * attachments instead of waving them through.
  */
 
-export type ScanVerdict =
-  | 'clean'
-  | 'infected'
-  | 'failed'
-  | 'skipped';
+export type ScanVerdict = 'clean' | 'infected' | 'failed' | 'skipped';
 
 export interface ScanOutcome {
   verdict: ScanVerdict;
@@ -43,7 +39,8 @@ export interface ScannerConfig {
 
 export function scannerConfig(): ScannerConfig {
   const url = process.env.FILE_SCANNER_URL ?? '';
-  const declared = process.env.FILE_SCANNER_PROVIDER ?? (url ? 'clamav' : 'none');
+  const declared =
+    process.env.FILE_SCANNER_PROVIDER ?? (url ? 'clamav' : 'none');
 
   return {
     provider: declared === 'clamav' && url ? 'clamav' : 'none',
@@ -80,7 +77,9 @@ async function scanWithClamav(
       method: 'POST',
       body: form,
       signal: controller.signal,
-      headers: config.apiKey ? { Authorization: `Bearer ${config.apiKey}` } : {},
+      headers: config.apiKey
+        ? { Authorization: `Bearer ${config.apiKey}` }
+        : {},
     });
 
     const body = (await response.text()).slice(0, 500);

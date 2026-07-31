@@ -73,7 +73,10 @@ export default async function FundingPage() {
         </p>
         <div className="mt-7 flex flex-wrap gap-3">
           <ButtonLink href="/pricing">See membership plans</ButtonLink>
-          <ButtonLink href="/opportunities?category=business_funding" variant="secondary">
+          <ButtonLink
+            href="/opportunities?category=business_funding"
+            variant="secondary"
+          >
             Browse funding records
           </ButtonLink>
         </div>
@@ -93,7 +96,8 @@ export default async function FundingPage() {
                 {item.body}
               </p>
               <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900">
-                <strong className="font-semibold">Watch for:</strong> {item.watch}
+                <strong className="font-semibold">Watch for:</strong>{' '}
+                {item.watch}
               </p>
             </Card>
           ))}
@@ -145,7 +149,8 @@ export default async function FundingPage() {
                 <li key={item.id} className="px-5 py-3">
                   <p className="text-sm font-medium">{item.title}</p>
                   <p className="mt-0.5 text-xs text-ink-500">
-                    {item.county ?? 'Georgia'} · {formatDeadline(item.closingDate)}
+                    {item.county ?? 'Georgia'} ·{' '}
+                    {formatDeadline(item.closingDate)}
                   </p>
                 </li>
               ))}

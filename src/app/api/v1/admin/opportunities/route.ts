@@ -11,9 +11,7 @@ import {
   withErrorHandling,
 } from '@/lib/http/responses';
 import { roleMayPerform } from '@/lib/opportunities/workflow';
-import {
-  OPPORTUNITY_CATEGORIES,
-} from '@/lib/search/filters';
+import { OPPORTUNITY_CATEGORIES } from '@/lib/search/filters';
 
 export const dynamic = 'force-dynamic';
 

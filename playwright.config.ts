@@ -14,6 +14,25 @@ export default defineConfig({
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
   },
+  /**
+   * An escape hatch for environments that already have a browser but not the
+   * exact build this Playwright version would download — CI images, sandboxes,
+   * anywhere `playwright install` is not the right answer. Unset, Playwright
+   * resolves its own browser as usual.
+   */
+  ...(process.env.PLAYWRIGHT_CHROMIUM_PATH
+    ? {
+        use: {
+          baseURL,
+          trace: 'on-first-retry' as const,
+          screenshot: 'only-on-failure' as const,
+          launchOptions: {
+            executablePath: process.env.PLAYWRIGHT_CHROMIUM_PATH,
+          },
+        },
+      }
+    : {}),
+
   projects: [
     { name: 'desktop-chrome', use: { ...devices['Desktop Chrome'] } },
     { name: 'iphone', use: { ...devices['iPhone 14'] } },

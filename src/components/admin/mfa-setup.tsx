@@ -198,10 +198,8 @@ export function MfaSetup({
               </div>
             </li>
             <li>
-              <strong className="font-semibold">
-                Cannot scan?
-              </strong>{' '}
-              Enter this key manually:
+              <strong className="font-semibold">Cannot scan?</strong> Enter this
+              key manually:
               <code className="mt-1 block break-all rounded bg-ink-50 px-2 py-1 font-mono text-xs">
                 {secret}
               </code>
@@ -244,8 +242,8 @@ export function MfaSetup({
 
           <p className="mt-4 text-xs text-ink-500">
             Store the manual key somewhere safe. It is the only way to move your
-            second factor to a new device without a super administrator resetting
-            it for you.
+            second factor to a new device without a super administrator
+            resetting it for you.
           </p>
         </>
       )}

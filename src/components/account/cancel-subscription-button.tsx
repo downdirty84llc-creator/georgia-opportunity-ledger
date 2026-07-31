@@ -24,7 +24,9 @@ export function CancelSubscriptionButton() {
     setBusy(true);
     setIsError(false);
     try {
-      const response = await fetch('/api/v1/billing/cancel', { method: 'POST' });
+      const response = await fetch('/api/v1/billing/cancel', {
+        method: 'POST',
+      });
       const payload = await response.json().catch(() => null);
 
       if (!response.ok) {
@@ -77,7 +79,9 @@ export function CancelSubscriptionButton() {
     <div className="w-full rounded-lg border border-ink-300 bg-ink-50 p-4">
       <p className="text-sm font-semibold">Cancel your subscription?</p>
       <ul className="mt-2 space-y-1 text-sm text-ink-700">
-        <li>Your access continues to the end of the period you have paid for.</li>
+        <li>
+          Your access continues to the end of the period you have paid for.
+        </li>
         <li>Your saved opportunities, notes and searches are all kept.</li>
         <li>Your account stays open at the free tier.</li>
         <li>You can resubscribe at any time.</li>

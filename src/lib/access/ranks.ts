@@ -187,7 +187,8 @@ export function parsePlanFeatures(
     fallback: T,
   ): T => {
     const value = doc[key];
-    return typeof value === 'string' && (allowed as readonly string[]).includes(value)
+    return typeof value === 'string' &&
+      (allowed as readonly string[]).includes(value)
       ? (value as T)
       : fallback;
   };
@@ -197,7 +198,10 @@ export function parsePlanFeatures(
       'savedOpportunityLimit',
       defaults.savedOpportunityLimit,
     ),
-    savedSearchLimit: nullableInt('savedSearchLimit', defaults.savedSearchLimit),
+    savedSearchLimit: nullableInt(
+      'savedSearchLimit',
+      defaults.savedSearchLimit,
+    ),
     csvExport: bool('csvExport', defaults.csvExport),
     immediateAlerts: bool('immediateAlerts', defaults.immediateAlerts),
     opportunityDetail: oneOf(
@@ -228,6 +232,7 @@ export function parsePlanFeatures(
       'completeDatabaseAccess',
       defaults.completeDatabaseAccess,
     ),
-    maxPageSize: nullableInt('maxPageSize', defaults.maxPageSize) ?? defaults.maxPageSize,
+    maxPageSize:
+      nullableInt('maxPageSize', defaults.maxPageSize) ?? defaults.maxPageSize,
   };
 }

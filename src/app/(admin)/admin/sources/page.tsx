@@ -39,16 +39,28 @@ export default async function AdminSourcesPage() {
           />
         </div>
       ) : (
-        <div className="mt-8 surface overflow-x-auto">
+        <div className="surface mt-8 overflow-x-auto">
           <table className="min-w-[880px] text-sm">
             <thead>
               <tr className="border-b border-ink-200 bg-ink-50 text-left">
-                <th scope="col" className="px-4 py-3 font-semibold">Source</th>
-                <th scope="col" className="px-4 py-3 font-semibold">Type</th>
-                <th scope="col" className="px-4 py-3 font-semibold">Reliability</th>
-                <th scope="col" className="px-4 py-3 font-semibold">Cadence</th>
-                <th scope="col" className="px-4 py-3 font-semibold">Last checked</th>
-                <th scope="col" className="px-4 py-3 font-semibold">Automation</th>
+                <th scope="col" className="px-4 py-3 font-semibold">
+                  Source
+                </th>
+                <th scope="col" className="px-4 py-3 font-semibold">
+                  Type
+                </th>
+                <th scope="col" className="px-4 py-3 font-semibold">
+                  Reliability
+                </th>
+                <th scope="col" className="px-4 py-3 font-semibold">
+                  Cadence
+                </th>
+                <th scope="col" className="px-4 py-3 font-semibold">
+                  Last checked
+                </th>
+                <th scope="col" className="px-4 py-3 font-semibold">
+                  Automation
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -57,7 +69,10 @@ export default async function AdminSourcesPage() {
                   row.is_active &&
                   (!row.next_check_at || new Date(row.next_check_at) <= now);
                 return (
-                  <tr key={row.id} className="border-b border-ink-100 last:border-0">
+                  <tr
+                    key={row.id}
+                    className="border-b border-ink-100 last:border-0"
+                  >
                     <td className="max-w-[300px] px-4 py-3">
                       <a
                         href={row.website_url}
@@ -78,7 +93,9 @@ export default async function AdminSourcesPage() {
                       {row.reliability_score} / 15
                     </td>
                     <td className="px-4 py-3 text-ink-600">
-                      {row.update_frequency ? titleCase(row.update_frequency) : '—'}
+                      {row.update_frequency
+                        ? titleCase(row.update_frequency)
+                        : '—'}
                     </td>
                     <td className="px-4 py-3 text-ink-600">
                       {formatDate(row.last_checked_at)}

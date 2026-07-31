@@ -20,9 +20,7 @@ function required(name: string, value: string | undefined): string {
 export const publicEnv = {
   siteUrl: process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000',
   environment: (process.env.NEXT_PUBLIC_ENVIRONMENT ?? 'development') as
-    | 'development'
-    | 'staging'
-    | 'production',
+    'development' | 'staging' | 'production',
   supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL ?? '',
   supabaseAnonKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '',
   stripePublishableKey: process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? '',
@@ -69,23 +67,26 @@ export function serverEnv(): ServerEnv {
       'SUPABASE_SERVICE_ROLE_KEY',
       process.env.SUPABASE_SERVICE_ROLE_KEY,
     ),
-    stripeSecretKey: required('STRIPE_SECRET_KEY', process.env.STRIPE_SECRET_KEY),
+    stripeSecretKey: required(
+      'STRIPE_SECRET_KEY',
+      process.env.STRIPE_SECRET_KEY,
+    ),
     stripeWebhookSecret: required(
       'STRIPE_WEBHOOK_SECRET',
       process.env.STRIPE_WEBHOOK_SECRET,
     ),
     emailProvider: (process.env.EMAIL_PROVIDER ?? 'console') as
-      | 'resend'
-      | 'postmark'
-      | 'console',
+      'resend' | 'postmark' | 'console',
     emailApiKey: process.env.EMAIL_API_KEY ?? '',
     emailFrom:
-      process.env.EMAIL_FROM ?? 'Georgia Opportunity Ledger <no-reply@localhost>',
+      process.env.EMAIL_FROM ??
+      'Georgia Opportunity Ledger <no-reply@localhost>',
     emailReplyTo: process.env.EMAIL_REPLY_TO ?? '',
     cronSecret: required('CRON_SECRET', process.env.CRON_SECRET),
     storageBuckets: {
       reports: process.env.SUPABASE_STORAGE_BUCKET_REPORTS ?? 'reports',
-      attachments: process.env.SUPABASE_STORAGE_BUCKET_ATTACHMENTS ?? 'attachments',
+      attachments:
+        process.env.SUPABASE_STORAGE_BUCKET_ATTACHMENTS ?? 'attachments',
       exports: process.env.SUPABASE_STORAGE_BUCKET_EXPORTS ?? 'exports',
     },
     maxUploadBytes: Number(process.env.MAX_UPLOAD_BYTES ?? 26_214_400),

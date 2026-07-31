@@ -7,6 +7,20 @@ const config: Config = {
     extend: {
       colors: {
         // Ledger palette: deep pine (Georgia forestry) + clay accent.
+        /**
+         * Contrast against white, for text (WCAG 1.4.3 wants 4.5:1 for body
+         * copy, 3:1 for large text and UI boundaries):
+         *
+         *   ink-300  2.3:1  borders and dividers only
+         *   ink-400  3.7:1  large text, icons, decorative — NOT body copy
+         *   ink-500  5.8:1  the lightest token safe for ordinary text
+         *   ink-600  7.9:1
+         *   ink-700+ 10:1 and above
+         *
+         * `text-ink-400` on a light surface fails AA and has done so twice;
+         * `tests/e2e/accessibility.spec.ts` now catches it. Reach for ink-500
+         * when the instinct is "this should look quieter".
+         */
         ink: {
           50: '#f5f7f7',
           100: '#e3e9e9',

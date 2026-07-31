@@ -1,5 +1,10 @@
 import { expect, test } from '@playwright/test';
 
+import {
+  skipIfEnvironmentIsDown,
+  skipWithoutDatabase,
+} from './support/environment';
+
 /**
  * Public-page smoke tests (spec 26).
  *
@@ -23,9 +28,13 @@ test.describe('public pages', () => {
 
   test('pricing page shows all four tiers and the comparison table', async ({
     page,
+    request,
   }) => {
+    await skipWithoutDatabase(request);
     await page.goto('/pricing');
-    await expect(page.getByRole('heading', { name: 'Membership plans' })).toBeVisible();
+    await expect(
+      page.getByRole('heading', { name: 'Membership plans' }),
+    ).toBeVisible();
     for (const plan of [
       'Free Preview',
       'Weekly Report',
@@ -49,7 +58,9 @@ test.describe('public pages', () => {
       page.getByRole('heading', { name: 'Terms of Service' }),
     ).toBeVisible();
     await page.goto('/legal/disclaimers');
-    await expect(page.getByText(/not a licensed real-estate broker/i)).toBeVisible();
+    await expect(
+      page.getByText(/not a licensed real-estate broker/i),
+    ).toBeVisible();
   });
 
   test('a signed-out visitor is redirected away from the member area', async ({
@@ -69,7 +80,10 @@ test.describe('public pages', () => {
   test('the opportunities API refuses oversized page requests gracefully', async ({
     request,
   }) => {
-    const response = await request.get('/api/v1/opportunities?limit=100');
+    const response = await request.get('/api/v1/opportunities?limit=100', {
+      failOnStatusCode: false,
+    });
+    skipIfEnvironmentIsDown(response.status(), '/api/v1/opportunities');
     expect(response.ok()).toBe(true);
     const payload = await response.json();
     // A signed-out caller is capped at the free page size even when asking
@@ -82,7 +96,9 @@ test.describe('public pages', () => {
   }) => {
     const response = await request.get(
       '/api/v1/opportunities/00000000-0000-4000-8000-000000000000',
+      { failOnStatusCode: false },
     );
+    skipIfEnvironmentIsDown(response.status(), '/api/v1/opportunities/{id}');
     expect(response.status()).toBe(404);
   });
 });

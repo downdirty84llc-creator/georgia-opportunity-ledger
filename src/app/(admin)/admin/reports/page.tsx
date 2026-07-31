@@ -29,7 +29,8 @@ export default async function AdminReportsPage() {
         <div>
           <h1 className="text-2xl sm:text-3xl">Reports</h1>
           <p className="mt-1 text-sm text-ink-600">
-            Drafting, approval, scheduling and distribution state for every report.
+            Drafting, approval, scheduling and distribution state for every
+            report.
           </p>
         </div>
         <NewReportButton />
@@ -45,22 +46,39 @@ export default async function AdminReportsPage() {
           </EmptyState>
         </div>
       ) : (
-        <div className="mt-8 surface overflow-x-auto">
+        <div className="surface mt-8 overflow-x-auto">
           <table className="min-w-[820px] text-sm">
             <thead>
               <tr className="border-b border-ink-200 bg-ink-50 text-left">
-                <th scope="col" className="px-4 py-3 font-semibold">Title</th>
-                <th scope="col" className="px-4 py-3 font-semibold">Type</th>
-                <th scope="col" className="px-4 py-3 font-semibold">Status</th>
-                <th scope="col" className="px-4 py-3 font-semibold">Tier</th>
-                <th scope="col" className="px-4 py-3 font-semibold">Published</th>
-                <th scope="col" className="px-4 py-3 font-semibold">Emailed</th>
-                <th scope="col" className="px-4 py-3 font-semibold">PDF</th>
+                <th scope="col" className="px-4 py-3 font-semibold">
+                  Title
+                </th>
+                <th scope="col" className="px-4 py-3 font-semibold">
+                  Type
+                </th>
+                <th scope="col" className="px-4 py-3 font-semibold">
+                  Status
+                </th>
+                <th scope="col" className="px-4 py-3 font-semibold">
+                  Tier
+                </th>
+                <th scope="col" className="px-4 py-3 font-semibold">
+                  Published
+                </th>
+                <th scope="col" className="px-4 py-3 font-semibold">
+                  Emailed
+                </th>
+                <th scope="col" className="px-4 py-3 font-semibold">
+                  PDF
+                </th>
               </tr>
             </thead>
             <tbody>
               {rows.map((row) => (
-                <tr key={row.id} className="border-b border-ink-100 last:border-0">
+                <tr
+                  key={row.id}
+                  className="border-b border-ink-100 last:border-0"
+                >
                   <td className="max-w-[300px] px-4 py-3">
                     <Link
                       href={`/admin/reports/${row.id}`}

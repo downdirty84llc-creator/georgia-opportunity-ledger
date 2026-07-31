@@ -91,7 +91,9 @@ export const GET = withErrorHandling(
     const serialized = serializeOpportunity(record, viewer);
 
     await track(
-      serialized.access.canViewFull ? 'opportunity_viewed' : 'locked_content_viewed',
+      serialized.access.canViewFull
+        ? 'opportunity_viewed'
+        : 'locked_content_viewed',
       {
         userId: viewer.userId,
         properties: {

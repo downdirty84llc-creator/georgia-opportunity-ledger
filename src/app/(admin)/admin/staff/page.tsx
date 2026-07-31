@@ -39,8 +39,8 @@ export default async function AdminStaffPage() {
           </li>
           <li>
             A reset does not sign them out, change their password, or affect
-            their member access. It clears the enrolled factor so they can
-            enrol again from a device they still have.
+            their member access. It clears the enrolled factor so they can enrol
+            again from a device they still have.
           </li>
           <li>
             Every reset is audited with your name, theirs, the factors removed

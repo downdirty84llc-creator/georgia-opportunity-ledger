@@ -40,9 +40,23 @@ const COLUMNS = [
       { href: '/legal/refunds', label: 'Refunds and cancellation' },
       { href: '/legal/disclaimers', label: 'Disclaimers' },
       { href: '/legal/cookies', label: 'Cookie policy' },
+      { href: '/legal/acceptable-use', label: 'Acceptable use' },
+      { href: '/legal/copyright', label: 'Copyright' },
+      { href: '/legal/accessibility', label: 'Accessibility' },
     ],
   },
 ];
+
+/**
+ * Every legal document must be reachable from the footer.
+ *
+ * `tests/unit/legal/documents.test.ts` asserts this against the document set,
+ * so adding a document without linking it fails the build rather than
+ * producing a page nobody can find.
+ */
+export const FOOTER_LEGAL_HREFS = COLUMNS.flatMap((column) =>
+  column.links.map((link) => link.href),
+).filter((href) => href.startsWith('/legal/'));
 
 export function SiteFooter() {
   return (

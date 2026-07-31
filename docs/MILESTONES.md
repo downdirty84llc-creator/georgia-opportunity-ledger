@@ -105,26 +105,70 @@ See `RUNBOOK.md` for the checklist.
 
 ## What is still not built
 
-1. **Stripe products, prices and the test-payment matrix.** Needs a Stripe
-   account; everything on our side is ready for it. The checkout endpoint
-   returns a clear conflict rather than failing inside Stripe when a price id
-   is missing, so this is safe to verify by trying it.
-2. **Legal review of all twelve documents.** A hard launch blocker. Each renders
-   an "awaiting legal review" banner until cleared.
-3. **A virus scanner to point the pipeline at.** The pipeline itself is built
-   (see below); production still needs a ClamAV endpoint in `FILE_SCANNER_URL`.
-   Until one exists, files store as `skipped` and a warning is logged in
-   production. That is a deployment task, not a code task.
+1. **Legal review of the nine documents that need counsel.** The hard launch
+   blocker, and the only remaining item nothing in this repository can move.
+   Each renders an "awaiting legal review" banner until cleared. The other
+   three — editorial standards, corrections, data sources — are statements of
+   our own practice and do not go to a lawyer; that split is pinned in
+   `tests/unit/legal/documents.test.ts` rather than left to memory.
+2. **A virus scanner endpoint in production.** The pipeline is built and
+   tested; `FILE_SCANNER_URL` needs to point at something.
+   `docker-compose.yml` runs one locally and the runbook has the EICAR
+   verification. Until it is set, files store as `skipped` and production logs
+   a warning on every upload.
+3. **The tier-by-tier test-payment matrix.** The live catalogue now exists and
+   `npm run stripe:setup` builds a test-mode one against a test key. What
+   remains is running a card through each tier and confirming the access rank
+   that results, which needs a deployed environment rather than more code.
 4. **High-fidelity design and brand sign-off** (milestone 1). A design
-   engagement, not a code artefact.
-5. **`/pricing` and `/support` remain server-rendered per request.** Both
+   engagement. The design _system_ is in better shape than it was — see the
+   contrast work below — but a brand direction is not a code artefact.
+5. **A human accessibility audit.** Automated rules run on every push and the
+   public pages are clean against WCAG 2.1 AA. That covers roughly a third of
+   real defects. The accessibility statement says so in those words rather
+   than claiming conformance we have not tested for.
+6. **`/pricing` and `/support` remain server-rendered per request.** Both
    genuinely personalise — pricing marks the plan you are on, support knows
-   whether you are signed in — so this is a deliberate exception rather than
-   the gap the previous entry described. `/georgia/[county]` is cached on
-   demand rather than prerendered, because prerendering 159 counties would put
-   the database on the build's critical path for pages that change weekly.
+   whether you are signed in — so this is a deliberate exception rather than a
+   gap. `/georgia/[county]` is cached on demand rather than prerendered,
+   because prerendering 159 counties would put the database on the build's
+   critical path for pages that change weekly.
 
-## Closed since the last revision
+## Closed in this revision
+
+**Stripe catalogue, and a reproducible way to build it.** The four products and
+six paid prices exist in live mode, keyed by `lookup_key`
+(`gol_weekly_monthly` and so on) and tagged with `plan_code` metadata.
+`scripts/stripe-setup.ts` creates or reuses them and writes the ids onto
+`subscription_plans`; the mode is whatever the key you hand it belongs to, so
+the same command builds the test catalogue. No price id is committed — an id is
+only meaningful in the mode that minted it.
+
+**Two legal documents that were missing.** The documentation claimed twelve and
+ten shipped, for two commits, with nothing noticing. The acceptable use policy
+and accessibility statement are now written, linked from the footer, and the
+count is pinned in a test.
+
+**The spec 26 security list, as tests that run.** Unauthorised API access,
+direct URL access, identifier enumeration, injection, webhook forgery, upload
+attacks and the cron-secret boundary — 62 checks against a built application.
+The tier-by-tier checks that need seeded accounts live in
+`entitlements.spec.ts` and _skip_ when the seed is absent rather than passing
+vacuously.
+
+**WCAG 2.1 AA checks, and the four defects they found.** `text-ink-400` at
+3.7:1 on white failed AA everywhere it carried body copy; three empty states
+rendered a `<p>` directly inside a `<dl>`. Both are fixed, the contrast ladder
+is documented in `tailwind.config.ts`, and every public page is now clean.
+
+**Continuous integration.** Types, lint, formatting and 177 unit tests;
+migrations applied from nothing against a real Postgres, twice, to prove the
+reference seed is idempotent; a production build; and the security and
+accessibility suites against a built app. `format:check` was already in the
+scripts but could never pass — prettier has no SQL parser — which is why it had
+never run.
+
+## Closed in the previous revision
 
 **Public landing pages are cached (spec 23).** The marketing layout rendered a
 session-aware header, and reading the session means reading cookies, which made

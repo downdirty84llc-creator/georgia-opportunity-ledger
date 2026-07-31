@@ -1,6 +1,11 @@
 import type { Metadata } from 'next';
 
-import { ButtonLink, Card, Meter, SectionHeading } from '@/components/ui/primitives';
+import {
+  ButtonLink,
+  Card,
+  Meter,
+  SectionHeading,
+} from '@/components/ui/primitives';
 import { CLASSIFICATION_BANDS, SCORE_MAXIMA } from '@/lib/scoring/score';
 
 export const metadata: Metadata = {
@@ -64,7 +69,8 @@ const WORKFLOW = [
   {
     role: 'Researcher',
     can: 'Creates draft records, attaches sources and internal notes, submits for review.',
-    cannot: 'Cannot publish, cannot change a score, cannot change who may see a record.',
+    cannot:
+      'Cannot publish, cannot change a score, cannot change who may see a record.',
   },
   {
     role: 'Reviewer',
@@ -166,7 +172,7 @@ export default function HowItWorksPage() {
           ))}
         </div>
 
-        <div className="mt-8 surface p-5">
+        <div className="surface mt-8 p-5">
           <h3 className="text-base font-semibold">Reviewer adjustment</h3>
           <p className="mt-2 text-sm leading-relaxed text-ink-700">
             A reviewer may move the calculated total by up to 25 points in
@@ -179,10 +185,7 @@ export default function HowItWorksPage() {
       </section>
 
       <section className="mt-14">
-        <SectionHeading
-          eyebrow="Classification"
-          title="What the bands mean"
-        />
+        <SectionHeading eyebrow="Classification" title="What the bands mean" />
         <div className="surface overflow-x-auto">
           <table className="min-w-[520px] text-sm">
             <thead>

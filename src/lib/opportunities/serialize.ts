@@ -106,7 +106,8 @@ export function serializeOpportunity(
   const industry = relation(row, 'industries');
 
   const summary = String(row.summary ?? '');
-  const teaser = summary.length <= 180 ? summary : `${summary.slice(0, 177)}...`;
+  const teaser =
+    summary.length <= 180 ? summary : `${summary.slice(0, 177)}...`;
 
   const base: SerializedOpportunity = {
     id: String(row.id),

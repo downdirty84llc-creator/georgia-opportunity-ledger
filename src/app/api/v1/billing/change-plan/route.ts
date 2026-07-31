@@ -77,7 +77,8 @@ export const POST = withErrorHandling(
       .eq('is_active', true)
       .maybeSingle();
 
-    if (!targetPlan) return apiError('not_found', 'That plan is not available.');
+    if (!targetPlan)
+      return apiError('not_found', 'That plan is not available.');
 
     const priceId = priceIdFor(
       {
@@ -122,7 +123,9 @@ export const POST = withErrorHandling(
     });
 
     await track(
-      direction === 'upgrade' ? 'subscription_upgraded' : 'subscription_downgraded',
+      direction === 'upgrade'
+        ? 'subscription_upgraded'
+        : 'subscription_downgraded',
       {
         userId: viewer.userId,
         properties: {

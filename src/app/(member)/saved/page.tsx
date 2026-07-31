@@ -78,7 +78,7 @@ export default async function SavedPage() {
           </EmptyState>
         </div>
       ) : (
-        <div className="mt-8 surface overflow-x-auto">
+        <div className="surface mt-8 overflow-x-auto">
           <table className="min-w-[820px] text-sm">
             <caption className="sr-only">Your saved opportunities</caption>
             <thead>
@@ -127,12 +127,16 @@ export default async function SavedPage() {
                       )}
                       <div className="mt-1 flex flex-wrap items-center gap-1.5">
                         {opportunity ? (
-                          <Pill tone="muted">{titleCase(opportunity.category)}</Pill>
+                          <Pill tone="muted">
+                            {titleCase(opportunity.category)}
+                          </Pill>
                         ) : null}
                         {changedSinceSaved ? (
                           <Pill tone="warning">Updated since you saved it</Pill>
                         ) : null}
-                        {locked ? <Pill tone="muted">Above your plan</Pill> : null}
+                        {locked ? (
+                          <Pill tone="muted">Above your plan</Pill>
+                        ) : null}
                         {opportunity?.is_expired ? (
                           <Pill tone="muted">Closed</Pill>
                         ) : null}

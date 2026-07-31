@@ -49,31 +49,44 @@ export default async function AdminAuditPage() {
           />
         </div>
       ) : (
-        <div className="mt-8 surface overflow-x-auto">
+        <div className="surface mt-8 overflow-x-auto">
           <table className="min-w-[820px] text-sm">
             <thead>
               <tr className="border-b border-ink-200 bg-ink-50 text-left">
-                <th scope="col" className="px-4 py-3 font-semibold">Action</th>
-                <th scope="col" className="px-4 py-3 font-semibold">Entity</th>
-                <th scope="col" className="px-4 py-3 font-semibold">Change</th>
-                <th scope="col" className="px-4 py-3 font-semibold">When</th>
+                <th scope="col" className="px-4 py-3 font-semibold">
+                  Action
+                </th>
+                <th scope="col" className="px-4 py-3 font-semibold">
+                  Entity
+                </th>
+                <th scope="col" className="px-4 py-3 font-semibold">
+                  Change
+                </th>
+                <th scope="col" className="px-4 py-3 font-semibold">
+                  When
+                </th>
               </tr>
             </thead>
             <tbody>
               {rows.map((row) => (
-                <tr key={row.id} className="border-b border-ink-100 align-top last:border-0">
+                <tr
+                  key={row.id}
+                  className="border-b border-ink-100 align-top last:border-0"
+                >
                   <td className="px-4 py-3 font-medium">{row.action}</td>
                   <td className="px-4 py-3 text-ink-600">
                     {row.entity_type}
                     {row.entity_id ? (
-                      <span className="block font-mono text-xs text-ink-400">
+                      <span className="block font-mono text-xs text-ink-500">
                         {String(row.entity_id).slice(0, 8)}…
                       </span>
                     ) : null}
                   </td>
                   <td className="max-w-[380px] px-4 py-3">
                     <code className="block overflow-x-auto whitespace-pre-wrap break-all text-xs text-ink-600">
-                      {JSON.stringify(row.new_values ?? row.previous_values ?? {})}
+                      {JSON.stringify(
+                        row.new_values ?? row.previous_values ?? {},
+                      )}
                     </code>
                   </td>
                   <td className="whitespace-nowrap px-4 py-3 text-ink-500">

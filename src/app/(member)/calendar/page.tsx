@@ -129,15 +129,14 @@ export default async function CalendarPage() {
               <section key={horizon.key}>
                 <h2 className="text-sm font-semibold uppercase tracking-[0.1em] text-ink-500">
                   {horizon.label}
-                  <span className="ml-2 font-normal text-ink-400">
+                  <span className="ml-2 font-normal text-ink-500">
                     {bucket.length}
                   </span>
                 </h2>
                 <ul className="surface mt-3 divide-y divide-ink-100">
                   {bucket.map((entry) => {
                     const locked =
-                      viewer.accessRank <
-                      entry.opportunity.minimum_access_rank;
+                      viewer.accessRank < entry.opportunity.minimum_access_rank;
                     return (
                       <li
                         key={entry.opportunity.id}

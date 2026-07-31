@@ -1,7 +1,10 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import type { Viewer } from '@/lib/access/entitlements';
-import { canUseAdvancedFilters, resolvePageSize } from '@/lib/access/entitlements';
+import {
+  canUseAdvancedFilters,
+  resolvePageSize,
+} from '@/lib/access/entitlements';
 import {
   advancedFiltersInUse,
   decodeCursor,
@@ -129,7 +132,9 @@ export async function searchOpportunities(
     totalCount: rows[0]?.total_count ?? 0,
     hasMore,
     nextCursor:
-      hasMore && last ? encodeCursor({ value: last.sort_key, id: last.id }) : null,
+      hasMore && last
+        ? encodeCursor({ value: last.sort_key, id: last.id })
+        : null,
     droppedFilters,
     appliedFilters: effective,
   };
@@ -212,7 +217,9 @@ export async function loadOpportunityDetail(
   if (record.source_id) {
     const { data: source } = await supabase
       .from('public_sources')
-      .select('name, organization_name, source_type, website_url, reliability_score')
+      .select(
+        'name, organization_name, source_type, website_url, reliability_score',
+      )
       .eq('id', record.source_id as string)
       .maybeSingle();
     record.sources = source ?? null;

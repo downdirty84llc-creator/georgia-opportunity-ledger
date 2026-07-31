@@ -10,7 +10,10 @@ import {
   SectionHeading,
 } from '@/components/ui/primitives';
 import { getSessionContext } from '@/lib/auth/session';
-import { needsPaymentAttention, paidAccessEndsAt } from '@/lib/billing/subscription';
+import {
+  needsPaymentAttention,
+  paidAccessEndsAt,
+} from '@/lib/billing/subscription';
 import { createServerSupabaseClient } from '@/lib/db/server';
 import { formatDate, formatDeadline, pluralize } from '@/lib/format';
 import { loadIndicatorPreviews } from '@/lib/public-data';
@@ -43,35 +46,42 @@ export default async function DashboardPage() {
 
   const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
 
-  const [recommended, closing, savedCount, newThisWeek, highScore, indicators, alerts] =
-    await Promise.all([
-      searchOpportunities(supabase, viewer, preferenceFilters),
-      searchOpportunities(
-        supabase,
-        viewer,
-        parseStoredFilters({ closingSoon: true, sort: 'closing_soon', limit: 5 }),
-      ),
-      supabase
-        .from('saved_opportunities')
-        .select('id', { count: 'exact', head: true })
-        .eq('user_id', viewer.userId),
-      supabase
-        .from('opportunity_previews')
-        .select('id', { count: 'exact', head: true })
-        .gte('published_at', weekAgo.toISOString()),
-      supabase
-        .from('opportunity_previews')
-        .select('id', { count: 'exact', head: true })
-        .gte('score', 85)
-        .eq('is_expired', false),
-      loadIndicatorPreviews(5),
-      supabase
-        .from('notifications')
-        .select('id, title, message, action_url, sent_at, is_read')
-        .eq('user_id', viewer.userId)
-        .order('sent_at', { ascending: false })
-        .limit(5),
-    ]);
+  const [
+    recommended,
+    closing,
+    savedCount,
+    newThisWeek,
+    highScore,
+    indicators,
+    alerts,
+  ] = await Promise.all([
+    searchOpportunities(supabase, viewer, preferenceFilters),
+    searchOpportunities(
+      supabase,
+      viewer,
+      parseStoredFilters({ closingSoon: true, sort: 'closing_soon', limit: 5 }),
+    ),
+    supabase
+      .from('saved_opportunities')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', viewer.userId),
+    supabase
+      .from('opportunity_previews')
+      .select('id', { count: 'exact', head: true })
+      .gte('published_at', weekAgo.toISOString()),
+    supabase
+      .from('opportunity_previews')
+      .select('id', { count: 'exact', head: true })
+      .gte('score', 85)
+      .eq('is_expired', false),
+    loadIndicatorPreviews(5),
+    supabase
+      .from('notifications')
+      .select('id, title, message, action_url, sent_at, is_read')
+      .eq('user_id', viewer.userId)
+      .order('sent_at', { ascending: false })
+      .limit(5),
+  ]);
 
   const accessEnds = paidAccessEndsAt(session.subscription);
   const paymentAttention = needsPaymentAttention(session.subscription);
@@ -80,7 +90,11 @@ export default async function DashboardPage() {
     : 'Good to see you.';
 
   const metrics = [
-    { label: 'New this week', value: newThisWeek.count ?? 0, href: '/opportunities?sort=newest' },
+    {
+      label: 'New this week',
+      value: newThisWeek.count ?? 0,
+      href: '/opportunities?sort=newest',
+    },
     {
       label: 'Closing soon',
       value: closing.totalCount,
@@ -137,7 +151,9 @@ export default async function DashboardPage() {
               href={metric.href}
               className="surface p-4 transition-colors hover:border-ink-400"
             >
-              <p className="text-2xl font-semibold tabular-nums">{metric.value}</p>
+              <p className="text-2xl font-semibold tabular-nums">
+                {metric.value}
+              </p>
               <p className="mt-1 text-sm text-ink-600">{metric.label}</p>
             </Link>
           ))}
@@ -174,7 +190,8 @@ export default async function DashboardPage() {
                       teaser: row.teaser,
                       summary: row.summary,
                       score: row.score,
-                      classification: row.score_classification as ScoreClassification,
+                      classification:
+                        row.score_classification as ScoreClassification,
                       county: row.county_name,
                       city: row.city_name,
                       closingDate: row.closing_date,
@@ -300,11 +317,16 @@ export default async function DashboardPage() {
             )}
           </section>
 
-          {savedCount.count !== null && viewer.features.savedOpportunityLimit !== null ? (
+          {savedCount.count !== null &&
+          viewer.features.savedOpportunityLimit !== null ? (
             <p className="text-xs text-ink-500">
               You have saved {savedCount.count} of{' '}
               {viewer.features.savedOpportunityLimit}{' '}
-              {pluralize(viewer.features.savedOpportunityLimit, 'opportunity', 'opportunities')}{' '}
+              {pluralize(
+                viewer.features.savedOpportunityLimit,
+                'opportunity',
+                'opportunities',
+              )}{' '}
               available on your plan.
             </p>
           ) : null}

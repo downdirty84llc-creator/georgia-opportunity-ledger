@@ -68,7 +68,10 @@ export default async function CommercialPropertyPage() {
         </p>
         <div className="mt-7 flex flex-wrap gap-3">
           <ButtonLink href="/pricing">See membership plans</ButtonLink>
-          <ButtonLink href="/opportunities?category=commercial_property" variant="secondary">
+          <ButtonLink
+            href="/opportunities?category=commercial_property"
+            variant="secondary"
+          >
             Browse property records
           </ButtonLink>
         </div>
@@ -125,7 +128,7 @@ export default async function CommercialPropertyPage() {
                   className="inline-flex items-center gap-1.5 rounded-full border border-ink-200 bg-white px-3 py-1.5 text-sm text-ink-700 hover:border-ink-400"
                 >
                   {county.name}
-                  <span className="text-xs text-ink-400 tabular-nums">
+                  <span className="text-xs tabular-nums text-ink-500">
                     {county.count}
                   </span>
                 </Link>
@@ -143,7 +146,10 @@ export default async function CommercialPropertyPage() {
         />
         <ul className="surface divide-y divide-ink-100">
           {DUE_DILIGENCE.map((item) => (
-            <li key={item} className="px-5 py-4 text-sm leading-relaxed text-ink-700">
+            <li
+              key={item}
+              className="px-5 py-4 text-sm leading-relaxed text-ink-700"
+            >
               {item}
             </li>
           ))}
@@ -163,7 +169,11 @@ export default async function CommercialPropertyPage() {
           <ButtonLink href="/pricing" variant="secondary">
             Compare plans
           </ButtonLink>
-          <ButtonLink href="/sample-report" variant="ghost" className="text-white hover:bg-ink-800">
+          <ButtonLink
+            href="/sample-report"
+            variant="ghost"
+            className="text-white hover:bg-ink-800"
+          >
             Read a sample report
           </ButtonLink>
         </div>

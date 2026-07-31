@@ -46,7 +46,9 @@ export function formatMoneyRange(
       ? formatMoney(min)
       : `${formatCompactMoney(min)} – ${formatCompactMoney(max)}`;
   }
-  return hasMin ? `From ${formatCompactMoney(min)}` : `Up to ${formatCompactMoney(max)}`;
+  return hasMin
+    ? `From ${formatCompactMoney(min)}`
+    : `Up to ${formatCompactMoney(max)}`;
 }
 
 const dateFormatter = new Intl.DateTimeFormat('en-US', {

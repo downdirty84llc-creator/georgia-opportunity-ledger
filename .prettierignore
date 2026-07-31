@@ -1,0 +1,10 @@
+# Prettier has no SQL parser installed, and the migrations are written to be
+# read as SQL rather than reformatted by a JavaScript tool. `format:check`
+# used to include them and could therefore never pass.
+*.sql
+
+.next
+node_modules
+playwright-report
+test-results
+coverage

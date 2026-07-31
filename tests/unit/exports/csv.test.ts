@@ -65,7 +65,10 @@ describe('export composition', () => {
   });
 
   it('file names are sanitised', () => {
-    const name = exportFileName('../etc/passwd', new Date('2026-07-15T10:20:30Z'));
+    const name = exportFileName(
+      '../etc/passwd',
+      new Date('2026-07-15T10:20:30Z'),
+    );
     expect(name).toBe('etc-passwd-2026-07-15-10-20-30.csv');
   });
 });

@@ -42,11 +42,16 @@ export interface CsvColumn<T> {
   value: (row: T) => unknown;
 }
 
-export function toCsv<T>(rows: readonly T[], columns: readonly CsvColumn<T>[]): string {
+export function toCsv<T>(
+  rows: readonly T[],
+  columns: readonly CsvColumn<T>[],
+): string {
   const lines: string[] = [];
   lines.push(columns.map((column) => escapeCell(column.header)).join(','));
   for (const row of rows) {
-    lines.push(columns.map((column) => escapeCell(column.value(row))).join(','));
+    lines.push(
+      columns.map((column) => escapeCell(column.value(row))).join(','),
+    );
   }
   // CRLF per RFC 4180; Excel on Windows is the most common destination.
   return lines.join('\r\n') + '\r\n';
@@ -90,15 +95,30 @@ export function opportunityExportColumns(
     { header: 'City', value: (r) => r.city_name ?? '' },
     { header: 'Address', value: (r) => r.street_address ?? '' },
     { header: 'Summary', value: (r) => r.summary },
-    { header: 'Estimated value (min)', value: (r) => r.estimated_value_min ?? '' },
-    { header: 'Estimated value (max)', value: (r) => r.estimated_value_max ?? '' },
-    { header: 'Capital required (min)', value: (r) => r.capital_required_min ?? '' },
-    { header: 'Capital required (max)', value: (r) => r.capital_required_max ?? '' },
+    {
+      header: 'Estimated value (min)',
+      value: (r) => r.estimated_value_min ?? '',
+    },
+    {
+      header: 'Estimated value (max)',
+      value: (r) => r.estimated_value_max ?? '',
+    },
+    {
+      header: 'Capital required (min)',
+      value: (r) => r.capital_required_min ?? '',
+    },
+    {
+      header: 'Capital required (max)',
+      value: (r) => r.capital_required_max ?? '',
+    },
     { header: 'Closing date', value: (r) => r.closing_date ?? '' },
     { header: 'Date verified', value: (r) => r.date_verified ?? '' },
     { header: 'Verification status', value: (r) => r.verification_status },
     { header: 'Source URL', value: (r) => r.original_source_url },
-    { header: 'Recommended next action', value: (r) => r.recommended_next_action },
+    {
+      header: 'Recommended next action',
+      value: (r) => r.recommended_next_action,
+    },
     { header: 'Sample data', value: (r) => (r.is_sample ? 'yes' : 'no') },
     {
       header: 'Ledger link',

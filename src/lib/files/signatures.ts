@@ -34,7 +34,9 @@ function startsWith(bytes: Uint8Array, signature: readonly number[]): boolean {
 
 /** ASCII of the first `length` bytes, for the text formats. */
 function head(bytes: Uint8Array, length: number): string {
-  return String.fromCharCode(...bytes.subarray(0, Math.min(length, bytes.length)));
+  return String.fromCharCode(
+    ...bytes.subarray(0, Math.min(length, bytes.length)),
+  );
 }
 
 const PDF = [0x25, 0x50, 0x44, 0x46] as const; // %PDF
@@ -48,7 +50,8 @@ const ZIP = [0x50, 0x4b, 0x03, 0x04] as const; // xlsx is a zip container
  * Markup that a browser would execute if the file were ever served inline.
  * Checked on the text formats, where there is no signature to rely on.
  */
-const SCRIPTABLE = /<\s*(script|iframe|object|embed|svg|!doctype\s+html|html)\b/i;
+const SCRIPTABLE =
+  /<\s*(script|iframe|object|embed|svg|!doctype\s+html|html)\b/i;
 
 export interface SniffResult {
   ok: boolean;
@@ -119,6 +122,9 @@ export function sniffMimeType(
     }
 
     default:
-      return { ok: false, reason: `Files of type ${declared} are not accepted.` };
+      return {
+        ok: false,
+        reason: `Files of type ${declared} are not accepted.`,
+      };
   }
 }

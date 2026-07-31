@@ -3,10 +3,7 @@ import { z } from 'zod';
 
 import { createServerSupabaseClient } from '@/lib/db/server';
 import { publicEnv } from '@/lib/env';
-import {
-  checkRateLimit,
-  rateLimitIdentity,
-} from '@/lib/http/rate-limit';
+import { checkRateLimit, rateLimitIdentity } from '@/lib/http/rate-limit';
 import {
   ok,
   rateLimited,

@@ -74,16 +74,76 @@ interface SeedUser {
 }
 
 const SEED_USERS: SeedUser[] = [
-  { email: 'free.member@example.com', firstName: 'Frankie', lastName: 'Free', role: 'member', planCode: 'free' },
-  { email: 'weekly.member@example.com', firstName: 'Wendy', lastName: 'Weeks', role: 'member', planCode: 'weekly' },
-  { email: 'detailed.member@example.com', firstName: 'Dana', lastName: 'Detail', role: 'member', planCode: 'detailed' },
-  { email: 'premium.member@example.com', firstName: 'Priya', lastName: 'Prime', role: 'member', planCode: 'premium' },
-  { email: 'researcher@example.com', firstName: 'Ravi', lastName: 'Records', role: 'researcher', planCode: 'free' },
-  { email: 'reviewer@example.com', firstName: 'Renee', lastName: 'Review', role: 'reviewer', planCode: 'free' },
-  { email: 'editor@example.com', firstName: 'Eddie', lastName: 'Editor', role: 'editor', planCode: 'free' },
-  { email: 'support@example.com', firstName: 'Sam', lastName: 'Support', role: 'support_representative', planCode: 'free' },
-  { email: 'billing@example.com', firstName: 'Blair', lastName: 'Billing', role: 'billing_manager', planCode: 'free' },
-  { email: 'admin@example.com', firstName: 'Ada', lastName: 'Admin', role: 'super_administrator', planCode: 'free' },
+  {
+    email: 'free.member@example.com',
+    firstName: 'Frankie',
+    lastName: 'Free',
+    role: 'member',
+    planCode: 'free',
+  },
+  {
+    email: 'weekly.member@example.com',
+    firstName: 'Wendy',
+    lastName: 'Weeks',
+    role: 'member',
+    planCode: 'weekly',
+  },
+  {
+    email: 'detailed.member@example.com',
+    firstName: 'Dana',
+    lastName: 'Detail',
+    role: 'member',
+    planCode: 'detailed',
+  },
+  {
+    email: 'premium.member@example.com',
+    firstName: 'Priya',
+    lastName: 'Prime',
+    role: 'member',
+    planCode: 'premium',
+  },
+  {
+    email: 'researcher@example.com',
+    firstName: 'Ravi',
+    lastName: 'Records',
+    role: 'researcher',
+    planCode: 'free',
+  },
+  {
+    email: 'reviewer@example.com',
+    firstName: 'Renee',
+    lastName: 'Review',
+    role: 'reviewer',
+    planCode: 'free',
+  },
+  {
+    email: 'editor@example.com',
+    firstName: 'Eddie',
+    lastName: 'Editor',
+    role: 'editor',
+    planCode: 'free',
+  },
+  {
+    email: 'support@example.com',
+    firstName: 'Sam',
+    lastName: 'Support',
+    role: 'support_representative',
+    planCode: 'free',
+  },
+  {
+    email: 'billing@example.com',
+    firstName: 'Blair',
+    lastName: 'Billing',
+    role: 'billing_manager',
+    planCode: 'free',
+  },
+  {
+    email: 'admin@example.com',
+    firstName: 'Ada',
+    lastName: 'Admin',
+    role: 'super_administrator',
+    planCode: 'free',
+  },
 ];
 
 async function findUserByEmail(email: string): Promise<string | null> {
@@ -186,7 +246,9 @@ async function loadLookups(): Promise<LookupTables> {
   return {
     counties: new Map((counties.data ?? []).map((row) => [row.slug, row.id])),
     cities: new Map((cities.data ?? []).map((row) => [row.slug, row.id])),
-    industries: new Map((industries.data ?? []).map((row) => [row.slug, row.id])),
+    industries: new Map(
+      (industries.data ?? []).map((row) => [row.slug, row.id]),
+    ),
     sources: new Map((sources.data ?? []).map((row) => [row.name, row.id])),
     stateId: state.data?.id ?? '',
   };
@@ -221,13 +283,22 @@ const PROPERTY_SEEDS: PropertySeed[] = [
   {
     slug: 'sample-macon-distribution-warehouse-tax-sale',
     title: 'SAMPLE: 84,000 sq ft distribution warehouse — Bibb County tax sale',
-    county: 'bibb', city: 'macon',
+    county: 'bibb',
+    city: 'macon',
     summary:
       'A mid-1980s tilt-wall distribution building on 6.1 acres near the I-75/I-16 interchange, listed for the county tax sale after three years of delinquency. Dock-high doors on two sides, 24-foot clear height, and rail spur access that has not been used since 2019. The delinquency amount is a fraction of assessed value, which is what makes tax sales worth watching — but Georgia redemption rules apply and possession is not immediate.',
-    propertyType: 'warehouse', saleType: 'tax_sale',
-    startingBid: 210_000, buildingSqft: 84_000, lotAcres: 6.1, zoning: 'I-2',
-    capitalMin: 210_000, estimatedMin: 1_400_000, estimatedMax: 1_900_000,
-    daysToClose: 21, complexity: 'high', risk: 'high',
+    propertyType: 'warehouse',
+    saleType: 'tax_sale',
+    startingBid: 210_000,
+    buildingSqft: 84_000,
+    lotAcres: 6.1,
+    zoning: 'I-2',
+    capitalMin: 210_000,
+    estimatedMin: 1_400_000,
+    estimatedMax: 1_900_000,
+    daysToClose: 21,
+    complexity: 'high',
+    risk: 'high',
     riskSummary:
       'Tax-sale title with a twelve-month redemption right: the delinquent owner can reclaim by paying the bid plus premium. Two recorded liens survive per the county docket. Roof age is unknown; budget for replacement. No interior access before sale.',
     nextAction:
@@ -236,14 +307,24 @@ const PROPERTY_SEEDS: PropertySeed[] = [
   },
   {
     slug: 'sample-savannah-flex-portfolio-bank-owned',
-    title: 'SAMPLE: Three-building flex portfolio near Savannah port — bank owned',
-    county: 'chatham', city: 'garden-city',
+    title:
+      'SAMPLE: Three-building flex portfolio near Savannah port — bank owned',
+    county: 'chatham',
+    city: 'garden-city',
     summary:
       'A lender-owned portfolio of three small flex buildings totalling 41,000 sq ft, two miles from the Garden City terminal gates. Occupancy is 55% on short leases, which is the problem and the opportunity: port-adjacent flex space leases quickly when actively managed, and the seller is a bank that wants it gone this quarter.',
-    propertyType: 'flex', saleType: 'bank_owned',
-    askingPrice: 2_950_000, buildingSqft: 41_000, lotAcres: 4.2, zoning: 'PDI',
-    capitalMin: 600_000, estimatedMin: 3_600_000, estimatedMax: 4_300_000,
-    daysToClose: 45, complexity: 'moderate', risk: 'moderate',
+    propertyType: 'flex',
+    saleType: 'bank_owned',
+    askingPrice: 2_950_000,
+    buildingSqft: 41_000,
+    lotAcres: 4.2,
+    zoning: 'PDI',
+    capitalMin: 600_000,
+    estimatedMin: 3_600_000,
+    estimatedMax: 4_300_000,
+    daysToClose: 45,
+    complexity: 'moderate',
+    risk: 'moderate',
     riskSummary:
       'Deferred maintenance on two roofs, and one tenant is month-to-month at 40% of the rent roll. Bank sale is as-is with a tight diligence window.',
     nextAction:
@@ -253,13 +334,20 @@ const PROPERTY_SEEDS: PropertySeed[] = [
   {
     slug: 'sample-columbus-downtown-retail-development-authority',
     title: 'SAMPLE: Downtown Columbus retail block — development authority RFP',
-    county: 'muscogee', city: 'columbus',
+    county: 'muscogee',
+    city: 'columbus',
     summary:
       'The downtown development authority is seeking proposals for a city-owned block of four contiguous storefronts on Broadway, offered on a long ground lease with facade grant support. Proposals are scored on activation plan, local hiring and timeline rather than price alone — a genuine opening for an operator without acquisition capital.',
-    propertyType: 'retail', saleType: 'development_authority',
-    buildingSqft: 18_500, zoning: 'CBD',
-    capitalMin: 150_000, estimatedMin: 900_000, estimatedMax: 1_500_000,
-    daysToClose: 38, complexity: 'high', risk: 'moderate',
+    propertyType: 'retail',
+    saleType: 'development_authority',
+    buildingSqft: 18_500,
+    zoning: 'CBD',
+    capitalMin: 150_000,
+    estimatedMin: 900_000,
+    estimatedMax: 1_500_000,
+    daysToClose: 38,
+    complexity: 'high',
+    risk: 'moderate',
     riskSummary:
       'Ground lease, not fee ownership; the authority retains approval over use changes. Facade grant reimburses after completion, so construction is financed up front. Historic-district review adds time.',
     nextAction:
@@ -269,13 +357,21 @@ const PROPERTY_SEEDS: PropertySeed[] = [
   {
     slug: 'sample-gainesville-poultry-processing-expansion-site',
     title: 'SAMPLE: 22-acre certified industrial site — Hall County',
-    county: 'hall', city: 'gainesville',
+    county: 'hall',
+    city: 'gainesville',
     summary:
       'A state-certified shovel-ready industrial site with water, sewer and three-phase power at the boundary, marketed by the county development authority with a published incentive schedule tied to job creation. Flat topography, no wetlands on the Phase 1, and forty minutes from the poultry-processing cluster it logically serves.',
-    propertyType: 'land', saleType: 'standard_listing',
-    askingPrice: 1_650_000, lotAcres: 22, zoning: 'HI',
-    capitalMin: 330_000, estimatedMin: 1_650_000, estimatedMax: 2_400_000,
-    daysToClose: null, complexity: 'low', risk: 'low',
+    propertyType: 'land',
+    saleType: 'standard_listing',
+    askingPrice: 1_650_000,
+    lotAcres: 22,
+    zoning: 'HI',
+    capitalMin: 330_000,
+    estimatedMin: 1_650_000,
+    estimatedMax: 2_400_000,
+    daysToClose: null,
+    complexity: 'low',
+    risk: 'low',
     riskSummary:
       'Little execution risk on the land itself; the risk is incentive-dependence — the published abatement schedule requires 50 jobs within three years, with clawback.',
     nextAction:
@@ -285,13 +381,21 @@ const PROPERTY_SEEDS: PropertySeed[] = [
   {
     slug: 'sample-augusta-medical-office-sheriff-sale',
     title: 'SAMPLE: Medical office condo, Augusta — sheriff sale',
-    county: 'richmond', city: 'augusta',
+    county: 'richmond',
+    city: 'augusta',
     summary:
       'A 6,200 sq ft medical office condominium two blocks from the hospital district, going to sheriff sale on a foreclosure judgment. Built out for a four-provider practice with plumbing in six exam rooms. Sheriff sales convey faster than tax sales in Georgia, but the association arrears survive and must be cleared.',
-    propertyType: 'office', saleType: 'sheriff_sale',
-    startingBid: 385_000, buildingSqft: 6_200, zoning: 'P-1',
-    capitalMin: 385_000, estimatedMin: 720_000, estimatedMax: 850_000,
-    daysToClose: 14, complexity: 'moderate', risk: 'elevated',
+    propertyType: 'office',
+    saleType: 'sheriff_sale',
+    startingBid: 385_000,
+    buildingSqft: 6_200,
+    zoning: 'P-1',
+    capitalMin: 385_000,
+    estimatedMin: 720_000,
+    estimatedMax: 850_000,
+    daysToClose: 14,
+    complexity: 'moderate',
+    risk: 'elevated',
     riskSummary:
       'Condo association arrears of record survive the sale. The judgment creditor may bid the debt. No interior inspection; the build-out condition is inferred from a 2024 listing.',
     nextAction:
@@ -301,13 +405,22 @@ const PROPERTY_SEEDS: PropertySeed[] = [
   {
     slug: 'sample-valdosta-hotel-conversion-distressed',
     title: 'SAMPLE: 92-key exterior-corridor hotel, Valdosta — distressed sale',
-    county: 'lowndes', city: 'valdosta',
+    county: 'lowndes',
+    city: 'valdosta',
     summary:
       'A 1990s exterior-corridor hotel on the I-75 corridor, offered by a special servicer below replacement cost. The realistic play is not hospitality: the floor plate suits workforce-housing conversion, and Valdosta has an adopted ordinance that permits it by right in this zone.',
-    propertyType: 'hospitality', saleType: 'distressed_sale',
-    askingPrice: 2_100_000, buildingSqft: 38_000, lotAcres: 2.8, zoning: 'C-H',
-    capitalMin: 550_000, estimatedMin: 2_100_000, estimatedMax: 3_800_000,
-    daysToClose: 60, complexity: 'very_high', risk: 'high',
+    propertyType: 'hospitality',
+    saleType: 'distressed_sale',
+    askingPrice: 2_100_000,
+    buildingSqft: 38_000,
+    lotAcres: 2.8,
+    zoning: 'C-H',
+    capitalMin: 550_000,
+    estimatedMin: 2_100_000,
+    estimatedMax: 3_800_000,
+    daysToClose: 60,
+    complexity: 'very_high',
+    risk: 'high',
     riskSummary:
       'Conversion cost is the whole question: plumbing risers, kitchens and code compliance routinely double naive budgets. Servicer sells as-is with no representations. Flagged franchise agreement must be terminated at cost.',
     nextAction:
@@ -316,14 +429,24 @@ const PROPERTY_SEEDS: PropertySeed[] = [
   },
   {
     slug: 'sample-albany-cold-storage-government-sale',
-    title: 'SAMPLE: Former USDA cold-storage facility, Albany — federal disposal',
-    county: 'dougherty', city: 'albany',
+    title:
+      'SAMPLE: Former USDA cold-storage facility, Albany — federal disposal',
+    county: 'dougherty',
+    city: 'albany',
     summary:
       'A federal surplus disposal of a 26,000 sq ft cold-storage and inspection facility, offered by online auction through the GSA process. Ammonia refrigeration decommissioned but racking and dock equipment remain. Federal disposals are slow and procedural, and that procedure is exactly why they clear below market.',
-    propertyType: 'special_purpose', saleType: 'government_sale',
-    startingBid: 425_000, buildingSqft: 26_000, lotAcres: 3.5, zoning: 'I-1',
-    capitalMin: 425_000, estimatedMin: 900_000, estimatedMax: 1_300_000,
-    daysToClose: 30, complexity: 'high', risk: 'moderate',
+    propertyType: 'special_purpose',
+    saleType: 'government_sale',
+    startingBid: 425_000,
+    buildingSqft: 26_000,
+    lotAcres: 3.5,
+    zoning: 'I-1',
+    capitalMin: 425_000,
+    estimatedMin: 900_000,
+    estimatedMax: 1_300_000,
+    daysToClose: 30,
+    complexity: 'high',
+    risk: 'moderate',
     riskSummary:
       'Refrigeration plant condition unknown; recommissioning ammonia systems requires certified contractors and regulatory notice. Federal deed carries a use covenant for five years.',
     nextAction:
@@ -332,14 +455,22 @@ const PROPERTY_SEEDS: PropertySeed[] = [
   },
   {
     slug: 'sample-marietta-mixed-use-off-market',
-    title: 'SAMPLE: Marietta square-adjacent mixed-use building — off-market indication',
-    county: 'cobb', city: 'marietta',
+    title:
+      'SAMPLE: Marietta square-adjacent mixed-use building — off-market indication',
+    county: 'cobb',
+    city: 'marietta',
     summary:
       'An estate is preparing to sell a three-storey mixed-use building one block off Marietta Square: two retail bays, four apartments, all occupied. Not listed; the indication comes from the probate filing, which is public record. Off-market records are published here when the underlying document is public and verifiable.',
-    propertyType: 'mixed_use', saleType: 'off_market_indication',
-    buildingSqft: 12_400, zoning: 'CBD',
-    capitalMin: 400_000, estimatedMin: 1_600_000, estimatedMax: 2_000_000,
-    daysToClose: null, complexity: 'moderate', risk: 'moderate',
+    propertyType: 'mixed_use',
+    saleType: 'off_market_indication',
+    buildingSqft: 12_400,
+    zoning: 'CBD',
+    capitalMin: 400_000,
+    estimatedMin: 1_600_000,
+    estimatedMax: 2_000_000,
+    daysToClose: null,
+    complexity: 'moderate',
+    risk: 'moderate',
     riskSummary:
       'Probate timelines slip, and the executor has no obligation to sell to anyone. Rents are reportedly below market, which cuts both ways: upside, and sitting tenants.',
     nextAction:
@@ -349,13 +480,22 @@ const PROPERTY_SEEDS: PropertySeed[] = [
   {
     slug: 'sample-dalton-industrial-foreclosure',
     title: 'SAMPLE: 120,000 sq ft former flooring plant, Dalton — foreclosure',
-    county: 'whitfield', city: 'dalton',
+    county: 'whitfield',
+    city: 'dalton',
     summary:
       'A first-generation flooring manufacturing plant scheduled for non-judicial foreclosure. Heavy power (4,000A), sprinklered throughout, and ceiling heights that limit modern racking in half the footprint. Priced by the debt, not the market — the opening bid is the loan balance.',
-    propertyType: 'industrial', saleType: 'foreclosure',
-    startingBid: 1_850_000, buildingSqft: 120_000, lotAcres: 9.4, zoning: 'M-2',
-    capitalMin: 1_850_000, estimatedMin: 3_000_000, estimatedMax: 4_200_000,
-    daysToClose: 28, complexity: 'moderate', risk: 'elevated',
+    propertyType: 'industrial',
+    saleType: 'foreclosure',
+    startingBid: 1_850_000,
+    buildingSqft: 120_000,
+    lotAcres: 9.4,
+    zoning: 'M-2',
+    capitalMin: 1_850_000,
+    estimatedMin: 3_000_000,
+    estimatedMax: 4_200_000,
+    daysToClose: 28,
+    complexity: 'moderate',
+    risk: 'elevated',
     riskSummary:
       'Foreclosure sales are cash on the courthouse steps with no diligence period after sale. Environmental history of flooring plants warrants a Phase 1 before, not after.',
     nextAction:
@@ -364,14 +504,22 @@ const PROPERTY_SEEDS: PropertySeed[] = [
   },
   {
     slug: 'sample-statesboro-student-housing-land-auction',
-    title: 'SAMPLE: 8.7 acres zoned multifamily near Georgia Southern — auction',
-    county: 'bulloch', city: 'statesboro',
+    title:
+      'SAMPLE: 8.7 acres zoned multifamily near Georgia Southern — auction',
+    county: 'bulloch',
+    city: 'statesboro',
     summary:
       'An entitled multifamily site half a mile from campus, sold at absolute auction by a retiring owner — no reserve, which is rare for entitled land. Concept plan for 180 beds was approved in 2024 and remains valid if construction starts within the window.',
-    propertyType: 'land', saleType: 'auction',
-    lotAcres: 8.7, zoning: 'R-3',
-    capitalMin: 250_000, estimatedMin: 850_000, estimatedMax: 1_400_000,
-    daysToClose: 17, complexity: 'low', risk: 'moderate',
+    propertyType: 'land',
+    saleType: 'auction',
+    lotAcres: 8.7,
+    zoning: 'R-3',
+    capitalMin: 250_000,
+    estimatedMin: 850_000,
+    estimatedMax: 1_400_000,
+    daysToClose: 17,
+    complexity: 'low',
+    risk: 'moderate',
     riskSummary:
       'Absolute auction means it will sell — possibly above the number that makes the deal work. Entitlement expiry date must be verified with the city, not the auctioneer.',
     nextAction:
@@ -380,14 +528,22 @@ const PROPERTY_SEEDS: PropertySeed[] = [
   },
   {
     slug: 'sample-brunswick-marine-industrial-lease-option',
-    title: 'SAMPLE: Waterfront marine-industrial yard, Brunswick — authority listing',
-    county: 'glynn', city: 'brunswick',
+    title:
+      'SAMPLE: Waterfront marine-industrial yard, Brunswick — authority listing',
+    county: 'glynn',
+    city: 'brunswick',
     summary:
       'A ports-authority-adjacent marine industrial yard with 400 feet of bulkhead, offered on a long lease with option terms published in the authority minutes. Suits barge service, marine repair or heavy staging; deep-water access without deep-water acquisition cost.',
-    propertyType: 'industrial', saleType: 'development_authority',
-    lotAcres: 5.6, zoning: 'BI',
-    capitalMin: 120_000, estimatedMin: 600_000, estimatedMax: 1_100_000,
-    daysToClose: 44, complexity: 'moderate', risk: 'moderate',
+    propertyType: 'industrial',
+    saleType: 'development_authority',
+    lotAcres: 5.6,
+    zoning: 'BI',
+    capitalMin: 120_000,
+    estimatedMin: 600_000,
+    estimatedMax: 1_100_000,
+    daysToClose: 44,
+    complexity: 'moderate',
+    risk: 'moderate',
     riskSummary:
       'Leasehold, with authority consent required for sublease. Bulkhead condition report is three years old. Flood insurance is a real operating cost here.',
     nextAction:
@@ -396,14 +552,24 @@ const PROPERTY_SEEDS: PropertySeed[] = [
   },
   {
     slug: 'sample-mcdonough-last-mile-warehouse',
-    title: 'SAMPLE: 62,000 sq ft last-mile warehouse, Henry County — bank owned',
-    county: 'henry', city: 'mcdonough',
+    title:
+      'SAMPLE: 62,000 sq ft last-mile warehouse, Henry County — bank owned',
+    county: 'henry',
+    city: 'mcdonough',
     summary:
       'A 2007 rear-load warehouse on the south metro logistics corridor, bank-owned after a tenant default cascaded into the owner’s loan. Vacant, broom-clean, and in the tightest last-mile submarket in the state. The lender has priced it to move before year-end.',
-    propertyType: 'warehouse', saleType: 'bank_owned',
-    askingPrice: 4_650_000, buildingSqft: 62_000, lotAcres: 5.9, zoning: 'M-1',
-    capitalMin: 950_000, estimatedMin: 5_400_000, estimatedMax: 6_200_000,
-    daysToClose: 50, complexity: 'low', risk: 'low',
+    propertyType: 'warehouse',
+    saleType: 'bank_owned',
+    askingPrice: 4_650_000,
+    buildingSqft: 62_000,
+    lotAcres: 5.9,
+    zoning: 'M-1',
+    capitalMin: 950_000,
+    estimatedMin: 5_400_000,
+    estimatedMax: 6_200_000,
+    daysToClose: 50,
+    complexity: 'low',
+    risk: 'low',
     riskSummary:
       'Straightforward asset; the risk is competition — clean metro Atlanta warehouses attract multiple offers even from lenders.',
     nextAction:
@@ -413,13 +579,21 @@ const PROPERTY_SEEDS: PropertySeed[] = [
   {
     slug: 'sample-athens-restaurant-building-tax-sale',
     title: 'SAMPLE: Freestanding restaurant building, Athens — tax sale',
-    county: 'clarke', city: 'athens',
+    county: 'clarke',
+    city: 'athens',
     summary:
       'A freestanding 4,100 sq ft restaurant building with a drive-through window and grease infrastructure, on the county tax-sale list. Closed since 2023. Hood systems and walk-ins reportedly intact, which is most of the cost of a restaurant fit-out.',
-    propertyType: 'retail', saleType: 'tax_sale',
-    startingBid: 96_000, buildingSqft: 4_100, zoning: 'C-G',
-    capitalMin: 96_000, estimatedMin: 450_000, estimatedMax: 620_000,
-    daysToClose: 24, complexity: 'moderate', risk: 'high',
+    propertyType: 'retail',
+    saleType: 'tax_sale',
+    startingBid: 96_000,
+    buildingSqft: 4_100,
+    zoning: 'C-G',
+    capitalMin: 96_000,
+    estimatedMin: 450_000,
+    estimatedMax: 620_000,
+    daysToClose: 24,
+    complexity: 'moderate',
+    risk: 'high',
     riskSummary:
       'Redemption right applies. Equipment condition is unverified and equipment may be subject to separate security interests that survive.',
     nextAction:
@@ -429,13 +603,22 @@ const PROPERTY_SEEDS: PropertySeed[] = [
   {
     slug: 'sample-rome-office-campus-reposition',
     title: 'SAMPLE: Suburban office campus, Rome — distressed listing',
-    county: 'floyd', city: 'rome',
+    county: 'floyd',
+    city: 'rome',
     summary:
       'A 48,000 sq ft two-building office campus at 30% occupancy, offered below assessed value by an out-of-state owner exiting Georgia. The occupancy is the discount; the county’s health-system expansion two exits away is the thesis for refilling it.',
-    propertyType: 'office', saleType: 'distressed_sale',
-    askingPrice: 1_750_000, buildingSqft: 48_000, lotAcres: 6.3, zoning: 'O-I',
-    capitalMin: 450_000, estimatedMin: 2_200_000, estimatedMax: 3_100_000,
-    daysToClose: null, complexity: 'moderate', risk: 'elevated',
+    propertyType: 'office',
+    saleType: 'distressed_sale',
+    askingPrice: 1_750_000,
+    buildingSqft: 48_000,
+    lotAcres: 6.3,
+    zoning: 'O-I',
+    capitalMin: 450_000,
+    estimatedMin: 2_200_000,
+    estimatedMax: 3_100_000,
+    daysToClose: null,
+    complexity: 'moderate',
+    risk: 'elevated',
     riskSummary:
       'Office demand outside the medical use case is genuinely weak. HVAC plant is original. Underwrite to the two signed tenants, not the pro forma.',
     nextAction:
@@ -444,14 +627,23 @@ const PROPERTY_SEEDS: PropertySeed[] = [
   },
   {
     slug: 'sample-carrollton-self-storage-site',
-    title: 'SAMPLE: Entitled self-storage site, Carroll County — standard listing',
-    county: 'carroll', city: 'carrollton',
+    title:
+      'SAMPLE: Entitled self-storage site, Carroll County — standard listing',
+    county: 'carroll',
+    city: 'carrollton',
     summary:
       'A 3.4-acre pad with approved site plan for 62,000 sq ft of climate-controlled self-storage, utilities stubbed, detention built. The entitlement work — usually eighteen months of risk — is done and transferable.',
-    propertyType: 'land', saleType: 'standard_listing',
-    askingPrice: 780_000, lotAcres: 3.4, zoning: 'C-2',
-    capitalMin: 780_000, estimatedMin: 780_000, estimatedMax: 1_100_000,
-    daysToClose: null, complexity: 'low', risk: 'moderate',
+    propertyType: 'land',
+    saleType: 'standard_listing',
+    askingPrice: 780_000,
+    lotAcres: 3.4,
+    zoning: 'C-2',
+    capitalMin: 780_000,
+    estimatedMin: 780_000,
+    estimatedMax: 1_100_000,
+    daysToClose: null,
+    complexity: 'low',
+    risk: 'moderate',
     riskSummary:
       'Storage supply in the trade area has grown 20% in three years; the feasibility study on offer is seller-commissioned and should be re-run independently.',
     nextAction:
@@ -461,13 +653,21 @@ const PROPERTY_SEEDS: PropertySeed[] = [
   {
     slug: 'sample-tucker-flex-owner-user-sba',
     title: 'SAMPLE: 12,800 sq ft flex building, Tucker — owner-user candidate',
-    county: 'dekalb', city: 'tucker',
+    county: 'dekalb',
+    city: 'tucker',
     summary:
       'A single-tenant flex building sized exactly for an owner-user under SBA 504: 10% down, fixed-rate debenture, and the mortgage payment lands near the market rent. Listed conventionally, but published here because the financing math is the opportunity.',
-    propertyType: 'flex', saleType: 'standard_listing',
-    askingPrice: 1_980_000, buildingSqft: 12_800, zoning: 'M',
-    capitalMin: 200_000, estimatedMin: 1_980_000, estimatedMax: 2_200_000,
-    daysToClose: null, complexity: 'low', risk: 'low',
+    propertyType: 'flex',
+    saleType: 'standard_listing',
+    askingPrice: 1_980_000,
+    buildingSqft: 12_800,
+    zoning: 'M',
+    capitalMin: 200_000,
+    estimatedMin: 1_980_000,
+    estimatedMax: 2_200_000,
+    daysToClose: null,
+    complexity: 'low',
+    risk: 'low',
     riskSummary:
       'Low risk for a qualifying owner-user; the 51% owner-occupancy rule is the binding constraint, and 504 timelines run 60–90 days.',
     nextAction:
@@ -476,14 +676,22 @@ const PROPERTY_SEEDS: PropertySeed[] = [
   },
   {
     slug: 'sample-forsyth-monroe-county-land-assemblage',
-    title: 'SAMPLE: I-75 interchange land assemblage — Monroe County tax parcels',
+    title:
+      'SAMPLE: I-75 interchange land assemblage — Monroe County tax parcels',
     county: 'monroe',
     summary:
       'Three adjacent unimproved parcels at an I-75 interchange, each separately tax-delinquent and headed for the same sale date. Individually they are remnants; assembled, they are a 14-acre interchange site. Assemblage through tax sale is slow-motion work with redemption risk on each piece — priced accordingly.',
-    propertyType: 'land', saleType: 'tax_sale',
-    startingBid: 74_000, lotAcres: 14.2, zoning: 'C-2',
-    capitalMin: 74_000, estimatedMin: 500_000, estimatedMax: 900_000,
-    daysToClose: 35, complexity: 'high', risk: 'high',
+    propertyType: 'land',
+    saleType: 'tax_sale',
+    startingBid: 74_000,
+    lotAcres: 14.2,
+    zoning: 'C-2',
+    capitalMin: 74_000,
+    estimatedMin: 500_000,
+    estimatedMax: 900_000,
+    daysToClose: 35,
+    complexity: 'high',
+    risk: 'high',
     riskSummary:
       'Three separate redemption clocks; redeeming any one parcel breaks the assemblage. Value shown assumes all three close and clear, which takes a year minimum.',
     nextAction:
@@ -493,13 +701,20 @@ const PROPERTY_SEEDS: PropertySeed[] = [
   {
     slug: 'sample-warner-robins-daycare-build-to-suit',
     title: 'SAMPLE: Approved daycare site near Robins AFB — authority land',
-    county: 'houston', city: 'warner-robins',
+    county: 'houston',
+    city: 'warner-robins',
     summary:
       'The development authority is offering a pad site pre-approved for child-care use, half a mile from a base gate, with a below-market land lease for a licensed operator. Childcare capacity is the stated bottleneck in the county’s workforce plan, and the authority is pricing land to fix it.',
-    propertyType: 'special_purpose', saleType: 'development_authority',
-    lotAcres: 1.8, zoning: 'PUD',
-    capitalMin: 350_000, estimatedMin: 1_200_000, estimatedMax: 1_600_000,
-    daysToClose: 52, complexity: 'moderate', risk: 'low',
+    propertyType: 'special_purpose',
+    saleType: 'development_authority',
+    lotAcres: 1.8,
+    zoning: 'PUD',
+    capitalMin: 350_000,
+    estimatedMin: 1_200_000,
+    estimatedMax: 1_600_000,
+    daysToClose: 52,
+    complexity: 'moderate',
+    risk: 'low',
     riskSummary:
       'Operator licensing is the gating item and takes months; the lease requires operations to begin within 24 months.',
     nextAction:
@@ -509,13 +724,21 @@ const PROPERTY_SEEDS: PropertySeed[] = [
   {
     slug: 'sample-canton-mountain-retail-strip',
     title: 'SAMPLE: Six-bay retail strip, Cherokee County — estate sale',
-    county: 'cherokee', city: 'canton',
+    county: 'cherokee',
+    city: 'canton',
     summary:
       'A fully occupied 1990s strip on the corridor into downtown Canton, sold by an estate that has owned it since construction. Rents are 25–35% below the corridor average because the family never raised them. The value-add is administrative, not physical.',
-    propertyType: 'retail', saleType: 'standard_listing',
-    askingPrice: 2_400_000, buildingSqft: 14_600, zoning: 'GC',
-    capitalMin: 600_000, estimatedMin: 2_900_000, estimatedMax: 3_300_000,
-    daysToClose: null, complexity: 'low', risk: 'low',
+    propertyType: 'retail',
+    saleType: 'standard_listing',
+    askingPrice: 2_400_000,
+    buildingSqft: 14_600,
+    zoning: 'GC',
+    capitalMin: 600_000,
+    estimatedMin: 2_900_000,
+    estimatedMax: 3_300_000,
+    daysToClose: null,
+    complexity: 'low',
+    risk: 'low',
     riskSummary:
       'Leases are handshake-era documents with weak assignment language; estoppels will take longer than usual. Tenant goodwill is real and worth preserving.',
     nextAction:
@@ -525,13 +748,22 @@ const PROPERTY_SEEDS: PropertySeed[] = [
   {
     slug: 'sample-pooler-truck-terminal-surplus',
     title: 'SAMPLE: 40-door cross-dock terminal, Pooler — corporate surplus',
-    county: 'chatham', city: 'pooler',
+    county: 'chatham',
+    city: 'pooler',
     summary:
       'A national carrier is disposing of a 40-door cross-dock made redundant by consolidation. Cross-docks are nearly impossible to entitle new in this submarket, which makes existing ones strategic regardless of age. Sealed-bid process with a published deadline.',
-    propertyType: 'industrial', saleType: 'standard_listing',
-    askingPrice: 3_800_000, buildingSqft: 28_000, lotAcres: 8.9, zoning: 'I-1',
-    capitalMin: 800_000, estimatedMin: 4_100_000, estimatedMax: 4_800_000,
-    daysToClose: 26, complexity: 'moderate', risk: 'low',
+    propertyType: 'industrial',
+    saleType: 'standard_listing',
+    askingPrice: 3_800_000,
+    buildingSqft: 28_000,
+    lotAcres: 8.9,
+    zoning: 'I-1',
+    capitalMin: 800_000,
+    estimatedMin: 4_100_000,
+    estimatedMax: 4_800_000,
+    daysToClose: 26,
+    complexity: 'moderate',
+    risk: 'low',
     riskSummary:
       'Sealed bid with no second round: the first number must be the best number. Pavement condition on the truck court is the main capital item.',
     nextAction:
@@ -571,10 +803,17 @@ const FUNDING_SEEDS: FundingSeed[] = [
     title: 'SAMPLE: Rural manufacturing equipment grant — up to $150,000',
     summary:
       'A state-administered matching grant for equipment purchases by manufacturers in rural counties, covering up to 30% of project cost. The match structure rewards businesses that were buying equipment anyway; the mistake applicants make is treating it as free money for speculative purchases the business case does not support.',
-    fundingType: 'grant', organization: 'Georgia Department of Community Affairs',
-    minAmount: 25_000, maxAmount: 150_000, ownerContribution: 70,
-    complexity: 'moderate', daysToDeadline: 42, industry: 'manufacturing',
-    industryRestricted: true, timeInBusiness: true, risk: 'low',
+    fundingType: 'grant',
+    organization: 'Georgia Department of Community Affairs',
+    minAmount: 25_000,
+    maxAmount: 150_000,
+    ownerContribution: 70,
+    complexity: 'moderate',
+    daysToDeadline: 42,
+    industry: 'manufacturing',
+    industryRestricted: true,
+    timeInBusiness: true,
+    risk: 'low',
     riskSummary:
       'Reimbursement-based: you buy first and claim after. Job-creation reporting runs for two years post-award.',
     eligibility:
@@ -585,12 +824,18 @@ const FUNDING_SEEDS: FundingSeed[] = [
   },
   {
     slug: 'sample-sba-504-owner-occupied-real-estate',
-    title: 'SAMPLE: SBA 504 loan — owner-occupied commercial real estate at 10% down',
+    title:
+      'SAMPLE: SBA 504 loan — owner-occupied commercial real estate at 10% down',
     summary:
       'The 504 program remains the single most under-used tool for Georgia owner-users: 50% conventional first, 40% fixed-rate SBA debenture, 10% down. On a $2m building that is $200k down instead of $500k, with 25-year fixed pricing on the debenture piece. Evergreen program, no deadline — published here because the current debenture rate makes the maths unusually good.',
-    fundingType: 'guaranteed_loan', organization: 'U.S. Small Business Administration',
-    minAmount: 125_000, maxAmount: 5_500_000, ownerContribution: 10,
-    complexity: 'moderate', daysToDeadline: null, risk: 'low',
+    fundingType: 'guaranteed_loan',
+    organization: 'U.S. Small Business Administration',
+    minAmount: 125_000,
+    maxAmount: 5_500_000,
+    ownerContribution: 10,
+    complexity: 'moderate',
+    daysToDeadline: null,
+    risk: 'low',
     riskSummary:
       'Personal guarantee required; the 51% owner-occupancy rule is checked at closing and the timeline is 60–90 days, which sellers must accept in writing.',
     eligibility:
@@ -601,11 +846,15 @@ const FUNDING_SEEDS: FundingSeed[] = [
   },
   {
     slug: 'sample-georgia-job-tax-credit-tier-1',
-    title: 'SAMPLE: Georgia Job Tax Credit — up to $4,000 per job in Tier 1 counties',
+    title:
+      'SAMPLE: Georgia Job Tax Credit — up to $4,000 per job in Tier 1 counties',
     summary:
       'Georgia’s statutory job tax credit pays up to $4,000 per net new job per year for five years in the least-developed counties, claimable against 100% of state income tax liability and, in Tier 1, against payroll withholding. Two new jobs is the Tier 1 threshold — this is not a big-company program.',
-    fundingType: 'tax_credit', organization: 'Georgia Department of Revenue',
-    maxAmount: 4_000, complexity: 'low', daysToDeadline: null,
+    fundingType: 'tax_credit',
+    organization: 'Georgia Department of Revenue',
+    maxAmount: 4_000,
+    complexity: 'low',
+    daysToDeadline: null,
     risk: 'low',
     riskSummary:
       'Credits require maintaining the jobs; headcount dips claw back the credit for that year. The county tier list is re-ranked annually.',
@@ -617,12 +866,17 @@ const FUNDING_SEEDS: FundingSeed[] = [
   },
   {
     slug: 'sample-usda-rural-business-development-grant',
-    title: 'SAMPLE: USDA Rural Business Development Grant — technical assistance and equipment',
+    title:
+      'SAMPLE: USDA Rural Business Development Grant — technical assistance and equipment',
     summary:
       'Federal grants to support small rural businesses, typically flowing through a development authority or nonprofit sponsor rather than to the business directly. Individual awards in Georgia have run $50k–$300k. The sponsor requirement is the feature to understand: find the sponsor first, then shape the project.',
-    fundingType: 'grant', organization: 'USDA Rural Development',
-    minAmount: 50_000, maxAmount: 300_000, complexity: 'high',
-    daysToDeadline: 65, risk: 'moderate',
+    fundingType: 'grant',
+    organization: 'USDA Rural Development',
+    minAmount: 50_000,
+    maxAmount: 300_000,
+    complexity: 'high',
+    daysToDeadline: 65,
+    risk: 'moderate',
     riskSummary:
       'Competitive nationally with one application window per year; missing it means waiting twelve months.',
     eligibility:
@@ -636,8 +890,11 @@ const FUNDING_SEEDS: FundingSeed[] = [
     title: 'SAMPLE: Georgia Quick Start — free customised workforce training',
     summary:
       'Quick Start builds and delivers customised training for qualifying expansions at no cost — curriculum, instructors, and facilities. It is consistently ranked the top state training program in the country, and it is chronically under-requested by mid-sized companies who assume it is only for headline projects.',
-    fundingType: 'workforce_funding', organization: 'Technical College System of Georgia',
-    complexity: 'low', daysToDeadline: null, risk: 'low',
+    fundingType: 'workforce_funding',
+    organization: 'Technical College System of Georgia',
+    complexity: 'low',
+    daysToDeadline: null,
+    risk: 'low',
     riskSummary:
       'No clawback and no cost; the only real risk is planning hiring around a training start date that slips.',
     eligibility:
@@ -648,13 +905,19 @@ const FUNDING_SEEDS: FundingSeed[] = [
   },
   {
     slug: 'sample-sam-gov-grounds-maintenance-set-aside',
-    title: 'SAMPLE: Robins AFB grounds maintenance — small business set-aside, $1.8m ceiling',
+    title:
+      'SAMPLE: Robins AFB grounds maintenance — small business set-aside, $1.8m ceiling',
     summary:
       'A five-year grounds-maintenance IDIQ at Robins Air Force Base, set aside for small business. Incumbent has held it for nine years, which is exactly when contracts turn over. Federal facilities maintenance is a realistic first federal contract for an established commercial landscaping firm — past performance transfers.',
-    fundingType: 'government_contract', organization: 'U.S. Air Force',
-    maxAmount: 1_800_000, complexity: 'high', daysToDeadline: 33,
-    industry: 'construction-and-trades', industryRestricted: true,
-    revenueRequirement: true, risk: 'moderate',
+    fundingType: 'government_contract',
+    organization: 'U.S. Air Force',
+    maxAmount: 1_800_000,
+    complexity: 'high',
+    daysToDeadline: 33,
+    industry: 'construction-and-trades',
+    industryRestricted: true,
+    revenueRequirement: true,
+    risk: 'moderate',
     riskSummary:
       'Bonding and certified payroll requirements; the pre-award survey checks equipment capacity. Losing bidders routinely fail on paperwork, not price.',
     eligibility:
@@ -668,9 +931,14 @@ const FUNDING_SEEDS: FundingSeed[] = [
     title: 'SAMPLE: City small-business gap loan fund — 3% fixed, subordinate',
     summary:
       'A municipal gap-financing fund lending $50k–$250k subordinate to a bank first, at 3% fixed. Designed for the deal where the bank gets to 70% and the owner has 10%: this covers the gap without mezzanine pricing. Funds replenish as loans repay, so the window opens and closes through the year.',
-    fundingType: 'direct_loan', organization: 'Municipal development authority',
-    minAmount: 50_000, maxAmount: 250_000, ownerContribution: 10,
-    complexity: 'moderate', daysToDeadline: null, firstCome: true,
+    fundingType: 'direct_loan',
+    organization: 'Municipal development authority',
+    minAmount: 50_000,
+    maxAmount: 250_000,
+    ownerContribution: 10,
+    complexity: 'moderate',
+    daysToDeadline: null,
+    firstCome: true,
     risk: 'low',
     riskSummary:
       'First-come while funded; the fund pausing intake mid-application is the common frustration.',
@@ -685,10 +953,15 @@ const FUNDING_SEEDS: FundingSeed[] = [
     title: 'SAMPLE: Value-added agriculture microloan — up to $50,000',
     summary:
       'A revolving microloan fund for value-added agricultural processing: commercial kitchens, co-packing, cold chain, and farm-adjacent manufacturing. Underwriting weighs the processing plan over credit score, which makes it reachable for first-time food businesses that banks decline on history alone.',
-    fundingType: 'microloan', organization: 'Agricultural development fund',
-    minAmount: 5_000, maxAmount: 50_000, complexity: 'low',
-    daysToDeadline: null, industry: 'agriculture-and-forestry',
-    industryRestricted: true, risk: 'low',
+    fundingType: 'microloan',
+    organization: 'Agricultural development fund',
+    minAmount: 5_000,
+    maxAmount: 50_000,
+    complexity: 'low',
+    daysToDeadline: null,
+    industry: 'agriculture-and-forestry',
+    industryRestricted: true,
+    risk: 'low',
     riskSummary:
       'Small dollars and short terms; equipment purchased serves as collateral.',
     eligibility:
@@ -699,12 +972,17 @@ const FUNDING_SEEDS: FundingSeed[] = [
   },
   {
     slug: 'sample-cdbg-employment-incentive-program',
-    title: 'SAMPLE: CDBG Employment Incentive Program — up to $500,000 through your county',
+    title:
+      'SAMPLE: CDBG Employment Incentive Program — up to $500,000 through your county',
     summary:
       'Federal community-development money a city or county can borrow-and-grant to a private employer creating jobs for low-to-moderate-income workers. The business does not apply; the local government does, on the business’s behalf. That structure defeats most applicants before they start — which is the opportunity for the ones who understand it.',
-    fundingType: 'grant', organization: 'Georgia Department of Community Affairs',
-    minAmount: 100_000, maxAmount: 500_000, complexity: 'very_high',
-    daysToDeadline: 80, risk: 'moderate',
+    fundingType: 'grant',
+    organization: 'Georgia Department of Community Affairs',
+    minAmount: 100_000,
+    maxAmount: 500_000,
+    complexity: 'very_high',
+    daysToDeadline: 80,
+    risk: 'moderate',
     riskSummary:
       'Job-creation commitments are contractual with the local government, and the LMI hiring documentation burden is real and audited.',
     eligibility:
@@ -715,11 +993,15 @@ const FUNDING_SEEDS: FundingSeed[] = [
   },
   {
     slug: 'sample-port-tax-credit-bonus',
-    title: 'SAMPLE: Georgia Port Tax Credit Bonus — $1,250 per job on top of the job credit',
+    title:
+      'SAMPLE: Georgia Port Tax Credit Bonus — $1,250 per job on top of the job credit',
     summary:
       'Businesses that increase port traffic through Georgia’s ports by 10% qualify for an additional $1,250 per job on top of the standard job tax credit. Routinely missed by importers and exporters who qualify without knowing the credit exists — the traffic threshold is measured in TEUs or tons, and mid-sized shippers clear it.',
-    fundingType: 'tax_credit', organization: 'Georgia Department of Revenue',
-    maxAmount: 1_250, complexity: 'low', daysToDeadline: null,
+    fundingType: 'tax_credit',
+    organization: 'Georgia Department of Revenue',
+    maxAmount: 1_250,
+    complexity: 'low',
+    daysToDeadline: null,
     risk: 'low',
     riskSummary:
       'Documentation of port throughput must come from your carrier or forwarder records; reconstruction after the fact is painful.',
@@ -734,9 +1016,13 @@ const FUNDING_SEEDS: FundingSeed[] = [
     title: 'SAMPLE: ARC business development grant — North Georgia counties',
     summary:
       'The Appalachian Regional Commission funds business development projects in Georgia’s 37 ARC counties, typically through a local sponsor, with awards from $50k to $500k. The current funding cycle emphasises workforce and downtown economies, which suits main-street operators unusually well.',
-    fundingType: 'grant', organization: 'Appalachian Regional Commission',
-    minAmount: 50_000, maxAmount: 500_000, complexity: 'high',
-    daysToDeadline: 55, risk: 'moderate',
+    fundingType: 'grant',
+    organization: 'Appalachian Regional Commission',
+    minAmount: 50_000,
+    maxAmount: 500_000,
+    complexity: 'high',
+    daysToDeadline: 55,
+    risk: 'moderate',
     riskSummary:
       'Sponsor-driven, match-required, and reimbursement-based; cash-flow the project as if the grant arrives a year late, because it can.',
     eligibility:
@@ -750,9 +1036,14 @@ const FUNDING_SEEDS: FundingSeed[] = [
     title: 'SAMPLE: SBA 7(a) — business acquisition financing to 90% LTV',
     summary:
       'The 7(a) program remains the default instrument for buying a small business in Georgia: up to $5m, 10% equity injections common, and seller notes can cover part of the injection. With a wave of retiring owners listing businesses, the constraint is rarely the loan — it is deal quality and buyer preparation.',
-    fundingType: 'guaranteed_loan', organization: 'U.S. Small Business Administration',
-    minAmount: 100_000, maxAmount: 5_000_000, ownerContribution: 10,
-    complexity: 'moderate', daysToDeadline: null, risk: 'moderate',
+    fundingType: 'guaranteed_loan',
+    organization: 'U.S. Small Business Administration',
+    minAmount: 100_000,
+    maxAmount: 5_000_000,
+    ownerContribution: 10,
+    complexity: 'moderate',
+    daysToDeadline: null,
+    risk: 'moderate',
     riskSummary:
       'Personal guarantee, and the acquired business’s cash flow must cover debt service at underwriting multiples — pro formas do not count.',
     eligibility:
@@ -763,11 +1054,15 @@ const FUNDING_SEEDS: FundingSeed[] = [
   },
   {
     slug: 'sample-film-tax-credit-service-vendors',
-    title: 'SAMPLE: Film industry vendor certification — access to production spending',
+    title:
+      'SAMPLE: Film industry vendor certification — access to production spending',
     summary:
       'Not a grant: a certification. Georgia’s production industry spends billions annually with certified local vendors, and the vendor list is where productions shop first. For caterers, equipment shops, transport firms and security companies, getting listed functions like a demand subsidy.',
-    fundingType: 'technical_assistance', organization: 'Georgia Department of Economic Development',
-    complexity: 'low', daysToDeadline: null, risk: 'low',
+    fundingType: 'technical_assistance',
+    organization: 'Georgia Department of Economic Development',
+    complexity: 'low',
+    daysToDeadline: null,
+    risk: 'low',
     riskSummary:
       'Production demand is cyclical and strike-sensitive; treat it as a revenue channel, not the business.',
     eligibility:
@@ -778,11 +1073,15 @@ const FUNDING_SEEDS: FundingSeed[] = [
   },
   {
     slug: 'sample-dot-disadvantaged-business-program',
-    title: 'SAMPLE: GDOT DBE certification — access to federal-aid contract goals',
+    title:
+      'SAMPLE: GDOT DBE certification — access to federal-aid contract goals',
     summary:
       'Federal-aid highway contracts in Georgia carry participation goals for certified Disadvantaged Business Enterprises. Certification is free, takes about 90 days, and prime contractors actively seek certified subs to meet goals — a structural demand advantage for qualifying trucking, materials and construction firms.',
-    fundingType: 'procurement_opportunity', organization: 'Georgia Department of Transportation',
-    complexity: 'moderate', daysToDeadline: null, risk: 'low',
+    fundingType: 'procurement_opportunity',
+    organization: 'Georgia Department of Transportation',
+    complexity: 'moderate',
+    daysToDeadline: null,
+    risk: 'low',
     riskSummary:
       'Certification requires disclosing personal financials, and the personal-net-worth cap excludes some otherwise-eligible owners.',
     eligibility:
@@ -796,9 +1095,14 @@ const FUNDING_SEEDS: FundingSeed[] = [
     title: 'SAMPLE: USDA REAP — 50% grant for rural energy improvements',
     summary:
       'The Rural Energy for America Program pays up to 50% of the cost of energy efficiency improvements and renewable systems for rural small businesses and agricultural producers — solar, refrigeration upgrades, HVAC, grain-drying. Quarterly competitions; smaller requests score surprisingly well.',
-    fundingType: 'grant', organization: 'USDA Rural Development',
-    minAmount: 1_500, maxAmount: 500_000, ownerContribution: 50,
-    complexity: 'moderate', daysToDeadline: 47, industry: 'agriculture-and-forestry',
+    fundingType: 'grant',
+    organization: 'USDA Rural Development',
+    minAmount: 1_500,
+    maxAmount: 500_000,
+    ownerContribution: 50,
+    complexity: 'moderate',
+    daysToDeadline: 47,
+    industry: 'agriculture-and-forestry',
     risk: 'low',
     riskSummary:
       'Requires a professional energy assessment for larger requests, and the project cannot start before award.',
@@ -813,10 +1117,15 @@ const FUNDING_SEEDS: FundingSeed[] = [
     title: 'SAMPLE: Veteran-owned business microloan and mentoring package',
     summary:
       'A community lender pairing microloans to $35k with structured mentoring for veteran-owned Georgia businesses. The mentoring is mandatory, which is the point: the fund’s losses run below industry average because the operating support is part of the credit.',
-    fundingType: 'microloan', organization: 'Community development financial institution',
-    minAmount: 5_000, maxAmount: 35_000, complexity: 'low',
-    daysToDeadline: null, risk: 'low',
-    riskSummary: 'Small-dollar exposure; the time commitment to mentoring is real.',
+    fundingType: 'microloan',
+    organization: 'Community development financial institution',
+    minAmount: 5_000,
+    maxAmount: 35_000,
+    complexity: 'low',
+    daysToDeadline: null,
+    risk: 'low',
+    riskSummary:
+      'Small-dollar exposure; the time commitment to mentoring is real.',
     eligibility:
       'Georgia businesses majority-owned by veterans, reservists or military spouses, under two years old or under $250k revenue.',
     nextAction:
@@ -828,9 +1137,13 @@ const FUNDING_SEEDS: FundingSeed[] = [
     title: 'SAMPLE: OneGeorgia EDGE fund — competitive-project gap closing',
     summary:
       'The state’s deal-closing fund for projects in rural counties where Georgia is competing against another state. Flows through the local government, and the trigger is a genuine competitive alternative — the application requires evidence the project could land elsewhere.',
-    fundingType: 'grant', organization: 'OneGeorgia Authority',
-    minAmount: 100_000, maxAmount: 1_000_000, complexity: 'very_high',
-    daysToDeadline: null, risk: 'moderate',
+    fundingType: 'grant',
+    organization: 'OneGeorgia Authority',
+    minAmount: 100_000,
+    maxAmount: 1_000_000,
+    complexity: 'very_high',
+    daysToDeadline: null,
+    risk: 'moderate',
     riskSummary:
       'Performance agreements with clawback follow the money; the competitive-alternative evidence is scrutinised.',
     eligibility:
@@ -841,12 +1154,18 @@ const FUNDING_SEEDS: FundingSeed[] = [
   },
   {
     slug: 'sample-childcare-capacity-expansion-grant',
-    title: 'SAMPLE: Child-care capacity expansion grants — equipment and buildout',
+    title:
+      'SAMPLE: Child-care capacity expansion grants — equipment and buildout',
     summary:
       'State lottery-funded grants for licensed child-care providers expanding capacity: classroom buildout, playground equipment, kitchen upgrades. Awards to $75k with a fast, checklist-style application. Capacity is a stated state priority, which is when grant programs are easiest to win.',
-    fundingType: 'grant', organization: 'Georgia Department of Early Care and Learning',
-    minAmount: 5_000, maxAmount: 75_000, complexity: 'low',
-    daysToDeadline: 28, firstCome: true, industryRestricted: true,
+    fundingType: 'grant',
+    organization: 'Georgia Department of Early Care and Learning',
+    minAmount: 5_000,
+    maxAmount: 75_000,
+    complexity: 'low',
+    daysToDeadline: 28,
+    firstCome: true,
+    industryRestricted: true,
     risk: 'low',
     riskSummary:
       'Licensed-capacity increase must be documented post-award; funds are reimbursement-based.',
@@ -858,12 +1177,18 @@ const FUNDING_SEEDS: FundingSeed[] = [
   },
   {
     slug: 'sample-export-assistance-step-grant',
-    title: 'SAMPLE: STEP export grant — trade-show and market-entry reimbursement',
+    title:
+      'SAMPLE: STEP export grant — trade-show and market-entry reimbursement',
     summary:
       'Federal State Trade Expansion Program dollars, administered by the state, reimbursing small businesses for export development: international trade-show costs, translation, export compliance, and inbound-buyer hosting. Typical awards $5k–$15k — small money that reliably moves the needle for first-time exporters.',
-    fundingType: 'export_assistance', organization: 'Georgia Department of Economic Development',
-    minAmount: 2_500, maxAmount: 15_000, complexity: 'low',
-    daysToDeadline: 39, firstCome: true, risk: 'low',
+    fundingType: 'export_assistance',
+    organization: 'Georgia Department of Economic Development',
+    minAmount: 2_500,
+    maxAmount: 15_000,
+    complexity: 'low',
+    daysToDeadline: 39,
+    firstCome: true,
+    risk: 'low',
     riskSummary:
       'Reimbursement-only, with receipts; activities must be pre-approved to count.',
     eligibility:
@@ -874,20 +1199,28 @@ const FUNDING_SEEDS: FundingSeed[] = [
   },
   {
     slug: 'sample-broadband-ready-site-incentive',
-    title: 'SAMPLE: Broadband infrastructure procurement — county last-mile builds',
+    title:
+      'SAMPLE: Broadband infrastructure procurement — county last-mile builds',
     summary:
       'Federally funded county broadband builds are being procured across middle and south Georgia, with contracts for construction, fibre splicing, drop installation and maintenance. Multi-year revenue for regional contractors, and most counties are struggling to attract enough qualified bidders.',
-    fundingType: 'procurement_opportunity', organization: 'County governments (federally funded)',
-    minAmount: 250_000, maxAmount: 5_000_000, complexity: 'high',
-    daysToDeadline: 51, industry: 'construction-and-trades', industryRestricted: true,
-    revenueRequirement: true, risk: 'moderate',
+    fundingType: 'procurement_opportunity',
+    organization: 'County governments (federally funded)',
+    minAmount: 250_000,
+    maxAmount: 5_000_000,
+    complexity: 'high',
+    daysToDeadline: 51,
+    industry: 'construction-and-trades',
+    industryRestricted: true,
+    revenueRequirement: true,
+    risk: 'moderate',
     riskSummary:
       'Federal labour and Build America requirements flow down; materials sourcing rules catch unprepared bidders.',
     eligibility:
       'Contractors with utility construction experience, bonding capacity, and the ability to document Build America compliance.',
     nextAction:
       'Register with the specific county portals — these do not all appear on state systems — and price the compliance overhead into the bid.',
-    source: 'Georgia Department of Administrative Services — Team Georgia Marketplace',
+    source:
+      'Georgia Department of Administrative Services — Team Georgia Marketplace',
   },
 ];
 
@@ -901,7 +1234,8 @@ async function seedOpportunities(lookups: LookupTables): Promise<void> {
     const sourceId = lookups.sources.get(sourceName);
     if (!sourceId) continue;
 
-    const closing = seed.daysToClose === null ? null : daysFromNow(seed.daysToClose);
+    const closing =
+      seed.daysToClose === null ? null : daysFromNow(seed.daysToClose);
 
     const score = buildScore({
       financialValue: scoreFinancialValue({
@@ -956,7 +1290,8 @@ async function seedOpportunities(lookups: LookupTables): Promise<void> {
           score_classification: score.classification,
           score_explanation: score.explanation,
           verification_status: 'verified',
-          minimum_access_rank: score.finalTotal >= 80 ? 30 : score.finalTotal >= 60 ? 20 : 10,
+          minimum_access_rank:
+            score.finalTotal >= 80 ? 30 : score.finalTotal >= 60 ? 20 : 10,
           is_sample: true,
         },
         { onConflict: 'slug' },
@@ -1055,7 +1390,9 @@ async function seedOpportunities(lookups: LookupTables): Promise<void> {
           workflow_status: 'published',
           published_at: new Date().toISOString(),
           state_id: lookups.stateId,
-          county_id: seed.county ? (lookups.counties.get(seed.county) ?? null) : null,
+          county_id: seed.county
+            ? (lookups.counties.get(seed.county) ?? null)
+            : null,
           industry_id: seed.industry
             ? (lookups.industries.get(seed.industry) ?? null)
             : null,
@@ -1076,7 +1413,8 @@ async function seedOpportunities(lookups: LookupTables): Promise<void> {
           score_classification: score.classification,
           score_explanation: score.explanation,
           verification_status: 'verified',
-          minimum_access_rank: score.finalTotal >= 80 ? 30 : score.finalTotal >= 60 ? 20 : 10,
+          minimum_access_rank:
+            score.finalTotal >= 80 ? 30 : score.finalTotal >= 60 ? 20 : 10,
           is_sample: true,
         },
         { onConflict: 'slug' },
@@ -1159,7 +1497,8 @@ async function seedIndicatorValues(): Promise<void> {
       start.setUTCDate(1);
 
       const value =
-        config.base + config.drift * (6 - monthsAgo) * (1 + 0.15 * Math.sin(monthsAgo));
+        config.base +
+        config.drift * (6 - monthsAgo) * (1 + 0.15 * Math.sin(monthsAgo));
 
       await admin.from('market_indicator_values').upsert(
         {
@@ -1169,7 +1508,10 @@ async function seedIndicatorValues(): Promise<void> {
           value: Math.round(value * 100) / 100,
           is_sample: true,
         },
-        { onConflict: 'indicator_id,reporting_period_start,reporting_period_end' },
+        {
+          onConflict:
+            'indicator_id,reporting_period_start,reporting_period_end',
+        },
       );
     }
     console.log(`  ✓ observations: ${indicator.slug}`);
@@ -1277,7 +1619,9 @@ async function main(): Promise<void> {
   console.log('\nReports:');
   await seedReports(users.get('editor@example.com'));
 
-  console.log('\nDone. Demo password for all seeded users: set via SEED_PASSWORD.');
+  console.log(
+    '\nDone. Demo password for all seeded users: set via SEED_PASSWORD.',
+  );
 }
 
 main().catch((error) => {

@@ -1,6 +1,11 @@
 import type { Metadata } from 'next';
 
-import { ButtonLink, Card, Pill, SectionHeading } from '@/components/ui/primitives';
+import {
+  ButtonLink,
+  Card,
+  Pill,
+  SectionHeading,
+} from '@/components/ui/primitives';
 import { formatDate, titleCase } from '@/lib/format';
 import { loadIndicatorPreviews } from '@/lib/public-data';
 

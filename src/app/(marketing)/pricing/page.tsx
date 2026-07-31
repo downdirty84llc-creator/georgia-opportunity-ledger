@@ -30,7 +30,9 @@ const COMPARISON_ROWS: ReadonlyArray<{
   {
     label: 'Score explanation',
     render: (code) =>
-      PLAN_FEATURE_DEFAULTS[code].opportunityDetail === 'complete' ? 'Yes' : 'No',
+      PLAN_FEATURE_DEFAULTS[code].opportunityDetail === 'complete'
+        ? 'Yes'
+        : 'No',
   },
   {
     label: 'Saved opportunities',
@@ -49,7 +51,8 @@ const COMPARISON_ROWS: ReadonlyArray<{
   },
   {
     label: 'Immediate alerts',
-    render: (code) => (PLAN_FEATURE_DEFAULTS[code].immediateAlerts ? 'Yes' : 'No'),
+    render: (code) =>
+      PLAN_FEATURE_DEFAULTS[code].immediateAlerts ? 'Yes' : 'No',
   },
   {
     label: 'CSV export',
@@ -57,7 +60,8 @@ const COMPARISON_ROWS: ReadonlyArray<{
   },
   {
     label: 'Weekly report',
-    render: (code) => (PLAN_FEATURE_DEFAULTS[code].weeklyReports ? 'Yes' : 'Preview'),
+    render: (code) =>
+      PLAN_FEATURE_DEFAULTS[code].weeklyReports ? 'Yes' : 'Preview',
   },
   {
     label: 'Report archive',
@@ -68,7 +72,8 @@ const COMPARISON_ROWS: ReadonlyArray<{
   },
   {
     label: 'Deadline calendar',
-    render: (code) => (PLAN_FEATURE_DEFAULTS[code].deadlineCalendar ? 'Yes' : 'No'),
+    render: (code) =>
+      PLAN_FEATURE_DEFAULTS[code].deadlineCalendar ? 'Yes' : 'No',
   },
   {
     label: 'Pricing dashboard',
@@ -79,7 +84,8 @@ const COMPARISON_ROWS: ReadonlyArray<{
   },
   {
     label: 'Advanced filters',
-    render: (code) => (PLAN_FEATURE_DEFAULTS[code].advancedFilters ? 'Yes' : 'No'),
+    render: (code) =>
+      PLAN_FEATURE_DEFAULTS[code].advancedFilters ? 'Yes' : 'No',
   },
   {
     label: 'Custom alert preferences',
@@ -88,7 +94,8 @@ const COMPARISON_ROWS: ReadonlyArray<{
   },
   {
     label: 'Premium briefing',
-    render: (code) => (PLAN_FEATURE_DEFAULTS[code].premiumBriefing ? 'Yes' : 'No'),
+    render: (code) =>
+      PLAN_FEATURE_DEFAULTS[code].premiumBriefing ? 'Yes' : 'No',
   },
   {
     label: 'Results per page',
@@ -127,7 +134,10 @@ const BILLING_FAQ = [
 ];
 
 export default async function PricingPage() {
-  const [plans, session] = await Promise.all([loadPlans(), getSessionContext()]);
+  const [plans, session] = await Promise.all([
+    loadPlans(),
+    getSessionContext(),
+  ]);
   const codes: PlanCode[] = ['free', 'weekly', 'detailed', 'premium'];
 
   return (
@@ -181,7 +191,10 @@ export default async function PricingPage() {
             </thead>
             <tbody>
               {COMPARISON_ROWS.map((row) => (
-                <tr key={row.label} className="border-b border-ink-100 last:border-0">
+                <tr
+                  key={row.label}
+                  className="border-b border-ink-100 last:border-0"
+                >
                   <th scope="row" className="px-4 py-3 text-left font-medium">
                     {row.label}
                   </th>

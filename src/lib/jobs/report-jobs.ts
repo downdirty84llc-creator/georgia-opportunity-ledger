@@ -83,8 +83,11 @@ export const distributeWeeklyReportJob: JobDefinition = {
     );
 
     const countyNames = new Map<string, string>();
-    const { data: counties } = await supabase.from('counties').select('id, name');
-    for (const county of counties ?? []) countyNames.set(county.id, county.name);
+    const { data: counties } = await supabase
+      .from('counties')
+      .select('id, name');
+    for (const county of counties ?? [])
+      countyNames.set(county.id, county.name);
 
     const entries = (report.report_opportunities ?? [])
       .slice()
@@ -157,7 +160,9 @@ export const distributeWeeklyReportJob: JobDefinition = {
 
       // Free members are on the list, but they get the preview version of the
       // weekly rather than nothing at all (spec 5, "Free Member").
-      const visible = entries.filter((entry) => accessRank >= entry.minimumAccessRank);
+      const visible = entries.filter(
+        (entry) => accessRank >= entry.minimumAccessRank,
+      );
       const lockedCount = entries.length - visible.length;
       const highlights = features.weeklyReports
         ? visible.slice(0, 8)
@@ -245,7 +250,11 @@ export const distributeWeeklyReportJob: JobDefinition = {
     return {
       processed: sent,
       failed,
-      detail: { report: report.slug, skipped, recipients: members?.length ?? 0 },
+      detail: {
+        report: report.slug,
+        skipped,
+        recipients: members?.length ?? 0,
+      },
     };
   },
 };

@@ -17,7 +17,10 @@ export const dynamic = 'force-dynamic';
  */
 export const GET = withErrorHandling(async (): Promise<NextResponse> => {
   const viewer = await getViewer();
-  if (viewer.role !== 'super_administrator' || viewer.accountStatus !== 'active') {
+  if (
+    viewer.role !== 'super_administrator' ||
+    viewer.accountStatus !== 'active'
+  ) {
     return apiError('forbidden', 'Super administrator access required.');
   }
 

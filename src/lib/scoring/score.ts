@@ -136,7 +136,11 @@ export function applyManualAdjustment(
   calculatedTotal: number,
   adjustment: number,
 ): number {
-  const bounded = clamp(adjustment, -MAX_MANUAL_ADJUSTMENT, MAX_MANUAL_ADJUSTMENT);
+  const bounded = clamp(
+    adjustment,
+    -MAX_MANUAL_ADJUSTMENT,
+    MAX_MANUAL_ADJUSTMENT,
+  );
   return clamp(calculatedTotal + bounded, 0, MAX_SCORE);
 }
 
@@ -198,7 +202,8 @@ export function scoreFinancialValue(input: {
  * floor is genuinely reachable by very few subscribers.
  */
 export function scoreAccessibility(input: {
-  geographicScope?: 'national' | 'statewide' | 'regional' | 'single_county' | null;
+  geographicScope?:
+    'national' | 'statewide' | 'regional' | 'single_county' | null;
   industryRestricted?: boolean;
   revenueRequirement?: boolean;
   licensingRequirement?: boolean;

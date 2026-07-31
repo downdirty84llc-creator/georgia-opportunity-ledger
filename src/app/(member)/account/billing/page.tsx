@@ -58,7 +58,9 @@ export default async function BillingPage() {
         eyebrow="Account"
         title="Billing"
         description="Payment methods, invoices and card details are held by Stripe. This application never receives a card number."
-        action={subscription?.stripe_customer_id ? <BillingPortalButton /> : undefined}
+        action={
+          subscription?.stripe_customer_id ? <BillingPortalButton /> : undefined
+        }
       />
 
       {attention ? (
@@ -113,7 +115,10 @@ export default async function BillingPage() {
             </>
           ) : null}
           {subscription?.trial_end ? (
-            <DataRow label="Trial ends" value={formatDate(subscription.trial_end)} />
+            <DataRow
+              label="Trial ends"
+              value={formatDate(subscription.trial_end)}
+            />
           ) : null}
           {subscription?.founding_member ? (
             <DataRow
@@ -126,13 +131,17 @@ export default async function BillingPage() {
         {session.cancelAtPeriodEnd ? (
           <p className="mt-4 rounded-lg bg-ink-50 px-3 py-2 text-sm text-ink-700">
             Your subscription is set to end at the close of the period you have
-            already paid for. Until then nothing changes. Afterwards your account
-            stays open at the free tier and everything you have saved is kept.
+            already paid for. Until then nothing changes. Afterwards your
+            account stays open at the free tier and everything you have saved is
+            kept.
           </p>
         ) : null}
 
         <div className="mt-5 flex flex-wrap gap-2">
-          <ButtonLink href="/pricing" variant={isPaid ? 'secondary' : 'primary'}>
+          <ButtonLink
+            href="/pricing"
+            variant={isPaid ? 'secondary' : 'primary'}
+          >
             {isPaid ? 'Change plan' : 'Choose a plan'}
           </ButtonLink>
           {isPaid && !session.cancelAtPeriodEnd ? (

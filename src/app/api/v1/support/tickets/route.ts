@@ -4,10 +4,7 @@ import { z } from 'zod';
 import { track } from '@/lib/analytics/events';
 import { getViewer } from '@/lib/auth/session';
 import { createServerSupabaseClient } from '@/lib/db/server';
-import {
-  checkRateLimit,
-  rateLimitIdentity,
-} from '@/lib/http/rate-limit';
+import { checkRateLimit, rateLimitIdentity } from '@/lib/http/rate-limit';
 import {
   apiError,
   created,
@@ -55,7 +52,10 @@ export const POST = withErrorHandling(
     const parsed = bodySchema.safeParse(await request.json());
     if (!parsed.success) return validationFailed(parsed.error);
 
-    if (viewer.accountStatus !== 'active' && parsed.data.category !== 'account') {
+    if (
+      viewer.accountStatus !== 'active' &&
+      parsed.data.category !== 'account'
+    ) {
       return apiError(
         'forbidden',
         'While your account is suspended, only account appeals can be submitted.',
@@ -70,7 +70,8 @@ export const POST = withErrorHandling(
         category: parsed.data.category,
         subject: parsed.data.subject,
         message: parsed.data.message,
-        priority: parsed.data.category === 'privacy_request' ? 'high' : 'normal',
+        priority:
+          parsed.data.category === 'privacy_request' ? 'high' : 'normal',
       })
       .select('id, status')
       .single();

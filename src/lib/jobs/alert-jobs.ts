@@ -13,7 +13,10 @@ import {
 } from '@/lib/billing/subscription';
 import { createAdminClient } from '@/lib/db/admin';
 import { sendEmail } from '@/lib/email/client';
-import { deadlineReminderEmail, premiumAlertEmail } from '@/lib/email/templates';
+import {
+  deadlineReminderEmail,
+  premiumAlertEmail,
+} from '@/lib/email/templates';
 import { mintUnsubscribeToken } from '@/lib/email/unsubscribe';
 import { dailyKey, type JobDefinition } from '@/lib/jobs/runner';
 import { dueReminderInterval } from '@/lib/opportunities/lifecycle';
@@ -133,7 +136,9 @@ async function loadRecipients(now: Date): Promise<AlertRecipient[]> {
   return recipients;
 }
 
-async function loadEmails(userIds: readonly string[]): Promise<Map<string, string>> {
+async function loadEmails(
+  userIds: readonly string[],
+): Promise<Map<string, string>> {
   const supabase = createAdminClient();
   const emails = new Map<string, string>();
   if (userIds.length === 0) return emails;
@@ -320,7 +325,11 @@ export const premiumAlertsJob: JobDefinition = {
 
     if (error) throw new Error(error.message);
     if (!candidates || candidates.length === 0) {
-      return { processed: 0, failed: 0, detail: { since: since.toISOString() } };
+      return {
+        processed: 0,
+        failed: 0,
+        detail: { since: since.toISOString() },
+      };
     }
 
     const recipients = await loadRecipients(now);
@@ -354,7 +363,10 @@ export const premiumAlertsJob: JobDefinition = {
         const email = emails.get(recipient.userId);
         if (!email) continue;
 
-        const unsubscribeToken = mintUnsubscribeToken(recipient.userId, 'alerts');
+        const unsubscribeToken = mintUnsubscribeToken(
+          recipient.userId,
+          'alerts',
+        );
         const rendered = premiumAlertEmail({
           firstName: null,
           reason: 'new',
@@ -422,7 +434,10 @@ export const deadlineRemindersJob: JobDefinition = {
     if (error) throw new Error(error.message);
 
     const recipients = new Map(
-      (await loadRecipients(now)).map((recipient) => [recipient.userId, recipient]),
+      (await loadRecipients(now)).map((recipient) => [
+        recipient.userId,
+        recipient,
+      ]),
     );
     const emails = await loadEmails([...recipients.keys()]);
 
@@ -430,18 +445,26 @@ export const deadlineRemindersJob: JobDefinition = {
     // listing everything closing at that horizon, not one email per record.
     const grouped = new Map<
       string,
-      Map<number, Array<{ title: string; slug: string; closingDate: string; score: number; dedupeKey: string; opportunityId: string }>>
+      Map<
+        number,
+        Array<{
+          title: string;
+          slug: string;
+          closingDate: string;
+          score: number;
+          dedupeKey: string;
+          opportunityId: string;
+        }>
+      >
     >();
 
     for (const entry of saved ?? []) {
       const recipient = recipients.get(entry.user_id);
       if (!recipient) continue;
 
-      const row = (
-        Array.isArray(entry.opportunities)
-          ? entry.opportunities[0]
-          : entry.opportunities
-      ) as unknown as CandidateRow | undefined;
+      const row = (Array.isArray(entry.opportunities)
+        ? entry.opportunities[0]
+        : entry.opportunities) as unknown as CandidateRow | undefined;
       if (!row?.closing_date) continue;
 
       const candidate = toCandidate(row, 1);
@@ -531,7 +554,9 @@ export const savedSearchMatchingJob: JobDefinition = {
 
     const { data: searches, error } = await supabase
       .from('saved_searches')
-      .select('id, user_id, name, filter_configuration, minimum_score, last_run_at')
+      .select(
+        'id, user_id, name, filter_configuration, minimum_score, last_run_at',
+      )
       .eq('alert_enabled', true)
       .eq('alert_frequency', 'immediate')
       .limit(2000);
@@ -540,7 +565,10 @@ export const savedSearchMatchingJob: JobDefinition = {
     note('searchCount', searches?.length ?? 0);
 
     const recipients = new Map(
-      (await loadRecipients(now)).map((recipient) => [recipient.userId, recipient]),
+      (await loadRecipients(now)).map((recipient) => [
+        recipient.userId,
+        recipient,
+      ]),
     );
 
     let matched = 0;
@@ -601,6 +629,10 @@ export const savedSearchMatchingJob: JobDefinition = {
         .eq('id', search.id);
     }
 
-    return { processed: matched, failed: 0, detail: { searches: searches?.length ?? 0 } };
+    return {
+      processed: matched,
+      failed: 0,
+      detail: { searches: searches?.length ?? 0 },
+    };
   },
 };

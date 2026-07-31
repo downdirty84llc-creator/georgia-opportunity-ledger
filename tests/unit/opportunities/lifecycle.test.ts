@@ -27,7 +27,9 @@ describe('expiry and closing-soon (spec 26)', () => {
   });
 
   it('the window matches the published constant', () => {
-    const edge = new Date(NOW.getTime() + CLOSING_SOON_DAYS * 24 * 60 * 60 * 1000);
+    const edge = new Date(
+      NOW.getTime() + CLOSING_SOON_DAYS * 24 * 60 * 60 * 1000,
+    );
     expect(isClosingSoon(edge, NOW)).toBe(true);
   });
 
@@ -78,7 +80,12 @@ describe('evaluateLifecycle transitions', () => {
   });
 
   it('never overrides administrator-controlled statuses', () => {
-    for (const status of ['withdrawn', 'under_review', 'information_only', 'closed'] as const) {
+    for (const status of [
+      'withdrawn',
+      'under_review',
+      'information_only',
+      'closed',
+    ] as const) {
       const result = evaluateLifecycle(
         { closingDate: new Date('2026-07-20T00:00:00Z'), status },
         NOW,
@@ -96,7 +103,9 @@ describe('reverification (spec: 30-day cycle)', () => {
       '2026-07-15T12:00:00.000Z',
     );
     expect(needsReverification(verified, NOW)).toBe(true);
-    expect(needsReverification(new Date('2026-07-01T00:00:00Z'), NOW)).toBe(false);
+    expect(needsReverification(new Date('2026-07-01T00:00:00Z'), NOW)).toBe(
+      false,
+    );
   });
 });
 
@@ -116,8 +125,12 @@ describe('deadline reminder intervals (spec 16)', () => {
   });
 
   it('returns null after the deadline and far before it', () => {
-    expect(dueReminderInterval(new Date('2026-07-14T00:00:00Z'), NOW)).toBeNull();
-    expect(dueReminderInterval(new Date('2026-10-01T00:00:00Z'), NOW)).toBeNull();
+    expect(
+      dueReminderInterval(new Date('2026-07-14T00:00:00Z'), NOW),
+    ).toBeNull();
+    expect(
+      dueReminderInterval(new Date('2026-10-01T00:00:00Z'), NOW),
+    ).toBeNull();
   });
 
   it('dedupe keys incorporate the deadline date', () => {

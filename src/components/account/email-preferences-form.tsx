@@ -25,8 +25,7 @@ const ALERT_TYPES: ReadonlyArray<{
   {
     type: 'high_score',
     label: 'New matching records',
-    description:
-      'Sent as soon as a record matching your filters is published.',
+    description: 'Sent as soon as a record matching your filters is published.',
     requires: 'premium',
   },
   {

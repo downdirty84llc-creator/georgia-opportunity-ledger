@@ -76,12 +76,19 @@ export default async function AccountPage() {
                   .join(' ') || '—'
               }
             />
-            <DataRow label="Company" value={session.profile?.companyName ?? '—'} />
+            <DataRow
+              label="Company"
+              value={session.profile?.companyName ?? '—'}
+            />
             <DataRow label="Role" value={titleCase(viewer.role)} />
             <DataRow
               label="Account status"
               value={
-                <Pill tone={viewer.accountStatus === 'active' ? 'positive' : 'warning'}>
+                <Pill
+                  tone={
+                    viewer.accountStatus === 'active' ? 'positive' : 'warning'
+                  }
+                >
                   {titleCase(viewer.accountStatus)}
                 </Pill>
               }
@@ -91,10 +98,7 @@ export default async function AccountPage() {
       </section>
 
       <section className="mt-10">
-        <SectionHeading
-          title="Subscription"
-          action={<BillingPortalButton />}
-        />
+        <SectionHeading title="Subscription" action={<BillingPortalButton />} />
         <Card>
           <dl>
             <DataRow label="Plan" value={session.planName} />
@@ -173,7 +177,10 @@ export default async function AccountPage() {
               label="Marketing emails"
               value={preferences?.marketing_email_enabled ? 'On' : 'Off'}
             />
-            <DataRow label="Time zone" value={preferences?.timezone ?? 'America/New_York'} />
+            <DataRow
+              label="Time zone"
+              value={preferences?.timezone ?? 'America/New_York'}
+            />
           </dl>
         </Card>
       </section>

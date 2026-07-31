@@ -1,4 +1,7 @@
-import { emptyDraft, type EditorDraft } from '@/lib/opportunities/editor-schema';
+import {
+  emptyDraft,
+  type EditorDraft,
+} from '@/lib/opportunities/editor-schema';
 
 type Row = Record<string, unknown>;
 
@@ -62,7 +65,9 @@ export function draftFromRecord(record: Row): EditorDraft {
     cityId: text(record.city_id),
     industryId: text(record.industry_id),
     streetAddress: text(record.street_address),
-    minimumAccessRank: Number(record.minimum_access_rank ?? base.minimumAccessRank),
+    minimumAccessRank: Number(
+      record.minimum_access_rank ?? base.minimumAccessRank,
+    ),
     status: (record.status as EditorDraft['status']) ?? base.status,
 
     sourceId: text(record.source_id),

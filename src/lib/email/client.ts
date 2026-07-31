@@ -53,7 +53,9 @@ async function sendViaResend(
       headers: message.unsubscribeToken
         ? unsubscribeHeaders(publicEnv.siteUrl, message.unsubscribeToken)
         : undefined,
-      tags: message.tag ? [{ name: 'category', value: message.tag }] : undefined,
+      tags: message.tag
+        ? [{ name: 'category', value: message.tag }]
+        : undefined,
     }),
   });
 
@@ -118,7 +120,10 @@ export async function sendEmail(message: EmailMessage): Promise<SendResult> {
   }
 
   const from = env.emailFrom;
-  const withReplyTo = { ...message, replyTo: message.replyTo ?? env.emailReplyTo };
+  const withReplyTo = {
+    ...message,
+    replyTo: message.replyTo ?? env.emailReplyTo,
+  };
 
   try {
     return env.emailProvider === 'postmark'

@@ -19,7 +19,10 @@ describe('filter parsing', () => {
     );
     const filters = parseFilters(params);
     expect(filters.q).toBe('warehouse');
-    expect(filters.category).toEqual(['commercial_property', 'business_funding']);
+    expect(filters.category).toEqual([
+      'commercial_property',
+      'business_funding',
+    ]);
     expect(filters.minScore).toBe(70);
     expect(filters.closingSoon).toBe(true);
     expect(filters.sort).toBe('closing_soon');

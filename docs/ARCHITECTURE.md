@@ -44,11 +44,11 @@ RLS denial cannot express.
 
 ## 2. Three layers of enforcement
 
-| Layer | Enforces | Fails safe by |
-| --- | --- | --- |
-| Row-level security | Which rows exist for this key | Returning nothing |
-| `search_opportunities` | Which columns this rank may read | Returning NULL |
-| `src/lib/access` | Which capabilities this plan includes | Returning a decision with a reason |
+| Layer                  | Enforces                              | Fails safe by                      |
+| ---------------------- | ------------------------------------- | ---------------------------------- |
+| Row-level security     | Which rows exist for this key         | Returning nothing                  |
+| `search_opportunities` | Which columns this rank may read      | Returning NULL                     |
+| `src/lib/access`       | Which capabilities this plan includes | Returning a decision with a reason |
 
 A bug in any one is caught by the others. The cost is that the plan matrix
 exists twice — in `subscription_plans.feature_configuration` and in
@@ -65,7 +65,7 @@ folds together:
 - **Account status.** Suspended or closed drops to rank 0 immediately, including
   for staff. A suspended editor previews nothing.
 - **Role.** Staff resolve to rank 100 so they can preview every tier. Staff
-  *permissions* — publish, refund, suspend — are role checks and never rank
+  _permissions_ — publish, refund, suspend — are role checks and never rank
   checks, because "Premium member" must never imply "administrator".
 - **Subscription.** Active and trialing grant the plan rank. Cancelled keeps
   access to the period end, because it has been paid for. Past-due keeps access
@@ -259,7 +259,7 @@ domain's deliverability for everybody.
 
 `src/lib/email/unsubscribe.ts` mints an HMAC token over the user id and scope.
 The token carries no secret, cannot be forged, and — importantly — only ever
-turns email *off*. Possession of one grants no read access and enables nothing,
+turns email _off_. Possession of one grants no read access and enables nothing,
 so the usual objection to unauthenticated action links does not apply.
 
 Alert, deadline and weekly-report email carry `List-Unsubscribe` and
@@ -298,7 +298,7 @@ Two details worth knowing:
 
 `src/lib/db/public.ts` exists because of a subtle failure discovered during a
 build: the marketing pages read only public teaser views, but they were doing so
-through the *session-bound* client, which calls `cookies()`. That forces the
+through the _session-bound_ client, which calls `cookies()`. That forces the
 whole route to render per request, defeating the caching spec 23 asks for.
 
 Worse, the `try/catch` in those loaders was swallowing Next.js's
@@ -325,12 +325,12 @@ thing in that tree that needed to know who was asking.
 
 So it was split in three:
 
-  - `header-actions.tsx` — the nav list and the account area as pure markup,
-    imported by both paths so they cannot drift into two different headers.
-  - `header.tsx` — a synchronous shell. Given a `session` prop it renders the
-    lot on the server; given nothing it defers to the client half.
-  - `header-session.tsx` — a client component that fetches
-    `/api/v1/auth/session` and swaps the two personalised links.
+- `header-actions.tsx` — the nav list and the account area as pure markup,
+  imported by both paths so they cannot drift into two different headers.
+- `header.tsx` — a synchronous shell. Given a `session` prop it renders the
+  lot on the server; given nothing it defers to the client half.
+- `header-session.tsx` — a client component that fetches
+  `/api/v1/auth/session` and swaps the two personalised links.
 
 The member and admin shells pass the session they have already resolved, so
 they lose nothing. The public pages prerender.
@@ -370,11 +370,11 @@ interesting decision.
 **Sniff before storing.** The `Content-Type` on a multipart part is whatever the
 client typed. A file uploaded as `image/png` containing markup is a stored XSS
 payload on the storage origin, so `signatures.ts` checks the leading bytes
-against the declared type and refuses a mismatch. Both the type *and* the
+against the declared type and refuses a mismatch. Both the type _and_ the
 signature can be individually valid and still not match each other — a PNG
 declared as a PDF is rejected, and both are on the allowlist.
 
-**Store, then scan.** The file is written and the row created `pending` *before*
+**Store, then scan.** The file is written and the row created `pending` _before_
 the scanner is called. Holding 25MB in memory until a verdict arrives makes a
 slow scanner into a failed upload. A `pending` row is invisible to members, so a
 stored-but-unscanned file is not a reachable file — and if the process dies
@@ -391,7 +391,7 @@ back. One decision, in the database, that the endpoint cannot drift away from.
 `skipped` is readable and `failed` is not, which looks inconsistent until you
 notice they answer different questions. `skipped` means no scanner is configured
 — a deployment decision, recorded in the runbook, that applies to every file
-equally. `failed` means we tried to check *this* file and could not.
+equally. `failed` means we tried to check _this_ file and could not.
 
 **Retry, and know when to stop.** `scan-attachments` picks up anything left
 `pending`, `failed`, or stuck in `scanning` past fifteen minutes, and gives up

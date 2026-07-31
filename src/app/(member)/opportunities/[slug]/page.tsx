@@ -124,7 +124,10 @@ export default async function OpportunityDetailPage({ params }: PageProps) {
 
   const opportunity = serializeOpportunity(record, viewer);
   const analysis = renderRichText(opportunity.fullAnalysis);
-  const property = opportunity.propertyDetails as Record<string, unknown> | null;
+  const property = opportunity.propertyDetails as Record<
+    string,
+    unknown
+  > | null;
   const funding = opportunity.fundingDetails as Record<string, unknown> | null;
 
   return (
@@ -146,7 +149,9 @@ export default async function OpportunityDetailPage({ params }: PageProps) {
       <header>
         <div className="flex flex-wrap items-center gap-2">
           <Pill>{titleCase(opportunity.category)}</Pill>
-          {opportunity.subtype ? <Pill tone="muted">{opportunity.subtype}</Pill> : null}
+          {opportunity.subtype ? (
+            <Pill tone="muted">{opportunity.subtype}</Pill>
+          ) : null}
           {opportunity.isSample ? <SampleDataBadge /> : null}
           {opportunity.isExpired ? <Pill tone="muted">Closed</Pill> : null}
           {opportunity.isClosingSoon && !opportunity.isExpired ? (
@@ -162,8 +167,9 @@ export default async function OpportunityDetailPage({ params }: PageProps) {
             classification={opportunity.classification as ScoreClassification}
           />
           <span className="text-sm text-ink-600">
-            {[opportunity.city, opportunity.county].filter(Boolean).join(', ') ||
-              'Georgia'}
+            {[opportunity.city, opportunity.county]
+              .filter(Boolean)
+              .join(', ') || 'Georgia'}
           </span>
           <span className="text-sm text-ink-600">
             {formatDeadline(opportunity.closingDate)}
@@ -229,7 +235,7 @@ export default async function OpportunityDetailPage({ params }: PageProps) {
               {property ? (
                 <section>
                   <h2 className="text-xl">Property details</h2>
-                  <dl className="mt-3 surface p-5">
+                  <dl className="surface mt-3 p-5">
                     <DataRow
                       label="Property type"
                       value={titleCase(String(property.property_type ?? '—'))}
@@ -244,15 +250,21 @@ export default async function OpportunityDetailPage({ params }: PageProps) {
                     />
                     <DataRow
                       label="Asking price"
-                      value={formatMoney(property.asking_price as number | null)}
+                      value={formatMoney(
+                        property.asking_price as number | null,
+                      )}
                     />
                     <DataRow
                       label="Starting bid"
-                      value={formatMoney(property.starting_bid as number | null)}
+                      value={formatMoney(
+                        property.starting_bid as number | null,
+                      )}
                     />
                     <DataRow
                       label="Assessed value"
-                      value={formatMoney(property.assessed_value as number | null)}
+                      value={formatMoney(
+                        property.assessed_value as number | null,
+                      )}
                     />
                     <DataRow
                       label="Building size"
@@ -270,10 +282,15 @@ export default async function OpportunityDetailPage({ params }: PageProps) {
                           : '—'
                       }
                     />
-                    <DataRow label="Zoning" value={String(property.zoning ?? '—')} />
+                    <DataRow
+                      label="Zoning"
+                      value={String(property.zoning ?? '—')}
+                    />
                     <DataRow
                       label="Registration deadline"
-                      value={formatDate(property.registration_deadline as string)}
+                      value={formatDate(
+                        property.registration_deadline as string,
+                      )}
                     />
                     <DataRow
                       label="Auction date"
@@ -290,7 +307,7 @@ export default async function OpportunityDetailPage({ params }: PageProps) {
               {funding ? (
                 <section>
                   <h2 className="text-xl">Program details</h2>
-                  <dl className="mt-3 surface p-5">
+                  <dl className="surface mt-3 p-5">
                     <DataRow
                       label="Funding type"
                       value={titleCase(String(funding.funding_type ?? '—'))}
@@ -342,7 +359,9 @@ export default async function OpportunityDetailPage({ params }: PageProps) {
               {opportunity.restrictions ? (
                 <section>
                   <h2 className="text-xl">Restrictions</h2>
-                  <p className="prose-ledger mt-3">{opportunity.restrictions}</p>
+                  <p className="prose-ledger mt-3">
+                    {opportunity.restrictions}
+                  </p>
                 </section>
               ) : null}
 
@@ -396,7 +415,9 @@ export default async function OpportunityDetailPage({ params }: PageProps) {
 
           {opportunity.scoreBreakdown ? (
             <Card>
-              <h2 className="text-base font-semibold">Why it scores {opportunity.score}</h2>
+              <h2 className="text-base font-semibold">
+                Why it scores {opportunity.score}
+              </h2>
               <div className="mt-4 space-y-3">
                 {opportunity.scoreBreakdown.map((row) => (
                   <Meter
@@ -432,8 +453,14 @@ export default async function OpportunityDetailPage({ params }: PageProps) {
           <Card>
             <h2 className="text-base font-semibold">Timeline</h2>
             <dl className="mt-3">
-              <DataRow label="Opens" value={formatDate(opportunity.openingDate)} />
-              <DataRow label="Closes" value={formatDate(opportunity.closingDate)} />
+              <DataRow
+                label="Opens"
+                value={formatDate(opportunity.openingDate)}
+              />
+              <DataRow
+                label="Closes"
+                value={formatDate(opportunity.closingDate)}
+              />
               <DataRow
                 label="Last verified"
                 value={formatDate(opportunity.dateVerified)}
@@ -449,7 +476,10 @@ export default async function OpportunityDetailPage({ params }: PageProps) {
             <Card>
               <h2 className="text-base font-semibold">Source</h2>
               <dl className="mt-3">
-                <DataRow label="Source" value={opportunity.source.name ?? '—'} />
+                <DataRow
+                  label="Source"
+                  value={opportunity.source.name ?? '—'}
+                />
                 <DataRow
                   label="Organisation"
                   value={opportunity.source.organization ?? '—'}
@@ -481,7 +511,11 @@ export default async function OpportunityDetailPage({ params }: PageProps) {
                 Premium members are alerted the moment a matching record is
                 published or materially changes.
               </p>
-              <ButtonLink href="/pricing" variant="secondary" className="mt-4 w-full">
+              <ButtonLink
+                href="/pricing"
+                variant="secondary"
+                className="mt-4 w-full"
+              >
                 Compare plans
               </ButtonLink>
             </Card>

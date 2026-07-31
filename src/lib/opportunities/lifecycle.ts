@@ -95,7 +95,11 @@ export function evaluateLifecycle(
     nextStatus = 'upcoming';
   } else if (closingSoon) {
     nextStatus = 'closing_soon';
-  } else if (status === 'expired' || status === 'closing_soon' || status === 'upcoming') {
+  } else if (
+    status === 'expired' ||
+    status === 'closing_soon' ||
+    status === 'upcoming'
+  ) {
     // The deadline moved outward again — a reopened or extended record.
     nextStatus = 'open';
   }

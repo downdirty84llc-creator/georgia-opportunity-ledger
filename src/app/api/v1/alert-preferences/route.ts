@@ -33,7 +33,14 @@ const putSchema = z.object({
         alertType: z.enum(ALERT_TYPES),
         enabled: z.boolean(),
         frequency: z
-          .enum(['immediate', 'daily', 'weekly', 'biweekly', 'monthly', 'never'])
+          .enum([
+            'immediate',
+            'daily',
+            'weekly',
+            'biweekly',
+            'monthly',
+            'never',
+          ])
           .optional(),
         minimumScore: z.number().int().min(0).max(100).optional(),
       }),
@@ -82,7 +89,10 @@ export const PUT = withErrorHandling(
   async (request: Request): Promise<NextResponse> => {
     const viewer = await getViewer();
     if (!viewer.isAuthenticated) {
-      return apiError('unauthorized', 'Sign in to update your alert preferences.');
+      return apiError(
+        'unauthorized',
+        'Sign in to update your alert preferences.',
+      );
     }
 
     const parsed = putSchema.safeParse(await request.json());

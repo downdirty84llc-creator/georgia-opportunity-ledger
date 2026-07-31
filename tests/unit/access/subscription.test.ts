@@ -34,8 +34,12 @@ function subscription(
 
 describe('subscriptionAccessRank (spec 9)', () => {
   it('grants the plan rank while active or trialing', () => {
-    expect(subscriptionAccessRank(subscription({ status: 'active' }), NOW)).toBe(30);
-    expect(subscriptionAccessRank(subscription({ status: 'trialing' }), NOW)).toBe(30);
+    expect(
+      subscriptionAccessRank(subscription({ status: 'active' }), NOW),
+    ).toBe(30);
+    expect(
+      subscriptionAccessRank(subscription({ status: 'trialing' }), NOW),
+    ).toBe(30);
   });
 
   it('keeps access after cancellation until the paid period ends', () => {
@@ -68,7 +72,12 @@ describe('subscriptionAccessRank (spec 9)', () => {
   });
 
   it('unpaid, paused, incomplete and expired grant nothing', () => {
-    for (const status of ['unpaid', 'paused', 'incomplete', 'expired'] as const) {
+    for (const status of [
+      'unpaid',
+      'paused',
+      'incomplete',
+      'expired',
+    ] as const) {
       expect(subscriptionAccessRank(subscription({ status }), NOW)).toBe(0);
     }
   });

@@ -16,11 +16,14 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "test:e2e": "playwright test",
+    "test:e2e:security": "playwright test tests/e2e/security.spec.ts tests/e2e/accessibility.spec.ts",
+    "smoke": "./scripts/smoke.sh",
     "db:reset": "supabase db reset",
     "db:seed": "tsx scripts/seed.ts",
     "db:types": "supabase gen types typescript --local > src/lib/db/generated-types.ts",
-    "format": "prettier --write \"**/*.{ts,tsx,md,json,sql}\"",
-    "format:check": "prettier --check \"**/*.{ts,tsx,md,json,sql}\""
+    "stripe:setup": "tsx scripts/stripe-setup.ts",
+    "format": "prettier --write \"**/*.{ts,tsx,md,json}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,md,json}\""
   },
   "dependencies": {
     "@supabase/ssr": "^0.5.2",
@@ -33,12 +36,14 @@
     "zod": "^3.23.8"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.12.1",
     "@playwright/test": "^1.48.0",
     "@types/node": "^22.7.5",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "@vitest/coverage-v8": "^2.1.3",
     "autoprefixer": "^10.4.20",
+    "axe-core": "^4.12.1",
     "eslint": "^8.57.1",
     "eslint-config-next": "^15.5.0",
     "postcss": "^8.4.47",

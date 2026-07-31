@@ -54,7 +54,9 @@ export function ExportButton({
 
       if (!response.ok) {
         setStatus('error');
-        setMessage(payload?.error?.message ?? 'The export could not be started.');
+        setMessage(
+          payload?.error?.message ?? 'The export could not be started.',
+        );
         return;
       }
 
@@ -94,7 +96,10 @@ export function ExportButton({
         >
           {message}{' '}
           {downloadUrl ? (
-            <a href={downloadUrl} className="font-medium text-ink-900 underline">
+            <a
+              href={downloadUrl}
+              className="font-medium text-ink-900 underline"
+            >
               Download
             </a>
           ) : null}

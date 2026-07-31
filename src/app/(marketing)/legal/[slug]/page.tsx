@@ -32,7 +32,10 @@ export default async function LegalPage({ params }: PageProps) {
   return (
     <div className="mx-auto max-w-6xl px-4 py-14 sm:px-6">
       <div className="grid gap-10 lg:grid-cols-[220px,1fr]">
-        <nav aria-label="Legal documents" className="lg:sticky lg:top-8 lg:self-start">
+        <nav
+          aria-label="Legal documents"
+          className="lg:sticky lg:top-8 lg:self-start"
+        >
           <h2 className="text-xs font-semibold uppercase tracking-[0.12em] text-ink-500">
             Policies
           </h2>

@@ -43,9 +43,7 @@ export interface UnsubscribeClaim {
   scope: UnsubscribeScope;
 }
 
-export function verifyUnsubscribeToken(
-  token: string,
-): UnsubscribeClaim | null {
+export function verifyUnsubscribeToken(token: string): UnsubscribeClaim | null {
   const separator = token.lastIndexOf('.');
   if (separator <= 0) return null;
 

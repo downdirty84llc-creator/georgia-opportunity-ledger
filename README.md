@@ -28,18 +28,18 @@ npm run dev                         # http://localhost:3000
 Seeded accounts (password from `SEED_PASSWORD`, default
 `ledger-demo-password-2026`):
 
-| Email                          | Role                   | Plan     |
-| ------------------------------ | ---------------------- | -------- |
-| `free.member@example.com`      | member                 | Free     |
-| `weekly.member@example.com`    | member                 | Weekly   |
-| `detailed.member@example.com`  | member                 | Detailed |
-| `premium.member@example.com`   | member                 | Premium  |
-| `researcher@example.com`       | researcher             | —        |
-| `reviewer@example.com`         | reviewer               | —        |
-| `editor@example.com`           | editor                 | —        |
-| `support@example.com`          | support representative | —        |
-| `billing@example.com`          | billing manager        | —        |
-| `admin@example.com`            | super administrator    | —        |
+| Email                         | Role                   | Plan     |
+| ----------------------------- | ---------------------- | -------- |
+| `free.member@example.com`     | member                 | Free     |
+| `weekly.member@example.com`   | member                 | Weekly   |
+| `detailed.member@example.com` | member                 | Detailed |
+| `premium.member@example.com`  | member                 | Premium  |
+| `researcher@example.com`      | researcher             | —        |
+| `reviewer@example.com`        | reviewer               | —        |
+| `editor@example.com`          | editor                 | —        |
+| `support@example.com`         | support representative | —        |
+| `billing@example.com`         | billing manager        | —        |
+| `admin@example.com`           | super administrator    | —        |
 
 Everything the seeder writes carries `is_sample = true`, is badged in the UI, and
 is excluded from production analytics. The seeder refuses to run when
@@ -49,17 +49,17 @@ is excluded from production analytics. The seeder refuses to run when
 
 ## Commands
 
-| Command                | What it does                                          |
-| ---------------------- | ----------------------------------------------------- |
-| `npm run dev`          | Development server                                     |
-| `npm run build`        | Production build                                       |
-| `npm run typecheck`    | `tsc --noEmit`                                         |
-| `npm run lint`         | ESLint                                                 |
-| `npm test`             | Unit and integration tests (Vitest)                    |
-| `npm run test:e2e`     | End-to-end tests (Playwright, needs a running app)     |
-| `npm run db:reset`     | Re-runs every migration and the reference-data seed    |
-| `npm run db:seed`      | Loads demo users and sample records                    |
-| `npm run db:types`     | Regenerates database types from a live schema          |
+| Command             | What it does                                        |
+| ------------------- | --------------------------------------------------- |
+| `npm run dev`       | Development server                                  |
+| `npm run build`     | Production build                                    |
+| `npm run typecheck` | `tsc --noEmit`                                      |
+| `npm run lint`      | ESLint                                              |
+| `npm test`          | Unit and integration tests (Vitest)                 |
+| `npm run test:e2e`  | End-to-end tests (Playwright, needs a running app)  |
+| `npm run db:reset`  | Re-runs every migration and the reference-data seed |
+| `npm run db:seed`   | Loads demo users and sample records                 |
+| `npm run db:types`  | Regenerates database types from a live schema       |
 
 ---
 
@@ -165,16 +165,23 @@ See `docs/RUNBOOK.md` for the launch checklist and operational procedures.
 
 ## Testing
 
-`npm test` runs 167 unit tests covering the parts where a quiet mistake costs
+`npm test` runs 177 unit tests covering the parts where a quiet mistake costs
 money or leaks paid content: score arithmetic and classification bands,
 subscription-status resolution including the past-due grace window, entitlement
 decisions per tier, alert matching and suppression keys, deadline lifecycle
 transitions, CSV escaping and formula-injection defence, filter parsing,
-unsubscribe token signing and tampering, and upload content sniffing including
-the file-name and scan-state rules.
+unsubscribe token signing and tampering, upload content sniffing, and the legal
+document set.
 
 `npm run test:e2e` runs Playwright against a built app across desktop, iPhone,
-Android and tablet viewports.
+Android and tablet viewports. It includes the specification's security list —
+unauthorised API access, direct URL access, identifier enumeration, injection,
+webhook forgery, upload attacks, the cron-secret boundary — and WCAG 2.1 AA
+checks on every public page.
+
+Checks that need seeded data **skip** when it is absent rather than passing.
+A green tick for an access-boundary test that never signed anyone in is worse
+than no test at all, so the suite says which ones did not run and why.
 
 ---
 
@@ -209,8 +216,10 @@ logs a warning on every upload. `skipped` says "not checked", never "clean".
 ## Status
 
 Milestones 2 through 9 of the specification are implemented; see
-`docs/MILESTONES.md` for the per-milestone breakdown and what remains. What is
-left is mostly not code: legal review of the twelve documents in
-`src/lib/legal/documents.ts` (a hard launch blocker), a Stripe account with
-products and prices so the tier-by-tier payment matrix can be run, a scanner
-endpoint for the upload pipeline to call, and design sign-off.
+`docs/MILESTONES.md` for the per-milestone breakdown and what remains.
+
+Nothing that is left is code. Legal review of the nine documents marked
+`requiresReview` is the hard launch blocker. The rest are deployment or
+engagement tasks: a scanner endpoint for `FILE_SCANNER_URL`, running the
+tier-by-tier payment matrix against a deployed environment, a human
+accessibility audit, and brand sign-off.

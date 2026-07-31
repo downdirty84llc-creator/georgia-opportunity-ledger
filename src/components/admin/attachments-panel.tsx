@@ -30,7 +30,10 @@ const RANK_OPTIONS = [
  * see these words — they simply do not see the file — so the copy is written
  * for the editor deciding whether to wait, retry or investigate.
  */
-const SCAN_LABELS: Record<string, { text: string; tone: 'positive' | 'warning' | 'neutral' }> = {
+const SCAN_LABELS: Record<
+  string,
+  { text: string; tone: 'positive' | 'warning' | 'neutral' }
+> = {
   clean: { text: 'Scanned — clean', tone: 'positive' },
   skipped: { text: 'Not scanned (no scanner configured)', tone: 'warning' },
   pending: { text: 'Waiting to be scanned', tone: 'warning' },
@@ -146,7 +149,10 @@ export function AttachmentsPanel({
 
       <div className="mt-4 flex flex-wrap items-end gap-3">
         <div>
-          <label htmlFor="attachment-rank" className="block text-sm font-medium">
+          <label
+            htmlFor="attachment-rank"
+            className="block text-sm font-medium"
+          >
             Who may download it
           </label>
           <select
@@ -164,7 +170,10 @@ export function AttachmentsPanel({
         </div>
 
         <div>
-          <label htmlFor="attachment-file" className="block text-sm font-medium">
+          <label
+            htmlFor="attachment-file"
+            className="block text-sm font-medium"
+          >
             File
           </label>
           <input
@@ -241,7 +250,8 @@ export function AttachmentsPanel({
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  {row.scan_status === 'clean' || row.scan_status === 'skipped' ? (
+                  {row.scan_status === 'clean' ||
+                  row.scan_status === 'skipped' ? (
                     <a
                       href={`/api/v1/attachments/${row.id}`}
                       className="rounded-md px-2.5 py-1.5 text-sm font-medium text-ink-700 underline hover:bg-ink-100"

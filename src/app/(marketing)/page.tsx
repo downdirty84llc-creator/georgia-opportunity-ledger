@@ -25,7 +25,11 @@ const CATEGORIES = [
       'Tax sales, sheriff sales, bank-owned inventory, development-authority ' +
       'sites and off-market indications — with the liens, zoning and ' +
       'registration deadlines attached.',
-    points: ['Auction and registration dates', 'Zoning and current use', 'Known liens and title notes'],
+    points: [
+      'Auction and registration dates',
+      'Zoning and current use',
+      'Known liens and title notes',
+    ],
   },
   {
     title: 'Business Funding',
@@ -34,7 +38,11 @@ const CATEGORIES = [
       'Grants, guaranteed loans, tax credits, workforce funding and ' +
       'procurement — sorted by who can actually qualify, not by who shouts ' +
       'loudest.',
-    points: ['Eligibility in plain language', 'Owner contribution and collateral', 'Real application deadlines'],
+    points: [
+      'Eligibility in plain language',
+      'Owner contribution and collateral',
+      'Real application deadlines',
+    ],
   },
   {
     title: 'Market Pricing',
@@ -42,7 +50,11 @@ const CATEGORIES = [
     description:
       'Construction inputs, industrial rents, vacancy, lending rates and ' +
       'permit activity — the numbers that decide whether a deal still works.',
-    points: ['Month-over-month movement', 'Named public sources', 'Interpretation, not just a chart'],
+    points: [
+      'Month-over-month movement',
+      'Named public sources',
+      'Interpretation, not just a chart',
+    ],
   },
 ];
 
@@ -259,11 +271,19 @@ export default async function HomePage() {
           {[
             { label: 'Active opportunities', value: stats.activeOpportunities },
             { label: 'Georgia counties covered', value: stats.countiesCovered },
-            { label: 'Records verified this week', value: stats.verifiedThisWeek },
-            { label: 'Deadlines in the next 14 days', value: stats.upcomingDeadlines },
+            {
+              label: 'Records verified this week',
+              value: stats.verifiedThisWeek,
+            },
+            {
+              label: 'Deadlines in the next 14 days',
+              value: stats.upcomingDeadlines,
+            },
           ].map((stat) => (
             <div key={stat.label}>
-              <p className="text-3xl font-semibold tabular-nums">{stat.value}</p>
+              <p className="text-3xl font-semibold tabular-nums">
+                {stat.value}
+              </p>
               <p className="mt-1 text-sm text-ink-300">{stat.label}</p>
             </div>
           ))}
@@ -385,7 +405,9 @@ export default async function HomePage() {
               </li>
             </ul>
             <div className="mt-6 flex flex-wrap gap-3">
-              <ButtonLink href="/sample-report">View a sample report</ButtonLink>
+              <ButtonLink href="/sample-report">
+                View a sample report
+              </ButtonLink>
               <ButtonLink href="/insights" variant="secondary">
                 Free insights
               </ButtonLink>
@@ -396,31 +418,32 @@ export default async function HomePage() {
             <p className="text-xs font-semibold uppercase tracking-[0.12em] text-ink-500">
               This week&rsquo;s pulse
             </p>
-            <dl className="mt-4 space-y-3">
-              {indicators.map((indicator) => (
-                <div
-                  key={indicator.id}
-                  className="flex items-baseline justify-between gap-4 border-b border-ink-100 pb-3 last:border-0"
-                >
-                  <dt className="text-sm text-ink-700">{indicator.name}</dt>
-                  <dd className="text-right">
-                    <span className="text-sm font-semibold tabular-nums">
-                      {indicator.percentChange === null
-                        ? '—'
-                        : `${indicator.percentChange > 0 ? '+' : ''}${indicator.percentChange.toFixed(1)}%`}
-                    </span>
-                    <span className="block text-xs text-ink-500">
-                      {indicator.scope}
-                    </span>
-                  </dd>
-                </div>
-              ))}
-              {indicators.length === 0 ? (
-                <p className="text-sm text-ink-500">
-                  Pricing indicators appear here once observations are loaded.
-                </p>
-              ) : null}
-            </dl>
+            {indicators.length === 0 ? (
+              <p className="mt-4 text-sm text-ink-500">
+                Pricing indicators appear here once observations are loaded.
+              </p>
+            ) : (
+              <dl className="mt-4 space-y-3">
+                {indicators.map((indicator) => (
+                  <div
+                    key={indicator.id}
+                    className="flex items-baseline justify-between gap-4 border-b border-ink-100 pb-3 last:border-0"
+                  >
+                    <dt className="text-sm text-ink-700">{indicator.name}</dt>
+                    <dd className="text-right">
+                      <span className="text-sm font-semibold tabular-nums">
+                        {indicator.percentChange === null
+                          ? '—'
+                          : `${indicator.percentChange > 0 ? '+' : ''}${indicator.percentChange.toFixed(1)}%`}
+                      </span>
+                      <span className="block text-xs text-ink-500">
+                        {indicator.scope}
+                      </span>
+                    </dd>
+                  </div>
+                ))}
+              </dl>
+            )}
           </div>
         </div>
       </section>

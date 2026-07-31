@@ -15,7 +15,9 @@ type PageProps = {
   searchParams: Promise<{ unsubscribe?: string }>;
 };
 
-export default async function EmailPreferencesPage({ searchParams }: PageProps) {
+export default async function EmailPreferencesPage({
+  searchParams,
+}: PageProps) {
   const { unsubscribe } = await searchParams;
   const { viewer } = await getSessionContext();
   const supabase = await createServerSupabaseClient();
@@ -40,9 +42,7 @@ export default async function EmailPreferencesPage({ searchParams }: PageProps) 
         description="Choose exactly which email reaches you. Essential account and billing messages — a failed payment, a password reset — are always sent, because they are not marketing."
       />
       <EmailPreferencesForm
-        emailAlertsEnabled={
-          preferences.data?.email_alerts_enabled ?? true
-        }
+        emailAlertsEnabled={preferences.data?.email_alerts_enabled ?? true}
         marketingEmailEnabled={
           preferences.data?.marketing_email_enabled ?? false
         }

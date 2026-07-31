@@ -58,7 +58,9 @@ export default async function ReportsPage() {
                   <div className="flex flex-wrap items-center gap-2">
                     <Pill tone="muted">{titleCase(report.report_type)}</Pill>
                     {report.is_sample ? <Pill>Sample</Pill> : null}
-                    {report.isLocked ? <Pill tone="warning">Locked</Pill> : null}
+                    {report.isLocked ? (
+                      <Pill tone="warning">Locked</Pill>
+                    ) : null}
                   </div>
                   <h2 className="mt-2 text-base font-semibold">
                     {report.isLocked ? (
@@ -73,7 +75,8 @@ export default async function ReportsPage() {
                     )}
                   </h2>
                   <p className="mt-1 text-sm text-ink-500">
-                    {report.reporting_period_start && report.reporting_period_end
+                    {report.reporting_period_start &&
+                    report.reporting_period_end
                       ? `${formatDate(report.reporting_period_start)} – ${formatDate(report.reporting_period_end)}`
                       : `Published ${formatDate(report.published_at)}`}
                   </p>
@@ -83,7 +86,10 @@ export default async function ReportsPage() {
                     Unlock
                   </ButtonLink>
                 ) : (
-                  <ButtonLink href={`/reports/${report.slug}`} variant="secondary">
+                  <ButtonLink
+                    href={`/reports/${report.slug}`}
+                    variant="secondary"
+                  >
                     Read
                   </ButtonLink>
                 )}
