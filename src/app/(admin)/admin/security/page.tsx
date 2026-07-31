@@ -48,8 +48,13 @@ export default async function AdminSecurityPage() {
         </ul>
         <p className="mt-4 text-sm text-ink-600">
           Losing your authenticator locks you out of the admin area, not out of
-          your account. A super administrator can clear your enrolment so you
-          can start again; that clearing is itself audited.
+          your account — the member side keeps working. Ask a super
+          administrator to clear your enrolment from{' '}
+          <a href="/admin/staff" className="underline">
+            Staff
+          </a>
+          , then enrol again on this page. The clearing is itself audited, and
+          nobody can clear their own.
         </p>
       </Card>
     </div>

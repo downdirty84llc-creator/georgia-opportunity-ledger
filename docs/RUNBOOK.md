@@ -50,9 +50,31 @@ refuses to run against production.
    pin one in code, so upgrading is a deliberate dashboard action with a
    test-mode rehearsal rather than a side effect of a dependency bump.
 
+### Virus scanning
+
+Uploads are scanned before members can reach them. With no scanner configured
+files store as `scan_status = 'skipped'`, which is readable — and which logs a
+warning on every upload in production, because shipping without one is a
+decision somebody should have made on purpose.
+
+To turn scanning on, run a ClamAV REST front end and point `FILE_SCANNER_URL`
+at it:
+
+```bash
+docker run -d -p 9000:9000 --name clamav-rest clamav/clamav-rest
+# then, in the environment:
+FILE_SCANNER_PROVIDER="clamav"
+FILE_SCANNER_URL="http://clamav-rest:9000/scan"
+```
+
+Verify it end to end with the EICAR test string — a harmless file every scanner
+recognises. Upload it through `/admin/opportunities/{id}` and the endpoint
+should refuse it, the object should be gone from the bucket, and the row should
+read `infected` with the signature name in `scan_detail`.
+
 ### Background jobs
 
-`vercel.json` declares all thirteen cron schedules. Set `CRON_SECRET`; Vercel
+`vercel.json` declares all fourteen cron schedules. Set `CRON_SECRET`; Vercel
 sends it automatically as a bearer token when the variable is present. Jobs
 accept both `GET` (what Vercel Cron sends) and `POST`.
 
@@ -66,7 +88,7 @@ curl -X POST -H "Authorization: Bearer $CRON_SECRET" \
 Available jobs: `publish-scheduled`, `premium-alerts`, `saved-search-matching`,
 `process-exports`, `evaluate-deadlines`, `deadline-reminders`,
 `reverification-reminders`, `stale-source-reminders`, `expire-lapsed-access`,
-`sync-subscriptions`, `aggregate-analytics`, `prune`,
+`sync-subscriptions`, `aggregate-analytics`, `prune`, `scan-attachments`,
 `distribute-weekly-report`.
 
 ---
@@ -76,9 +98,45 @@ Available jobs: `publish-scheduled`, `premium-alerts`, `saved-search-matching`,
 ### A staff member has lost their authenticator
 
 They are locked out of the admin area, not out of their account — they can still
-use the member side normally. Clear the enrolled factor through Supabase (Auth →
-the user → MFA factors), then have them re-enrol at `/admin/security`. There is
-no in-product reset yet; that gap is recorded in `MILESTONES.md`.
+use the member side normally.
+
+A super administrator clears the enrolment from `/admin/staff`, then the person
+re-enrols at `/admin/security`. Three rules are enforced, not conventions:
+
+- Only a super administrator can do it. A support representative can read member
+  accounts, which is exactly the position from which resetting someone else's
+  second factor would be most useful to an attacker.
+- Nobody can reset their own. A reset is a recovery path and needs a second
+  person; otherwise a session that got past the password alone could shed the
+  factor it could not present.
+- The reason is mandatory and lands on the audit row with both names and the
+  factors removed.
+
+**Confirm their identity by a channel other than email** before you clear
+anything. Email is one of the things the second factor exists to protect, so a
+request arriving by email proves only that someone can send email.
+
+If every super administrator is locked out at once, the fallback is still
+Supabase directly (Auth → the user → MFA factors). That path is unaudited, which
+is why it is the fallback.
+
+### An attachment is not visible to members
+
+Check `scan_status` on the row. Members see only `clean` and `skipped`; the read
+policy withholds `pending`, `scanning`, `failed` and `infected`, so an
+attachment that "disappeared" is almost always one whose scan has not resolved.
+
+- `pending` or `scanning` — `scan-attachments` runs every twenty minutes and
+  will pick it up. A row stuck in `scanning` for over fifteen minutes had its
+  process killed and is reclaimed on the next run.
+- `failed` — `scan_detail` says why. A scanner outage is the usual cause; the
+  job retries up to five times, then leaves it for a person.
+- `infected` — the file was deleted from storage on purpose. The row is kept so
+  the incident is on the record. Do not clear the status to make it downloadable
+  again; there is nothing left to download.
+
+Files whose attempts are exhausted are counted in the job's `detail.exhausted`
+on the admin dashboard.
 
 ### A member reports missing access after paying
 
@@ -153,6 +211,10 @@ Spec 28, milestone 10. Every line needs a name against it.
 - [ ] Security review: the test list in spec 26 — unauthorised API access,
       access-rank bypass, direct URL access, ID enumeration, invalid webhooks,
       file-upload attacks, XSS, SQL injection, rate-limit enforcement.
+- [ ] `FILE_SCANNER_URL` set and verified with the EICAR test file. Without it
+      every attachment stores as `skipped` — readable, and unscanned.
+- [ ] At least two super administrators enrolled, so a lost authenticator has an
+      in-product recovery path rather than a Supabase one.
 - [ ] Confirm no sample data reached production:
       `select count(*) from opportunities where is_sample;` must be 0.
 
@@ -165,7 +227,9 @@ Spec 28, milestone 10. Every line needs a name against it.
 - [ ] A real weekly report published, emailed, and read at each tier.
 - [ ] Administrator training on the review queue and correction workflow.
 - [ ] Accessibility audit against WCAG 2.1 AA.
-- [ ] Core Web Vitals measured on the public pages.
+- [ ] Core Web Vitals measured on the public pages. The landing pages are
+      prerendered with `revalidate` windows; confirm the cache is actually being
+      hit rather than every request revalidating.
 
 ### Verify after launch
 
@@ -194,6 +258,14 @@ Spec 28, milestone 10. Every line needs a name against it.
   the whole route render per request. A `try/catch` around such a read will also
   swallow Next.js's dynamic-bailout signal — that bug produced a silently empty
   homepage once already.
+- **A production build now fails if it cannot read the database.** That is
+  deliberate: the landing pages are prerendered, so a build that cannot read
+  would bake an empty home page and serve it for the whole revalidate window.
+  A failed deploy is the cheaper outcome. Local builds without Supabase still
+  pass, with the failures logged.
+- **`scan_status = 'skipped'` is downloadable.** It means no scanner is
+  configured, not that a file was checked and cleared. That is a deployment
+  decision with a line on the checklist above, not a per-file verdict.
 - **The plan matrix lives in two places.** Changing a limit means changing both
   `subscription_plans.feature_configuration` and `PLAN_FEATURE_DEFAULTS`.
   `tests/unit/access/plan-parity.test.ts` fails if you forget.

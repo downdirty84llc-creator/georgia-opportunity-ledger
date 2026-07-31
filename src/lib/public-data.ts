@@ -14,8 +14,37 @@ import type { ScoreClassification } from '@/lib/scoring/score';
  *
  * Each helper degrades to an empty result rather than throwing: a database
  * hiccup should soften the home page, not return a 500 to a prospective
- * subscriber.
+ * subscriber. The one exception is a production build — see `softFail`.
  */
+
+/**
+ * Logs a read failure, and fails the build if one happens during a deployable
+ * prerender.
+ *
+ * These pages are statically generated and then served from cache for the
+ * whole `revalidate` window. Degrading to an empty result is the right answer
+ * at request time, but during a production or staging build it would bake an
+ * empty home page and serve it to every visitor for the next five minutes —
+ * and keep doing so on each failed revalidation. A deployment that cannot
+ * reach the database should stop at the deployment, not reach customers.
+ *
+ * Developer builds without a local database are allowed through, because the
+ * alternative is that nobody can run `next build` without Supabase running.
+ */
+function softFail(context: string, error: unknown): void {
+  console.error(`[public-data] ${context}`, error);
+
+  const deployable =
+    process.env.NEXT_PHASE === 'phase-production-build' &&
+    (process.env.NEXT_PUBLIC_ENVIRONMENT === 'production' ||
+      process.env.NEXT_PUBLIC_ENVIRONMENT === 'staging');
+
+  if (deployable) {
+    throw error instanceof Error
+      ? error
+      : new Error(`public-data: ${context}`);
+  }
+}
 
 export interface PublicStats {
   activeOpportunities: number;
@@ -62,7 +91,7 @@ export async function loadPublicStats(): Promise<PublicStats> {
       upcomingDeadlines: deadlines.count ?? 0,
     };
   } catch (error) {
-    console.error('[public-data] stats unavailable', error);
+    softFail('stats unavailable', error);
     return {
       activeOpportunities: 0,
       countiesCovered: 0,
@@ -137,7 +166,7 @@ export async function loadPreviewOpportunities(options: {
     if (error) throw new Error(error.message);
     return (data ?? []).map(mapPreview);
   } catch (error) {
-    console.error('[public-data] preview load failed', error);
+    softFail('preview load failed', error);
     return [];
   }
 }
@@ -180,7 +209,7 @@ export async function loadPlans(): Promise<PlanSummary[]> {
       features: (row.feature_configuration ?? {}) as Record<string, unknown>,
     }));
   } catch (error) {
-    console.error('[public-data] plan load failed', error);
+    softFail('plan load failed', error);
     return [];
   }
 }
@@ -227,7 +256,7 @@ export async function loadIndicatorPreviews(
       isSample: Boolean(row.is_sample),
     }));
   } catch (error) {
-    console.error('[public-data] indicator load failed', error);
+    softFail('indicator load failed', error);
     return [];
   }
 }
@@ -245,7 +274,7 @@ export async function loadCountiesWithCounts(): Promise<
       .map((row) => ({ slug: row.key, name: row.label, count: Number(row.count) }))
       .sort((a, b) => b.count - a.count);
   } catch (error) {
-    console.error('[public-data] county facet load failed', error);
+    softFail('county facet load failed', error);
     return [];
   }
 }

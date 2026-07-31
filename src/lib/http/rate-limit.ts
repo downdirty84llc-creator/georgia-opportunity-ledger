@@ -17,6 +17,10 @@ export const RATE_LIMITS = {
   reportGeneration: { limit: 20, windowSeconds: 3600 },
   adminPublish: { limit: 60, windowSeconds: 3600 },
   correction: { limit: 10, windowSeconds: 3600 },
+  // Uploads are read whole into memory and posted to the scanner, so this
+  // limit is about protecting the scanner and the function's memory, not
+  // about abuse: editorial staff rarely attach more than a handful an hour.
+  upload: { limit: 40, windowSeconds: 3600 },
 } as const;
 
 export type RateLimitAction = keyof typeof RATE_LIMITS;

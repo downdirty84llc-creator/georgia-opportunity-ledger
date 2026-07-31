@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { notFound, redirect } from 'next/navigation';
 
+import { AttachmentsPanel } from '@/components/admin/attachments-panel';
 import {
   ReportBuilder,
   type CandidateRecord,
@@ -100,26 +101,33 @@ export default async function ComposeReportPage({ params }: PageProps) {
   );
 
   return (
-    <ReportBuilder
-      reportId={report.data.id}
-      slug={report.data.slug}
-      status={report.data.status}
-      hasPdf={Boolean(report.data.pdf_file_path)}
-      candidates={candidateRecords}
-      initial={{
-        title: report.data.title,
-        reportType: report.data.report_type,
-        periodStart: report.data.reporting_period_start ?? '',
-        periodEnd: report.data.reporting_period_end ?? '',
-        minimumAccessRank: report.data.minimum_access_rank,
-        executiveSummary: textOf(report.data.executive_summary),
-        marketCommentary: textOf(report.data.market_commentary),
-        scheduledAt: report.data.scheduled_at
-          ? String(report.data.scheduled_at).slice(0, 16)
-          : '',
-        sections,
-        opportunities,
-      }}
-    />
+    <>
+      <ReportBuilder
+        reportId={report.data.id}
+        slug={report.data.slug}
+        status={report.data.status}
+        hasPdf={Boolean(report.data.pdf_file_path)}
+        candidates={candidateRecords}
+        initial={{
+          title: report.data.title,
+          reportType: report.data.report_type,
+          periodStart: report.data.reporting_period_start ?? '',
+          periodEnd: report.data.reporting_period_end ?? '',
+          minimumAccessRank: report.data.minimum_access_rank,
+          executiveSummary: textOf(report.data.executive_summary),
+          marketCommentary: textOf(report.data.market_commentary),
+          scheduledAt: report.data.scheduled_at
+            ? String(report.data.scheduled_at).slice(0, 16)
+            : '',
+          sections,
+          opportunities,
+        }}
+      />
+      {/* Supporting files for the report itself — source PDFs, data extracts.
+          Separate from the generated report PDF, which the builder handles. */}
+      <div className="mx-auto max-w-5xl px-4 pb-12 sm:px-6">
+        <AttachmentsPanel reportId={report.data.id} />
+      </div>
+    </>
   );
 }

@@ -311,6 +311,91 @@ Public loaders now use an anonymous, cookie-free client. Every projection they
 touch is already granted to `anon` and carries no paid content, so nothing is
 weakened. `sitemap.xml` became genuinely static as a result.
 
-The marketing pages themselves are still rendered per request, because the
-shared header is session-aware. That is a real, known gap against spec 23 and is
-recorded in `MILESTONES.md` rather than papered over.
+The marketing pages themselves were still rendered per request, because the
+shared header was session-aware. That is now closed — see §16.
+
+---
+
+## 16. The header is why the landing pages were not cached
+
+A layout that reads the session reads cookies, and a route beneath a layout that
+reads cookies renders per request. The whole marketing tree therefore ignored
+the `revalidate` values its pages already declared. The header was the only
+thing in that tree that needed to know who was asking.
+
+So it was split in three:
+
+  - `header-actions.tsx` — the nav list and the account area as pure markup,
+    imported by both paths so they cannot drift into two different headers.
+  - `header.tsx` — a synchronous shell. Given a `session` prop it renders the
+    lot on the server; given nothing it defers to the client half.
+  - `header-session.tsx` — a client component that fetches
+    `/api/v1/auth/session` and swaps the two personalised links.
+
+The member and admin shells pass the session they have already resolved, so
+they lose nothing. The public pages prerender.
+
+The one visible cost is a signed-in member briefly seeing signed-out links on a
+marketing page. A `localStorage` flag — written when a session resolves,
+cleared when one does not — lets the client paint the remembered shape before
+the fetch answers, so an anonymous visitor (who never has the flag) sees the
+static markup with no flash, and a returning member sees theirs. It is not a
+credential and is trusted for nothing: the server answer overrides it either
+way, and every page behind those links checks entitlements itself.
+
+### Failing the build instead of caching an empty page
+
+Caching made an existing weakness matter more. The public loaders degrade to
+empty results on a read failure, which is right at request time — a database
+hiccup should soften the home page, not 500 at a prospective subscriber. Under
+ISR the same behaviour would bake the empty page into the cache and serve it for
+the whole revalidate window, then again on each failed revalidation.
+
+`softFail` in `public-data.ts` therefore rethrows during a production or staging
+build. A deployment that cannot reach the database now stops at the deployment.
+Developer builds without a local Supabase are still allowed through, because the
+alternative is that nobody can run `next build` without one.
+
+---
+
+## 17. Uploads: store, then scan, and let the policy decide
+
+`attachments.scan_status` shipped in the first migration and meant nothing —
+nothing wrote it and nothing read it. There was also no upload endpoint, so the
+column was describing a pipeline that did not exist.
+
+The pipeline now has four parts, and the ordering of the middle two is the
+interesting decision.
+
+**Sniff before storing.** The `Content-Type` on a multipart part is whatever the
+client typed. A file uploaded as `image/png` containing markup is a stored XSS
+payload on the storage origin, so `signatures.ts` checks the leading bytes
+against the declared type and refuses a mismatch. Both the type *and* the
+signature can be individually valid and still not match each other — a PNG
+declared as a PDF is rejected, and both are on the allowlist.
+
+**Store, then scan.** The file is written and the row created `pending` *before*
+the scanner is called. Holding 25MB in memory until a verdict arrives makes a
+slow scanner into a failed upload. A `pending` row is invisible to members, so a
+stored-but-unscanned file is not a reachable file — and if the process dies
+between the two steps, what is left behind is a file nobody can download. That
+is the correct direction to fail.
+
+**The read policy is the enforcement.** Migration 0022 rewrites
+`attachments_read` to require `scan_status in ('clean', 'skipped')` on top of
+the existing access-rank and parent-visibility rules. `GET /api/v1/attachments/
+{id}` deliberately contains no scan check of its own: it looks the row up
+through the caller's session client and mints a signed URL only if the row comes
+back. One decision, in the database, that the endpoint cannot drift away from.
+
+`skipped` is readable and `failed` is not, which looks inconsistent until you
+notice they answer different questions. `skipped` means no scanner is configured
+— a deployment decision, recorded in the runbook, that applies to every file
+equally. `failed` means we tried to check *this* file and could not.
+
+**Retry, and know when to stop.** `scan-attachments` picks up anything left
+`pending`, `failed`, or stuck in `scanning` past fifteen minutes, and gives up
+after five attempts so a genuinely broken file surfaces on the dashboard instead
+of being retried forever. An infected file is deleted from storage but its row
+is kept: deleting both would hide the incident from the people who need to know
+it happened.

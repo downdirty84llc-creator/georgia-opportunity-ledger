@@ -14,6 +14,7 @@
     { "path": "/api/v1/jobs/sync-subscriptions", "schedule": "0 */6 * * *" },
     { "path": "/api/v1/jobs/aggregate-analytics", "schedule": "15 6 * * *" },
     { "path": "/api/v1/jobs/prune", "schedule": "45 6 * * *" },
+    { "path": "/api/v1/jobs/scan-attachments", "schedule": "*/20 * * * *" },
     { "path": "/api/v1/jobs/distribute-weekly-report", "schedule": "0 12 * * 4" }
   ]
 }

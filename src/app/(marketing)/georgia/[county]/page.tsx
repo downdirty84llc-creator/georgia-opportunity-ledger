@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation';
 
 import { OpportunityCard } from '@/components/opportunities/opportunity-card';
 import { ButtonLink, SectionHeading } from '@/components/ui/primitives';
-import { createServerSupabaseClient } from '@/lib/db/server';
+import { createPublicSupabaseClient } from '@/lib/db/public';
 import { loadPreviewOpportunities } from '@/lib/public-data';
 
 export const revalidate = 900;
@@ -11,7 +11,7 @@ export const revalidate = 900;
 type PageProps = { params: Promise<{ county: string }> };
 
 async function loadCounty(slug: string) {
-  const supabase = await createServerSupabaseClient();
+  const supabase = createPublicSupabaseClient();
   const { data } = await supabase
     .from('counties')
     .select('id, name, slug, fips_code, states ( name, abbreviation )')

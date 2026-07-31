@@ -16,6 +16,7 @@ import {
   pruneJob,
   syncSubscriptionsJob,
 } from '@/lib/jobs/maintenance-jobs';
+import { scanAttachmentsJob } from '@/lib/jobs/file-jobs';
 import { distributeWeeklyReportJob } from '@/lib/jobs/report-jobs';
 import type { JobDefinition } from '@/lib/jobs/runner';
 
@@ -44,6 +45,7 @@ export const JOBS: readonly ScheduledJob[] = [
   { definition: syncSubscriptionsJob, schedule: '0 */6 * * *' },
   { definition: aggregateAnalyticsJob, schedule: '15 6 * * *' },
   { definition: pruneJob, schedule: '45 6 * * *' },
+  { definition: scanAttachmentsJob, schedule: '*/20 * * * *' },
   // Thursdays at 12:00 UTC — mid-morning Eastern, when the weekly lands.
   { definition: distributeWeeklyReportJob, schedule: '0 12 * * 4' },
 ];

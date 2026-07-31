@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 
+import { AttachmentsPanel } from '@/components/admin/attachments-panel';
 import { OpportunityEditor } from '@/components/admin/opportunity-editor';
 import { getSessionContext } from '@/lib/auth/session';
 import { createServerSupabaseClient } from '@/lib/db/server';
@@ -35,17 +36,25 @@ export default async function EditOpportunityPage({ params }: PageProps) {
   if (!record.data) notFound();
 
   return (
-    <OpportunityEditor
-      opportunityId={id}
-      initialDraft={draftFromRecord(record.data as Record<string, unknown>)}
-      workflowStatus={String(record.data.workflow_status)}
-      counties={options.counties}
-      cities={options.cities}
-      industries={options.industries}
-      sources={options.sources}
-      stateId={options.stateId}
-      canApprove={roleMayPerform(viewer.role, 'approve')}
-      canPublish={roleMayPerform(viewer.role, 'publish')}
-    />
+    <>
+      <OpportunityEditor
+        opportunityId={id}
+        initialDraft={draftFromRecord(record.data as Record<string, unknown>)}
+        workflowStatus={String(record.data.workflow_status)}
+        counties={options.counties}
+        cities={options.cities}
+        industries={options.industries}
+        sources={options.sources}
+        stateId={options.stateId}
+        canApprove={roleMayPerform(viewer.role, 'approve')}
+        canPublish={roleMayPerform(viewer.role, 'publish')}
+      />
+      {/* Outside the editor rather than inside a step: uploads are immediate
+          and irreversible, so they must not ride along with autosaved draft
+          state that the editor may still discard. */}
+      <div className="mx-auto max-w-5xl px-4 pb-12 sm:px-6">
+        <AttachmentsPanel opportunityId={id} />
+      </div>
+    </>
   );
 }

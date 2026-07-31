@@ -102,7 +102,8 @@ src/
     (member)/           Dashboard, search, detail, saved, calendar, reports,
                         account (profile, preferences, billing, email)
     (admin)/            Dashboard, review queue, seven-step opportunity editor,
-                        report builder, sources, audit log, MFA setup
+                        report builder, sources, audit log, MFA setup, staff
+                        two-factor administration
     api/v1/             Versioned API (spec section 10)
   components/           UI primitives and feature components
   lib/
@@ -112,6 +113,7 @@ src/
     db/                 Supabase clients (session-scoped, service-role, browser)
     email/              Provider abstraction, templates, unsubscribe tokens
     exports/            CSV generation and export jobs
+    files/              Upload validation, content sniffing, virus scanning
     jobs/               Background jobs and the idempotent runner
     opportunities/      Lifecycle, workflow, query, serialisation
     observability/      Error reporting (Sentry envelope API, no SDK)
@@ -144,7 +146,7 @@ a banner marks every non-production page.
 ## Deployment
 
 - **Application** — Vercel. `vercel.json` declares the cron schedule for all
-  thirteen background jobs.
+  fourteen background jobs.
 - **Database, auth and storage** — Supabase Postgres.
 - **Payments** — Stripe. Checkout, the customer portal and every card detail
   live in Stripe; this application never receives a card number.
@@ -163,12 +165,13 @@ See `docs/RUNBOOK.md` for the launch checklist and operational procedures.
 
 ## Testing
 
-`npm test` runs 148 unit tests covering the parts where a quiet mistake costs
+`npm test` runs 167 unit tests covering the parts where a quiet mistake costs
 money or leaks paid content: score arithmetic and classification bands,
 subscription-status resolution including the past-due grace window, entitlement
 decisions per tier, alert matching and suppression keys, deadline lifecycle
-transitions, CSV escaping and formula-injection defence, filter parsing, and
-unsubscribe token signing and tampering.
+transitions, CSV escaping and formula-injection defence, filter parsing,
+unsubscribe token signing and tampering, and upload content sniffing including
+the file-name and scan-state rules.
 
 `npm run test:e2e` runs Playwright against a built app across desktop, iPhone,
 Android and tablet viewports.
@@ -183,12 +186,31 @@ which is exempt from its own gate. The check fails open on an unexpected error �
 a Supabase outage should not be indistinguishable from a missing second factor,
 and row-level security still enforces every permission underneath.
 
+Recovery for a lost authenticator is `/admin/staff`: a super administrator
+clears the enrolment, with a mandatory reason on the audit row. Nobody can
+reset their own, because a reset is a recovery path and needs a second person.
+
+---
+
+## Uploads
+
+Attachments are checked three times before a member can reach one: the declared
+type must be on the allowlist, the leading bytes must match what it claims to
+be, and a virus scanner must clear it. Files are stored before they are scanned
+and start life invisible — the read policy withholds anything not `clean` or
+`skipped` — so a scan that never finishes leaves a file nobody can download
+rather than one nobody checked. `scan-attachments` retries what did not resolve.
+
+With no `FILE_SCANNER_URL` configured, files store as `skipped` and production
+logs a warning on every upload. `skipped` says "not checked", never "clean".
+
 ---
 
 ## Status
 
 Milestones 2 through 9 of the specification are implemented; see
-`docs/MILESTONES.md` for the per-milestone breakdown and the six things that
-remain. Two are hard launch blockers: legal review of the twelve documents in
-`src/lib/legal/documents.ts`, and creating the Stripe products and prices so the
-tier-by-tier payment matrix can be run.
+`docs/MILESTONES.md` for the per-milestone breakdown and what remains. What is
+left is mostly not code: legal review of the twelve documents in
+`src/lib/legal/documents.ts` (a hard launch blocker), a Stripe account with
+products and prices so the tier-by-tier payment matrix can be run, a scanner
+endpoint for the upload pipeline to call, and design sign-off.

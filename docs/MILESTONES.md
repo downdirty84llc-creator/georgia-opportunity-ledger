@@ -106,19 +106,51 @@ See `RUNBOOK.md` for the checklist.
 ## What is still not built
 
 1. **Stripe products, prices and the test-payment matrix.** Needs a Stripe
-   account; everything on our side is ready for it.
+   account; everything on our side is ready for it. The checkout endpoint
+   returns a clear conflict rather than failing inside Stripe when a price id
+   is missing, so this is safe to verify by trying it.
 2. **Legal review of all twelve documents.** A hard launch blocker. Each renders
    an "awaiting legal review" banner until cleared.
-3. **Virus scanning on uploads.** Spec 20 says "where supported". The
-   `attachments.scan_status` column exists and defaults to `pending`; no scanner
-   is wired to it.
-4. **High-fidelity design and brand sign-off** (milestone 1).
-5. **Public landing pages are server-rendered per request, not cached.** The
-   marketing layout renders a session-aware header, which makes the whole route
-   dynamic. Spec 23 asks for these to be cached. Fixing it properly means moving
-   the auth-dependent part of the header to a client component or adopting
-   partial prerendering — worth doing before launch, and deliberately not
-   bodged in the meantime.
-6. **Super-administrator MFA reset.** A staff member who loses their
-   authenticator currently needs intervention through Supabase directly; the
-   in-product reset described on `/admin/security` is not built.
+3. **A virus scanner to point the pipeline at.** The pipeline itself is built
+   (see below); production still needs a ClamAV endpoint in `FILE_SCANNER_URL`.
+   Until one exists, files store as `skipped` and a warning is logged in
+   production. That is a deployment task, not a code task.
+4. **High-fidelity design and brand sign-off** (milestone 1). A design
+   engagement, not a code artefact.
+5. **`/pricing` and `/support` remain server-rendered per request.** Both
+   genuinely personalise — pricing marks the plan you are on, support knows
+   whether you are signed in — so this is a deliberate exception rather than
+   the gap the previous entry described. `/georgia/[county]` is cached on
+   demand rather than prerendered, because prerendering 159 counties would put
+   the database on the build's critical path for pages that change weekly.
+
+## Closed since the last revision
+
+**Public landing pages are cached (spec 23).** The marketing layout rendered a
+session-aware header, and reading the session means reading cookies, which made
+every page beneath it dynamic. The header now renders a static shell and
+resolves the session in the browser; the member and admin shells, dynamic
+anyway, still render theirs on the server from an already-resolved session. The
+home page, all four category pages, insights, the sample report and every legal
+document are now prerendered with their declared `revalidate` windows.
+
+The same pass hardened the failure mode that made this worth doing carefully:
+`src/lib/public-data.ts` now fails a production or staging build outright when
+it cannot read, rather than baking an empty page and serving it for the whole
+revalidate window.
+
+**Virus scanning on uploads (spec 20).** `attachments.scan_status` existed but
+nothing set it and nothing read it — and there was no upload path at all. Now
+there is: an editorial-only multipart endpoint, magic-byte checking against the
+declared type, a scanner behind a provider interface, storage-then-scan
+ordering so a killed process leaves a hidden file rather than an exposed one, a
+read policy that withholds anything not `clean` or `skipped`, quarantine and
+deletion on a hit, and a `scan-attachments` job that retries what did not
+resolve. See `ARCHITECTURE.md` §16.
+
+**Super-administrator two-factor reset.** Recovery for a lost authenticator was
+a Supabase dashboard login — outside the product, unaudited, and available to
+whoever held infrastructure credentials rather than to the role the
+specification assigns it to. `/admin/staff` now shows every staff account's
+enrolment state and lets a super administrator clear one, with a mandatory
+reason on the audit row and a hard block on resetting your own.

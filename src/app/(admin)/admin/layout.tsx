@@ -17,6 +17,9 @@ const ADMIN_LINKS = [
   { href: '/admin/security', label: 'Security' },
 ];
 
+/** Links only a super administrator may follow, appended to the nav above. */
+const SUPER_ADMIN_LINKS = [{ href: '/admin/staff', label: 'Staff' }];
+
 export default async function AdminLayout({
   children,
 }: {
@@ -49,7 +52,12 @@ export default async function AdminLayout({
           </Link>
           <nav aria-label="Administration" className="flex-1 overflow-x-auto">
             <ul className="flex items-center gap-1 whitespace-nowrap text-sm">
-              {ADMIN_LINKS.map((link) => (
+              {[
+                ...ADMIN_LINKS,
+                ...(viewer.role === 'super_administrator'
+                  ? SUPER_ADMIN_LINKS
+                  : []),
+              ].map((link) => (
                 <li key={link.href}>
                   <Link
                     href={link.href}

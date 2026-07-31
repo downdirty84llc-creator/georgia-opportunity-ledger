@@ -18,7 +18,7 @@ export default async function MemberLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { viewer } = await getSessionContext();
+  const { viewer, planCode, planName } = await getSessionContext();
 
   if (!viewer.isAuthenticated) {
     redirect('/login?next=/dashboard');
@@ -26,7 +26,14 @@ export default async function MemberLayout({
 
   return (
     <div className="flex min-h-screen flex-col">
-      <SiteHeader />
+      <SiteHeader
+        session={{
+          authenticated: true,
+          isStaff: viewer.isStaff,
+          planCode,
+          planName,
+        }}
+      />
       {viewer.accountStatus === 'suspended' ? (
         <p className="bg-red-800 px-4 py-2 text-center text-sm text-white">
           Your account is suspended. Member content, exports and alerts are
