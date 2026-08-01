@@ -276,6 +276,26 @@ E2E_BASE_URL=https://staging.example.com npm run test:e2e:security
 ./scripts/smoke.sh https://staging.example.com
 ```
 
+### Checking the database itself
+
+`supabase/verify-rls.sql` asserts what the architecture claims: that a member
+at each tier sees exactly the records their rank allows, that role and
+account-status changes are refused without a super administrator, that the
+functions only the service role should call are not reachable by `anon` or
+`authenticated`, and that every table has row-level security on.
+
+```bash
+npm run db:verify          # against $PGHOST/$PGDATABASE
+```
+
+It creates its own fixtures and rolls back, so it is safe to run repeatedly —
+though not against production, because it writes before it rolls back.
+
+`supabase/ci-bootstrap.sql` creates stand-ins for the objects Supabase provides
+(`auth.users`, `auth.uid()`, the storage tables, the API-role grants) so the
+migrations can be applied to a bare PostgreSQL instance. It is for CI and local
+checking only; never run it against a real Supabase project.
+
 `scripts/smoke.sh` needs no credentials and is safe to run against production at
 any time. It checks that the public pages answer, the access boundary holds, the
 jobs refuse without their secret, and the sitemap advertises nothing private.
@@ -314,6 +334,12 @@ jobs refuse without their secret, and the sitemap advertises nothing private.
 - **`text-ink-400` is not safe for body copy.** 3.7:1 on white, below the AA
   floor. `ink-500` is the lightest token that passes; the ladder is documented
   in `tailwind.config.ts` and the accessibility suite catches regressions.
+- **Revoking from `PUBLIC` is not enough.** Supabase's default privileges grant
+  EXECUTE on every new function to `anon` and `authenticated` _by name_, and
+  PostgREST exposes anything `authenticated` may execute as
+  `POST /rest/v1/rpc/<name>`. A new SECURITY DEFINER function is reachable by
+  every signed-in member the moment it is created unless migration 0024's list
+  is extended. `verify-rls.sql` fails if one is missed.
 - **The plan matrix lives in two places.** Changing a limit means changing both
   `subscription_plans.feature_configuration` and `PLAN_FEATURE_DEFAULTS`.
   `tests/unit/access/plan-parity.test.ts` fails if you forget.

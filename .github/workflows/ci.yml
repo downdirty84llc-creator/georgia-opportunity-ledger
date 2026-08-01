@@ -53,21 +53,11 @@ jobs:
         env:
           PGPASSWORD: postgres
         run: |
-          # Supabase-specific roles and schemas the migrations assume exist.
-          psql -h localhost -U postgres -v ON_ERROR_STOP=1 <<'SQL'
-          create schema if not exists extensions;
-          create schema if not exists auth;
-          create schema if not exists storage;
-          do $$ begin
-            create role anon; exception when duplicate_object then null;
-          end $$;
-          do $$ begin
-            create role authenticated; exception when duplicate_object then null;
-          end $$;
-          do $$ begin
-            create role service_role; exception when duplicate_object then null;
-          end $$;
-          SQL
+          # Supabase provides auth.users, auth.uid(), the storage tables and
+          # the API-role grants. CI has none of that, so the migrations get a
+          # documented stand-in rather than an ad-hoc block inlined here.
+          psql -h localhost -U postgres -v ON_ERROR_STOP=1 \
+            -f supabase/ci-bootstrap.sql
           for file in supabase/migrations/*.sql; do
             echo "--- $file"
             psql -h localhost -U postgres -v ON_ERROR_STOP=1 -f "$file"
@@ -80,6 +70,12 @@ jobs:
         env:
           PGPASSWORD: postgres
         run: psql -h localhost -U postgres -v ON_ERROR_STOP=1 -f supabase/seed.sql
+      - name: Row-level security does what it claims
+        env:
+          PGPASSWORD: postgres
+        # Tier-by-tier visibility, the privilege-escalation guards, and the
+        # function grants PostgREST would otherwise expose as RPC endpoints.
+        run: psql -h localhost -U postgres -v ON_ERROR_STOP=1 -f supabase/verify-rls.sql
 
   build:
     name: Production build

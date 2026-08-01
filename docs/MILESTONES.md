@@ -136,6 +136,39 @@ See `RUNBOOK.md` for the checklist.
 
 ## Closed in this revision
 
+**The migrations were run against a real PostgreSQL instance for the first
+time, and two of them were broken.**
+
+`refresh_opportunity_search_vector` chose its target id with a SQL `case`
+expression. PL/pgSQL plans an expression as one statement, so every column it
+names must resolve against the record type _even on the branch that is not
+taken_ — and the else branch named `new.opportunity_id`, which does not exist
+on `opportunities`. Every insert into the opportunities table would have failed
+with "record new has no field opportunity_id". The branching is now PL/pgSQL
+control flow.
+
+Migration 0017 revoked `write_audit_log` from `PUBLIC`. Supabase's default
+privileges grant EXECUTE on every new function to `anon` and `authenticated`
+_by name_, so the revoke removed a grant that was not the one doing the work.
+PostgREST exposes anything `authenticated` may execute as
+`POST /rest/v1/rpc/<name>`, which means any signed-in member could have written
+directly into the append-only audit trail. Migration 0024 revokes from the
+named roles across every function the service role alone should call, and
+`verify-rls.sql` asserts it by asking `has_function_privilege` rather than
+pattern-matching an ACL.
+
+**Row-level security is now tested rather than asserted.**
+`supabase/verify-rls.sql` builds members at all four tiers plus a staff
+account, and checks that each sees exactly the records their rank allows — free
+and weekly one, detailed two, premium three, staff five including the
+restricted record and the draft. It also confirms the profile guard refuses
+role, account-status and access-rank-override changes without a super
+administrator, and that every table has RLS on. `supabase/ci-bootstrap.sql`
+provides the Supabase-supplied objects so all of this runs on a bare Postgres,
+which is what made the CI `migrations` job real rather than decorative — as
+first written, it would have failed on the first migration that referenced
+`auth.users`.
+
 **Stripe catalogue, and a reproducible way to build it.** The four products and
 six paid prices exist in live mode, keyed by `lookup_key`
 (`gol_weekly_monthly` and so on) and tagged with `plan_code` metadata.

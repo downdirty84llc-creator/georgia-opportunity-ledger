@@ -119,6 +119,23 @@ as $$
            fd.funding_organization;
 $$;
 
+/**
+ * Rebuilds the search vector for whichever opportunity was touched.
+ *
+ * One function serves three tables, so it has to find the opportunity id in
+ * three different places. That branching must be PL/pgSQL control flow, not a
+ * SQL `case` expression: an expression is planned as a single statement, so
+ * every column it names has to resolve against the record type even on the
+ * branch that will not be taken. Written as `case tg_table_name when
+ * 'opportunities' then new.id else new.opportunity_id end` it raised
+ * "record new has no field opportunity_id" on *every* insert into
+ * `opportunities` — the branch was right and the parse still failed.
+ *
+ * `new` and `old` are likewise addressed only where the operation defines
+ * them. `coalesce(new, old)` reads as defensive and is not: referencing an
+ * unassigned record is an error in its own right, so the operation is checked
+ * instead of relying on one of them being null.
+ */
 create or replace function public.refresh_opportunity_search_vector()
 returns trigger
 language plpgsql
@@ -126,16 +143,30 @@ as $$
 declare
   target uuid;
 begin
-  target := case tg_table_name
-    when 'opportunities' then coalesce(new.id, old.id)
-    else coalesce(new.opportunity_id, old.opportunity_id)
-  end;
+  if tg_op = 'DELETE' then
+    if tg_table_name = 'opportunities' then
+      target := old.id;
+    else
+      target := old.opportunity_id;
+    end if;
+  else
+    if tg_table_name = 'opportunities' then
+      target := new.id;
+    else
+      target := new.opportunity_id;
+    end if;
+  end if;
 
-  update public.opportunities
-  set search_vector = public.build_opportunity_search_vector(target)
-  where id = target;
+  if target is not null then
+    update public.opportunities
+    set search_vector = public.build_opportunity_search_vector(target)
+    where id = target;
+  end if;
 
-  return coalesce(new, old);
+  if tg_op = 'DELETE' then
+    return old;
+  end if;
+  return new;
 end;
 $$;
 

@@ -20,6 +20,7 @@
     "smoke": "./scripts/smoke.sh",
     "db:reset": "supabase db reset",
     "db:seed": "tsx scripts/seed.ts",
+    "db:verify": "psql -v ON_ERROR_STOP=1 -f supabase/verify-rls.sql",
     "db:types": "supabase gen types typescript --local > src/lib/db/generated-types.ts",
     "stripe:setup": "tsx scripts/stripe-setup.ts",
     "format": "prettier --write \"**/*.{ts,tsx,md,json}\"",
