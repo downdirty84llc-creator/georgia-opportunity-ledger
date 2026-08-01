@@ -75,7 +75,9 @@ apart so a tier can be inserted later without renumbering published content.
 The rule is enforced in **three independent places**, deliberately:
 
 1. **Row-level security** on every table. A leaked anon key gets nothing it
-   should not have, whatever the application does.
+   should not have, whatever the application does. `supabase/verify-rls.sql`
+   proves this rather than asserting it: it creates a member at each tier and
+   checks that each sees exactly the records their rank allows.
 2. **`public.search_opportunities`**, a `SECURITY DEFINER` function that applies
    column-level redaction — RLS is row-level and cannot express "this member may
    see the title but not the financials", which is exactly what the upsell

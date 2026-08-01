@@ -2,8 +2,13 @@
 
 Against the ten milestones in specification section 28. This is an honest
 accounting: "Done" means implemented, typechecked and linted, with unit tests
-where the logic is testable without a database. Nothing here has been run
-against a live Supabase instance or live Stripe account.
+where the logic is testable without a database.
+
+The schema **has** now been applied to a real PostgreSQL 16 instance — all 24
+migrations from empty, the reference seed twice, and `verify-rls.sql` against
+live row-level security. What has _not_ been exercised is a running Supabase
+project: GoTrue issuing real tokens, PostgREST in front of the schema, and
+Storage. The Stripe live catalogue exists but no payment has been taken.
 
 ---
 
@@ -20,7 +25,7 @@ direction, or owner sign-off. That is a design engagement, not a code artefact.
 
 ## Milestone 2 — Foundation
 
-**Done.** Repository, environment separation, complete schema across 21
+**Done.** Repository, environment separation, complete schema across 24
 migrations, email/password and magic-link authentication, password reset (both
 halves of the flow on one page), Google sign-in wired in Supabase config,
 profiles created by database trigger, the full role system, public pages, and
@@ -35,9 +40,9 @@ handler. A full billing page shows plan, status, renewal, interval and amount.
 Access-rank enforcement is implemented in all three layers described in
 `ARCHITECTURE.md`.
 
-Outstanding: create the products and prices in Stripe, populate
-`stripe_monthly_price_id` / `stripe_annual_price_id` on `subscription_plans`,
-and run the tier-by-tier test-payment matrix the acceptance criterion requires.
+The live catalogue now exists and `npm run stripe:setup` reproduces it in
+either mode. Outstanding: the tier-by-tier test-payment matrix the acceptance
+criterion requires, which needs a deployed environment.
 
 ## Milestone 4 — Opportunity database
 
