@@ -300,6 +300,12 @@ checking only; never run it against a real Supabase project.
 any time. It checks that the public pages answer, the access boundary holds, the
 jobs refuse without their secret, and the sitemap advertises nothing private.
 
+It aborts with exit 2 if the host does not answer at all, rather than running
+the checks anyway. That is not defensive padding: the first version reported
+"ok — nothing sensitive is advertised" against a server that was not running,
+because `curl` returned nothing and `grep` found nothing in the nothing. Exit 1
+means a real failure; exit 2 means it could not look.
+
 ---
 
 ## Things that will bite
