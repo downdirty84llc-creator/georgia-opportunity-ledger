@@ -278,18 +278,26 @@ E2E_BASE_URL=https://staging.example.com npm run test:e2e:security
 
 ### Checking the database itself
 
+```bash
+npm run db:verify                        # throwaway cluster, torn down after
+./scripts/verify-schema.sh "$DATABASE_URL"   # an existing database
+```
+
+The first form needs nothing but `initdb` and `psql` on PATH — no Docker, no
+Supabase CLI. It starts its own PostgreSQL instance, applies all 26 migrations
+in order from empty, loads the reference data twice to prove the idempotence
+claim, runs the row-level-security checks, and removes the cluster. It is the
+same script CI runs, so the two cannot drift.
+
+The second form runs only the assertions against a database that already has
+the migrations. It writes fixtures and rolls them back, so do not aim it at
+production.
+
 `supabase/verify-rls.sql` asserts what the architecture claims: that a member
 at each tier sees exactly the records their rank allows, that role and
 account-status changes are refused without a super administrator, that the
 functions only the service role should call are not reachable by `anon` or
 `authenticated`, and that every table has row-level security on.
-
-```bash
-npm run db:verify          # against $PGHOST/$PGDATABASE
-```
-
-It creates its own fixtures and rolls back, so it is safe to run repeatedly —
-though not against production, because it writes before it rolls back.
 
 `supabase/ci-bootstrap.sql` creates stand-ins for the objects Supabase provides
 (`auth.users`, `auth.uid()`, the storage tables, the API-role grants) so the

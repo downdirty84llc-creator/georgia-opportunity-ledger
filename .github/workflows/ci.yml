@@ -36,46 +36,18 @@ jobs:
   migrations:
     name: Migrations apply from scratch
     runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: postgres:15
-        env:
-          POSTGRES_PASSWORD: postgres
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-        ports: ['5432:5432']
+    # No `services:` block. The script starts its own throwaway cluster, which
+    # keeps the local and CI paths identical instead of merely similar.
     steps:
       - uses: actions/checkout@v4
-      - name: Apply every migration in order
+      - name: Apply migrations, load reference data, check RLS
         env:
           PGPASSWORD: postgres
+        # One script rather than the steps repeated in YAML, so a developer
+        # running it locally is running exactly what CI runs.
         run: |
-          # Supabase provides auth.users, auth.uid(), the storage tables and
-          # the API-role grants. CI has none of that, so the migrations get a
-          # documented stand-in rather than an ad-hoc block inlined here.
-          psql -h localhost -U postgres -v ON_ERROR_STOP=1 \
-            -f supabase/ci-bootstrap.sql
-          for file in supabase/migrations/*.sql; do
-            echo "--- $file"
-            psql -h localhost -U postgres -v ON_ERROR_STOP=1 -f "$file"
-          done
-      - name: Reference data loads
-        env:
-          PGPASSWORD: postgres
-        run: psql -h localhost -U postgres -v ON_ERROR_STOP=1 -f supabase/seed.sql
-      - name: Reference data is idempotent
-        env:
-          PGPASSWORD: postgres
-        run: psql -h localhost -U postgres -v ON_ERROR_STOP=1 -f supabase/seed.sql
-      - name: Row-level security does what it claims
-        env:
-          PGPASSWORD: postgres
-        # Tier-by-tier visibility, the privilege-escalation guards, and the
-        # function grants PostgREST would otherwise expose as RPC endpoints.
-        run: psql -h localhost -U postgres -v ON_ERROR_STOP=1 -f supabase/verify-rls.sql
+          export PATH="/usr/lib/postgresql/16/bin:$PATH"
+          ./scripts/verify-schema.sh
 
   build:
     name: Production build
