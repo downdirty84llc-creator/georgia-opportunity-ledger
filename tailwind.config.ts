@@ -11,15 +11,21 @@ const config: Config = {
          * Contrast against white, for text (WCAG 1.4.3 wants 4.5:1 for body
          * copy, 3:1 for large text and UI boundaries):
          *
-         *   ink-300  2.3:1  borders and dividers only
-         *   ink-400  3.7:1  large text, icons, decorative — NOT body copy
-         *   ink-500  5.8:1  the lightest token safe for ordinary text
-         *   ink-600  7.9:1
-         *   ink-700+ 10:1 and above
+         *   ink-300  2.21:1  borders and dividers only
+         *   ink-400  3.70:1  large text, icons, decorative — NOT body copy
+         *   ink-500  5.76:1  the lightest token safe for ordinary text
+         *   ink-600  7.99:1
+         *   ink-700  9.97:1, and darker above that
          *
          * `text-ink-400` on a light surface fails AA and has done so twice;
          * `tests/e2e/accessibility.spec.ts` now catches it. Reach for ink-500
          * when the instinct is "this should look quieter".
+         *
+         * These figures are asserted in `tests/unit/design/palette.test.ts`,
+         * computed from the tokens below rather than trusted from this
+         * comment — which was wrong about ink-300 until the test was written.
+         * The brand is signed off, so a hex change here is a deliberate act
+         * and the test is what makes it one.
          */
         ink: {
           50: '#f5f7f7',

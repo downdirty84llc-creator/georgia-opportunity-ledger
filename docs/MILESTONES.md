@@ -4,24 +4,39 @@ Against the ten milestones in specification section 28. This is an honest
 accounting: "Done" means implemented, typechecked and linted, with unit tests
 where the logic is testable without a database.
 
-The schema **has** now been applied to a real PostgreSQL 16 instance — all 24
-migrations from empty, the reference seed twice, and `verify-rls.sql` against
-live row-level security. What has _not_ been exercised is a running Supabase
-project: GoTrue issuing real tokens, PostgREST in front of the schema, and
-Storage. The Stripe live catalogue exists but no payment has been taken.
+The schema is deployed to the live Supabase project and also applies cleanly to
+a bare PostgreSQL 16 instance — all 26 migrations from empty, the reference seed
+twice, and `verify-rls.sql` against live row-level security (`npm run db:verify`).
+
+What has _not_ been exercised is the product against that project: no account
+has signed in through GoTrue, no application request has gone through PostgREST,
+nothing has touched Storage, and no payment has been taken.
 
 ---
 
 ## Milestone 1 — Discovery and design system
 
-**Partial.** A working design system exists (`tailwind.config.ts`,
-`src/app/globals.css`, `src/components/ui/primitives.tsx`) with a defined
-palette, type scale, and accessible primitives: focus-visible rings, meters with
-`role="meter"` and text labels, badges that never carry status by colour alone,
-reduced-motion support.
+**Done.** The design system (`tailwind.config.ts`, `src/app/globals.css`,
+`src/components/ui/primitives.tsx`) has a defined palette, type scale, and
+accessible primitives: focus-visible rings, meters with `role="meter"` and text
+labels, badges that never carry status by colour alone, reduced-motion support.
 
-Not delivered: high-fidelity comparative design work, a confirmed brand
-direction, or owner sign-off. That is a design engagement, not a code artefact.
+**Brand signed off by the owner** on the system as built — the pine-and-clay
+palette, the type scale and the primitives in the repository. No separate brand
+guideline document was produced; the tokens are the specification. If something
+other than the implemented system was intended, this is the line to correct.
+
+Sign-off changes what the tokens are. They were a working choice and are now a
+commitment, so `tests/unit/design/palette.test.ts` computes the contrast ladder
+from the committed hex values and fails if one moves — including the assertion
+that `ink-500` is the lightest token safe for body copy, which is the rule
+`text-ink-400` broke across seven files before anything caught it.
+
+Writing that test found the documented ladder was wrong about two of its own
+figures (`ink-300` and `ink-600`). Both corrected against computed values.
+
+No high-fidelity comparative design work was done, and none is outstanding:
+the owner signed off on what exists rather than on a choice between options.
 
 ## Milestone 2 — Foundation
 
@@ -125,14 +140,11 @@ See `RUNBOOK.md` for the checklist.
    `npm run stripe:setup` builds a test-mode one against a test key. What
    remains is running a card through each tier and confirming the access rank
    that results, which needs a deployed environment rather than more code.
-4. **High-fidelity design and brand sign-off** (milestone 1). A design
-   engagement. The design _system_ is in better shape than it was — see the
-   contrast work below — but a brand direction is not a code artefact.
-5. **A human accessibility audit.** Automated rules run on every push and the
+4. **A human accessibility audit.** Automated rules run on every push and the
    public pages are clean against WCAG 2.1 AA. That covers roughly a third of
    real defects. The accessibility statement says so in those words rather
    than claiming conformance we have not tested for.
-6. **`/pricing` and `/support` remain server-rendered per request.** Both
+5. **`/pricing` and `/support` remain server-rendered per request.** Both
    genuinely personalise — pricing marks the plan you are on, support knows
    whether you are signed in — so this is a deliberate exception rather than a
    gap. `/georgia/[county]` is cached on demand rather than prerendered,

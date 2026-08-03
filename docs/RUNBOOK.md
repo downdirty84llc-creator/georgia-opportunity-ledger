@@ -250,7 +250,8 @@ Spec 28, milestone 10. Every line needs a name against it.
 - [ ] Cron schedules confirmed firing; check `job_runs` after 24 hours.
 - [ ] A real weekly report published, emailed, and read at each tier.
 - [ ] Administrator training on the review queue and correction workflow.
-- [ ] Accessibility audit against WCAG 2.1 AA.
+- [ ] Accessibility audit against WCAG 2.1 AA. `docs/ACCESSIBILITY-AUDIT.md`
+      is the brief; the automated third already runs on every push.
 - [ ] Core Web Vitals measured on the public pages. The landing pages are
       prerendered with `revalidate` windows; confirm the cache is actually being
       hit rather than every request revalidating.
