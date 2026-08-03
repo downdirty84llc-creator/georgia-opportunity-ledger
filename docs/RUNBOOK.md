@@ -80,6 +80,19 @@ recognises. Upload it through `/admin/opportunities/{id}` and the endpoint
 should refuse it, the object should be gone from the bucket, and the row should
 read `infected` with the signature name in `scan_detail`.
 
+If the host cannot reach `database.clamav.net` for signature definitions, the
+client can still be verified against a real engine using a custom signature:
+
+```bash
+mkdir -p /tmp/clamdb
+python3 -c "s=open('/tmp/eicar.com').read(); \
+  open('/tmp/clamdb/eicar.ndb','w').write('EICAR-Test:0:*:'+s.encode().hex())"
+clamscan -d /tmp/clamdb --no-summary /tmp/eicar.com   # ... FOUND
+```
+
+`tests/unit/files/scanner-http.test.ts` covers the same contract without any
+engine at all, so the client is checked on every push regardless.
+
 ### Background jobs
 
 `vercel.json` declares all fourteen cron schedules. Set `CRON_SECRET`; Vercel

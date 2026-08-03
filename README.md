@@ -175,6 +175,11 @@ transitions, CSV escaping and formula-injection defence, filter parsing,
 unsubscribe token signing and tampering, upload content sniffing, and the legal
 document set.
 
+Accessibility runs in two suites: the public pages, and the twenty-two behind
+sign-in including each step of the opportunity editor. `docs/ACCESSIBILITY-AUDIT.md`
+is the brief for the human audit — what automation cannot reach, and what not to
+pay someone to re-check.
+
 `npm run test:e2e` runs Playwright against a built app across desktop, iPhone,
 Android and tablet viewports. It includes the specification's security list —
 unauthorised API access, direct URL access, identifier enumeration, injection,
