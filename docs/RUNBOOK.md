@@ -95,9 +95,43 @@ engine at all, so the client is checked on every push regardless.
 
 ### Background jobs
 
-`vercel.json` declares all fourteen cron schedules. Set `CRON_SECRET`; Vercel
-sends it automatically as a bearer token when the variable is present. Jobs
-accept both `GET` (what Vercel Cron sends) and `POST`.
+The fourteen schedules live in `src/lib/jobs/registry.ts`. Both platforms'
+config is generated from it:
+
+```bash
+npm run schedules:generate   # rewrite vercel.json and netlify/functions
+npm run schedules:check      # fail if either has drifted (runs in CI)
+```
+
+**On Netlify** each job is a scheduled function in `netlify/functions`. Netlify
+has no equivalent of Vercel Cron's automatic credential, so each function sends
+`CRON_SECRET` as a bearer token itself. Set `CRON_SECRET`; `URL` is provided by
+Netlify.
+
+**On Vercel** `vercel.json` declares the crons and Vercel attaches
+`CRON_SECRET` automatically when the variable is present. Jobs accept both
+`GET` (what Vercel Cron sends) and `POST`.
+
+The endpoint authorises on the header rather than on who is calling, so it is
+identical either way.
+
+### The one thing that does not port
+
+`/api/v1/jobs/[job]` declares `maxDuration = 300` and
+`/api/v1/admin/attachments` declares `60`. Vercel reads those exports; Netlify
+does not, and its synchronous function limit is well below 300 seconds on every
+plan. Long jobs — `distribute-weekly-report` and `process-exports` especially —
+will be cut off mid-run on Netlify unless one of these applies:
+
+- run them as Netlify **background functions**, which raises the ceiling to 15
+  minutes (paid plans);
+- or leave the schedule to an external caller (Supabase `pg_cron`, GitHub
+  Actions, any uptime pinger) hitting `/api/v1/jobs/{job}` with the bearer
+  token, and delete the scheduled functions.
+
+Every job writes a `job_runs` row before it starts and updates it at the end, so
+a truncated run is visible on the admin dashboard as one that began and never
+finished, rather than as silence.
 
 To run one by hand:
 

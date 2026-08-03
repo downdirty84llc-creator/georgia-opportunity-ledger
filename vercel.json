@@ -2,25 +2,58 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": "nextjs",
   "crons": [
-    { "path": "/api/v1/jobs/publish-scheduled", "schedule": "*/15 * * * *" },
-    { "path": "/api/v1/jobs/premium-alerts", "schedule": "*/15 * * * *" },
+    {
+      "path": "/api/v1/jobs/publish-scheduled",
+      "schedule": "*/15 * * * *"
+    },
+    {
+      "path": "/api/v1/jobs/premium-alerts",
+      "schedule": "*/15 * * * *"
+    },
     {
       "path": "/api/v1/jobs/saved-search-matching",
       "schedule": "*/30 * * * *"
     },
-    { "path": "/api/v1/jobs/process-exports", "schedule": "*/5 * * * *" },
-    { "path": "/api/v1/jobs/evaluate-deadlines", "schedule": "10 5 * * *" },
-    { "path": "/api/v1/jobs/deadline-reminders", "schedule": "0 13 * * *" },
+    {
+      "path": "/api/v1/jobs/process-exports",
+      "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/v1/jobs/evaluate-deadlines",
+      "schedule": "10 5 * * *"
+    },
+    {
+      "path": "/api/v1/jobs/deadline-reminders",
+      "schedule": "0 13 * * *"
+    },
     {
       "path": "/api/v1/jobs/reverification-reminders",
       "schedule": "30 5 * * *"
     },
-    { "path": "/api/v1/jobs/stale-source-reminders", "schedule": "40 5 * * *" },
-    { "path": "/api/v1/jobs/expire-lapsed-access", "schedule": "20 5 * * *" },
-    { "path": "/api/v1/jobs/sync-subscriptions", "schedule": "0 */6 * * *" },
-    { "path": "/api/v1/jobs/aggregate-analytics", "schedule": "15 6 * * *" },
-    { "path": "/api/v1/jobs/prune", "schedule": "45 6 * * *" },
-    { "path": "/api/v1/jobs/scan-attachments", "schedule": "*/20 * * * *" },
+    {
+      "path": "/api/v1/jobs/stale-source-reminders",
+      "schedule": "40 5 * * *"
+    },
+    {
+      "path": "/api/v1/jobs/expire-lapsed-access",
+      "schedule": "20 5 * * *"
+    },
+    {
+      "path": "/api/v1/jobs/sync-subscriptions",
+      "schedule": "0 */6 * * *"
+    },
+    {
+      "path": "/api/v1/jobs/aggregate-analytics",
+      "schedule": "15 6 * * *"
+    },
+    {
+      "path": "/api/v1/jobs/prune",
+      "schedule": "45 6 * * *"
+    },
+    {
+      "path": "/api/v1/jobs/scan-attachments",
+      "schedule": "*/20 * * * *"
+    },
     {
       "path": "/api/v1/jobs/distribute-weekly-report",
       "schedule": "0 12 * * 4"

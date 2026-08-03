@@ -28,6 +28,9 @@ jobs:
       - run: npm run typecheck
       - run: npm run lint
       - run: npm run format:check
+      # The deployment schedules are generated from the job registry; this
+      # fails if a committed file has drifted from it.
+      - run: npm run schedules:check
       - run: npm test
 
   # The migrations have to apply in order, from nothing, every time. A

@@ -147,8 +147,11 @@ a banner marks every non-production page.
 
 ## Deployment
 
-- **Application** — Vercel. `vercel.json` declares the cron schedule for all
-  fourteen background jobs.
+- **Application** — Netlify (`netlify.toml`), with Vercel supported as an
+  alternative. The fourteen job schedules live in `src/lib/jobs/registry.ts`
+  and both platforms' config is generated from it; `npm run schedules:check`
+  fails CI if either has drifted. One caveat carries over to neither platform
+  equally — see the runbook on function time limits.
 - **Database, auth and storage** — Supabase Postgres.
 - **Payments** — Stripe. Checkout, the customer portal and every card detail
   live in Stripe; this application never receives a card number.

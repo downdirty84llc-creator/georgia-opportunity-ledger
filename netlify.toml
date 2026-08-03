@@ -1,0 +1,37 @@
+# Netlify build configuration.
+#
+# Hand-written. The scheduled functions in netlify/functions are generated from
+# src/lib/jobs/registry.ts — run `npm run schedules:generate` after changing a
+# job or its cadence, and `npm run schedules:check` fails the build if the
+# committed files have drifted.
+
+[build]
+  command = "npm run build"
+  publish = ".next"
+
+[build.environment]
+  NODE_VERSION = "22"
+  NEXT_TELEMETRY_DISABLED = "1"
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
+
+[functions]
+  node_bundler = "esbuild"
+
+# --- Function budgets -------------------------------------------------------
+#
+# Two routes declare a longer budget than the default, through Next.js
+# `maxDuration` exports that Vercel reads directly:
+#
+#   /api/v1/jobs/[job]         300s  jobs iterate the whole member list
+#   /api/v1/admin/attachments   60s  uploads are read whole to be scanned
+#
+# Netlify does not read those exports, and its synchronous function limit is
+# well below 300 seconds on every plan. The jobs are therefore the one thing
+# that does not port unchanged. Which remedy applies depends on the plan this
+# deploys under, so it is recorded in docs/RUNBOOK.md as a deployment decision
+# rather than guessed at here.
+#
+# The scheduled functions themselves are tiny — they POST to the job endpoint
+# and return — so they are not the constraint. The endpoint is.
