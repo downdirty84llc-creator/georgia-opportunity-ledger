@@ -1,9 +1,19 @@
 name: CI
 
+# Pull requests, plus direct pushes to the branch that is deployed.
+#
+# This used to be `push: branches: ['**']`, which ran the whole matrix twice for
+# every branch that had a pull request open — once for the push, once for the
+# synchronise. That was free while the repository was public. It is metered
+# once it is private, and the second run tells you nothing the first did not.
+#
+# Work in progress is still covered: an open pull request re-runs CI on every
+# push to its head branch.
 on:
   push:
-    branches: ['**']
+    branches: [main]
   pull_request:
+  workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}

@@ -218,6 +218,15 @@ accessibility suites against a built app. `format:check` was already in the
 scripts but could never pass — prettier has no SQL parser — which is why it had
 never run.
 
+**CI triggers narrowed to what is actually informative.** `push` fired on
+`branches: ['**']` alongside `pull_request`, so every branch with a pull request
+open ran the full matrix twice — types, lint, unit tests, a throwaway Postgres,
+a production build and a browser suite, all of it duplicated. That was free
+while the repository was public and is metered once it is not. `push` now
+covers `main`; open pull requests still re-run on every push to their head
+branch, and `workflow_dispatch` is there for a manual run on a branch with no
+pull request.
+
 ## Closed in the previous revision
 
 **Public landing pages are cached (spec 23).** The marketing layout rendered a
