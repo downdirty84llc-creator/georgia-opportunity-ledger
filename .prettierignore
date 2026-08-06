@@ -8,3 +8,9 @@ node_modules
 playwright-report
 test-results
 coverage
+
+# Per-machine tool state, not source. It is gitignored, but only by a global
+# ignore file on some machines — Prettier scans the working directory rather
+# than the index, so without this `format:check` fails locally for anyone whose
+# editor has written one.
+.claude/settings.local.json

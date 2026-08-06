@@ -245,6 +245,41 @@ are locked out.
 
 Spec 28, milestone 10. Every line needs a name against it.
 
+**Run it rather than read it:**
+
+```bash
+npm run preflight              # against the production environment
+npm run preflight -- --json    # machine-readable
+```
+
+Most of what follows is now decided by that command instead of by someone
+walking the list and deciding for themselves. It reports four states, and the
+third is the one that matters:
+
+|        |                                                           |
+| ------ | --------------------------------------------------------- |
+| `ok`   | checked, and it is right                                  |
+| `FAIL` | checked, and it is wrong                                  |
+| `??`   | **could not check** — counts as not ready, never as ready |
+| `you`  | no machine can decide this; it is owner work              |
+
+`??` exists because this codebase has twice shipped a check that passed by
+looking at nothing — `smoke.sh` reporting "nothing sensitive is advertised"
+against a server that was not running, and a guard grepping an empty checkout.
+A readiness report that cannot tell "fine" from "did not look" is worse than
+none, because it gets believed. Anything the command cannot reach from where it
+runs is reported as unknown and keeps the exit status non-zero.
+
+It exits 0 only when every blocking item passes, owner work included — so a
+green run is the launch gate, not a suggestion.
+
+Which of the lines below it decides for you is not duplicated here, because a
+second list would drift from the first: run the command and read the states. It
+covers configuration, the legal-review flags, the database questions (sample
+data, price ids, super administrators, staff two-factor), the scanner against a
+real EICAR upload, sending-domain DNS, and the deployed `robots.txt` and
+sitemap. What it marks `you` is what no machine can close.
+
 ### Blocking
 
 - [ ] **Legal review of the nine documents marked `requiresReview`** in

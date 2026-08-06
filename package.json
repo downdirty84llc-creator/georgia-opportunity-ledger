@@ -26,7 +26,8 @@
     "db:types": "supabase gen types typescript --local > src/lib/db/generated-types.ts",
     "stripe:setup": "tsx scripts/stripe-setup.ts",
     "format": "prettier --write \"**/*.{ts,tsx,md,json}\"",
-    "format:check": "prettier --check \"**/*.{ts,tsx,md,json}\""
+    "format:check": "prettier --check \"**/*.{ts,tsx,md,json}\"",
+    "preflight": "tsx scripts/preflight.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.5.2",

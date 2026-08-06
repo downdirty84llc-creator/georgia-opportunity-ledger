@@ -117,3 +117,40 @@ jobs:
           name: playwright-report
           path: playwright-report/
           retention-days: 7
+
+  # Production readiness, on demand.
+  #
+  # Not part of the push/PR matrix: every meaningful check here needs the
+  # production environment's own secrets, and running it without them produces
+  # a wall of "could not check" that teaches nobody anything. Run it from the
+  # Actions tab before a launch, or locally with the production env loaded.
+  #
+  # It exits non-zero while anything is outstanding — including the items only
+  # a person can close — so a green run genuinely means ready.
+  preflight:
+    name: Production readiness
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run preflight
+        env:
+          NEXT_PUBLIC_ENVIRONMENT: production
+          NEXT_PUBLIC_SITE_URL: ${{ secrets.NEXT_PUBLIC_SITE_URL }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
+          STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
+          EMAIL_UNSUBSCRIBE_SECRET: ${{ secrets.EMAIL_UNSUBSCRIBE_SECRET }}
+          FILE_SCANNER_PROVIDER: ${{ secrets.FILE_SCANNER_PROVIDER }}
+          FILE_SCANNER_URL: ${{ secrets.FILE_SCANNER_URL }}
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+          NEXT_PUBLIC_POSTHOG_KEY: ${{ secrets.NEXT_PUBLIC_POSTHOG_KEY }}
