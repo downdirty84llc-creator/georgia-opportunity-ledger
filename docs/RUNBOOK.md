@@ -252,6 +252,11 @@ npm run preflight              # against the production environment
 npm run preflight -- --json    # machine-readable
 ```
 
+Or from the Actions tab: **Production readiness → Run workflow**, which reads
+the repository secrets. It is a separate workflow from CI on purpose — CI asks
+whether the code is correct and should be green today; this asks whether
+production is ready and is meant to stay red until it is.
+
 Most of what follows is now decided by that command instead of by someone
 walking the list and deciding for themselves. It reports four states, and the
 third is the one that matters:
