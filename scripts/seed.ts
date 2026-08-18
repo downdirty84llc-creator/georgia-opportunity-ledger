@@ -37,7 +37,7 @@ import {
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
-const ENVIRONMENT = process.env.NEXT_PUBLIC_ENVIRONMENT ?? 'development';
+const ENVIRONMENT = process.env.NEXT_PUBLIC_ENVIRONMENT;
 
 if (!SUPABASE_URL || !SERVICE_ROLE_KEY) {
   console.error(
@@ -45,8 +45,40 @@ if (!SUPABASE_URL || !SERVICE_ROLE_KEY) {
   );
   process.exit(1);
 }
+
+// This guard used to read `?? 'development'`, which made it useless in the one
+// situation it existed for. The dangerous caller is not someone who sets
+// NEXT_PUBLIC_ENVIRONMENT to the wrong thing — it is someone who does not set
+// it at all while SUPABASE_URL points at the live project. Defaulting to
+// 'development' meant that person seeded production. Unset now refuses.
+if (!ENVIRONMENT) {
+  console.error(
+    'NEXT_PUBLIC_ENVIRONMENT is not set.\n' +
+      '  Set it explicitly (development | staging) so this cannot default its\n' +
+      '  way into the production database.',
+  );
+  process.exit(1);
+}
 if (ENVIRONMENT === 'production') {
   console.error('Refusing to load sample data into production.');
+  process.exit(1);
+}
+
+// The environment variable says what the operator believes. The URL says which
+// database will actually be written to, and the two disagree exactly when it
+// matters. A remote target therefore has to be named on the command line.
+const host = new URL(SUPABASE_URL).host;
+const isLocal = /^(127\.0\.0\.1|localhost|\[::1\])(:\d+)?$/.test(host);
+
+if (!isLocal && !process.argv.includes('--remote')) {
+  console.error(
+    `Refusing to seed a remote database without --remote.\n` +
+      `  Target: ${host}\n` +
+      `  Environment: ${ENVIRONMENT}\n\n` +
+      '  Sample data is badged in the UI and excluded from production\n' +
+      "  analytics, but it is still rows in somebody's database. If this is\n" +
+      '  the staging project, re-run with --remote.',
+  );
   process.exit(1);
 }
 
