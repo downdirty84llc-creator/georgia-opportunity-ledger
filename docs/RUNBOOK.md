@@ -20,8 +20,22 @@ psql "$DATABASE_URL" -f supabase/seed.sql   # reference data only
 
 `supabase/seed.sql` is idempotent: plans, states, counties, cities, industries,
 sources and indicator definitions all upsert on a natural key. It contains no
-demo users and no sample records — those come from `npm run db:seed`, which
-refuses to run against production.
+demo users and no sample records — those come from `npm run db:seed`.
+
+That script refuses three ways, all failing closed:
+
+- `NEXT_PUBLIC_ENVIRONMENT` unset — refused. It used to default to
+  `development`, which made the guard useless in the one case it existed for:
+  an operator who never set the variable while the URL pointed at the live
+  project.
+- `NEXT_PUBLIC_ENVIRONMENT=production` — refused.
+- A non-localhost target without `--remote` on the command line — refused. The
+  variable records what the operator believes; the URL decides which database is
+  actually written to, and the two disagree exactly when it matters.
+
+Everything it writes is flagged `is_sample`, badged in the UI and excluded from
+production analytics. `npm run preflight` asserts the production count is zero
+across `opportunities`, `profiles`, `reports` and `market_indicator_values`.
 
 ### Stripe
 

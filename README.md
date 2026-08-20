@@ -20,10 +20,21 @@ cp .env.example .env.local          # fill in Supabase and Stripe values
 
 supabase start                      # local Postgres + Auth + Storage
 supabase db reset                   # runs migrations, then supabase/seed.sql
-npm run db:seed                     # demo users, sample records, sample reports
+
+# Demo users, sample records and sample reports. The environment has to be
+# named: db:seed refuses to run when NEXT_PUBLIC_ENVIRONMENT is unset, so it
+# cannot default its way into a database you did not mean to write to.
+NEXT_PUBLIC_ENVIRONMENT=development \
+NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321 \
+SUPABASE_SERVICE_ROLE_KEY=<the key `supabase start` printed> \
+  npm run db:seed
 
 npm run dev                         # http://localhost:3000
 ```
+
+Seeding anything that is not localhost also needs `--remote` on the end, so a
+remote write is always a thing somebody typed. `NEXT_PUBLIC_ENVIRONMENT=production`
+is refused outright.
 
 Seeded accounts (password from `SEED_PASSWORD`, default
 `ledger-demo-password-2026`):
