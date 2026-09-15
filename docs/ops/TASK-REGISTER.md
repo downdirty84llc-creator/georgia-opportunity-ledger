@@ -739,5 +739,6 @@ One remedy fixes both.
   agents, with the gate green.
 - **Completion proof required** — The commit hash, with typecheck, lint and test
   output.
-- **Status** In Verification · **Next action** — Record the pushed hash in
-  `OPERATING-LOG.md`, then Done.
+- **Status** **Done**, 2026-09-09 · Evidence: OL-0013, commit `00575a3` on
+  `claude/consolidate-agent-platform`, with typecheck silent, lint clean and 240
+  tests passing in 18 files. Routines repointed under OL-0014.

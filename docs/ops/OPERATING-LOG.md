@@ -340,7 +340,78 @@ meta_mcp`.
 
 ---
 
-## Next entry: OL-0013
+## OL-0013 — Consolidate onto the canonical repository
+
+- **Timestamp** 2026-09-09T12:40:00Z
+- **Task** T-28 · **Approval** A-11
+- **Action** Moved the DD84 agent platform into
+  `downdirty84llc-creator/georgia-opportunity-ledger`, ported and wired the three
+  modules it lacked, wrote a CLAUDE.md for this repository, and repointed the
+  four Routines.
+- **Tool** `add_repo`, `git clone`, `git checkout -b`, `cp`, `Edit`, `npx tsc`,
+  `npx next lint`, `npx vitest run`, `git commit`, `git push`,
+  `update_trigger` ×4
+- **Source** Owner decision, 2026-09-09: this repository is canonical.
+- **Operator** Claude (agent)
+- **Before** Two divergent copies. This repository ahead on the application
+  (31 migrations, scanner wired, MFA reset built, Netlify schedules generated
+  from the registry); `tune-advisor-` the only home of the agent platform and of
+  four modules.
+- **After** One repository holding both, on branch
+  `claude/consolidate-agent-platform` at `00575a3`. `main` untouched, no pull
+  request opened.
+- **Evidence** — real output:
+  - `npx tsc --noEmit` — no diagnostics.
+  - `npx next lint` — `✔ No ESLint warnings or errors`.
+  - `npx vitest run` — `Test Files 18 passed (18)`, `Tests 240 passed (240)`.
+    That includes the 39 ported tests: `billing/mrr` (18),
+    `analytics/sample-data` (13), `analytics/upgrade-source` (8).
+  - `git push` — `* [new branch] claude/consolidate-agent-platform`.
+- **Error** None.
+- **Remediation** Two things were deliberately **not** done, and both would have
+  looked like progress. `member-header.tsx` was not ported, because this
+  repository's `header-session.tsx` already implements the same caching fix —
+  copying it would have left two mechanisms for one job. And the older entries in
+  this log, in `APPROVALS.md` and in `TASK-REGISTER.md` still name
+  `tune-advisor-` branches; they were **not** rewritten to match present
+  geography, because an append-only log edited to agree with the present is not a
+  log. Only the live explainer, `docs/agents/README.md`, carries a superseded
+  notice.
+
+## OL-0014 — Repoint the Routines, and a negative result on T-27
+
+- **Timestamp** 2026-09-15T12:45:00Z
+- **Task** T-27, T-28 · **Approval** A-11 (consequence of the canonical-repo
+  decision)
+- **Action** Updated the four Routine prompts to name this repository, to push to
+  a per-routine branch rather than `main`, and to **state plainly in the reply
+  when they cannot commit** instead of finishing silently.
+- **Tool** `update_trigger` ×4, `git ls-remote`
+- **Source** T-28. Left alone, the Routines would have cloned a retired
+  repository the moment T-27 was fixed.
+- **Operator** Claude (agent)
+- **Before** Four prompts naming `tune-advisor-` and the merged branch there.
+- **After** Four prompts naming `georgia-opportunity-ledger`, branch `main`, each
+  with its own push branch and an explicit instruction not to report success
+  without a commit.
+- **Evidence** — real output. Each `update_trigger` returned the stored prompt
+  with the new text. Six days later, `git ls-remote --heads origin` on this
+  repository lists `main`, `capability-probe`,
+  `claude/georgia-opportunity-ledger-kfpt4c` and
+  `claude/consolidate-agent-platform` — **and none of the four
+  `claude/torque-*` branches the routines were told to push.**
+- **Error** None from this change.
+- **Remediation** **This is a negative result worth recording, not a gap in the
+  work.** The prompt change was never expected to fix T-27; it was expected to
+  make the failure legible and to stop the routines pointing at a dead
+  repository. Six days of firing with corrected prompts and still no branch
+  confirms what OL-0012 concluded: the fired sessions have no repository
+  attached, so no wording will make them able to commit. **A-10 remains the
+  only fix, and it remains with the owner.**
+
+---
+
+## Next entry: OL-0015
 
 The next routine run or executed action appends here. If you are a routine: your
 run entry goes at the bottom of this file and nothing above it is touched.
