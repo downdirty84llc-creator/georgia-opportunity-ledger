@@ -122,16 +122,69 @@ has no equivalent of Vercel Cron's automatic credential, so each function sends
 `CRON_SECRET` as a bearer token itself. Set `CRON_SECRET`; `URL` is provided by
 Netlify.
 
-**On Vercel** `vercel.json` declares the crons and Vercel attaches
-`CRON_SECRET` automatically when the variable is present. Jobs accept both
-`GET` (what Vercel Cron sends) and `POST`.
+**On Vercel** `vercel.json` declares **no** crons. The hobby plan enforces a
+once-per-day minimum cadence and fails the deploy on anything more frequent, and
+six of these jobs run every five to thirty minutes. Restore the `crons` block
+(and raise `maxDuration` back above 60) only on Pro.
+
+**On Supabase, which is how this actually runs.** `pg_cron` calls the endpoints
+on the real cadence from inside the database, at no cost, and keeps the project
+from idling into the pause that hit it in September.
+
+Set up once per environment:
+
+```sql
+-- 1. The token. Generated inside Postgres so it never passes through a chat,
+--    a terminal history or a clipboard on the way in.
+select vault.create_secret(
+  encode(extensions.gen_random_bytes(32), 'hex'),
+  'ledger_cron_secret',
+  'Shared secret for /api/v1/jobs/*. Must match CRON_SECRET in Vercel exactly.'
+);
+
+-- 2. The base URL pg_net calls. Must be publicly reachable.
+select vault.create_secret(
+  'https://gaopportunityledger.com',
+  'ledger_site_url'
+);
+
+-- 3. Read the token once, and paste it into Vercel as CRON_SECRET.
+select decrypted_secret from vault.decrypted_secrets
+where name = 'ledger_cron_secret';
+```
+
+Then apply `supabase/pg_cron-schedule.sql`, which is generated from the job
+registry and is idempotent — re-running re-points existing schedules rather than
+creating duplicates that fire alongside them.
+
+The two values must match exactly or every job returns 401. If the site URL
+changes — connecting the custom domain, for instance — update the secret:
+
+```sql
+select vault.update_secret(
+  (select id from vault.secrets where name = 'ledger_site_url'),
+  'https://gaopportunityledger.com'
+);
+```
+
+Check it is working:
+
+```sql
+select jobname, schedule, active from cron.job order by jobname;
+select jobname, status, return_message, start_time
+from cron.job_run_details order by start_time desc limit 20;
+```
+
+`dispatch_ledger_job` raises rather than returning quietly when either secret is
+missing. A scheduled job that silently does nothing looks exactly like one that
+ran and found no work, and this schedule is unattended.
 
 The endpoint authorises on the header rather than on who is calling, so it is
-identical either way.
+identical however it is driven.
 
 ### The one thing that does not port
 
-`/api/v1/jobs/[job]` declares `maxDuration = 300` and
+`/api/v1/jobs/[job]` declares `maxDuration = 60` (the hobby ceiling) and
 `/api/v1/admin/attachments` declares `60`. Vercel reads those exports; Netlify
 does not, and its synchronous function limit is well below 300 seconds on every
 plan. Long jobs — `distribute-weekly-report` and `process-exports` especially —
