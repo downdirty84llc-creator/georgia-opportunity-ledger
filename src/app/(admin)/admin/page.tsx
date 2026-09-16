@@ -2,7 +2,9 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 
 import { Card, Pill, SectionHeading } from '@/components/ui/primitives';
+import { sampleUserIdList } from '@/lib/analytics/sample-data';
 import { getSessionContext } from '@/lib/auth/session';
+import { centsToDollars, monthlyRecurringRevenue } from '@/lib/billing/mrr';
 import { createServerSupabaseClient } from '@/lib/db/server';
 import { formatDate, formatMoney, titleCase } from '@/lib/format';
 
@@ -23,6 +25,30 @@ export default async function AdminDashboardPage() {
 
   const now = new Date();
   const inSevenDays = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+
+  // Subscriber and revenue figures exclude seeded demo accounts. The lookup is
+  // a separate query rather than an embedded join because `subscriptions` and
+  // `profiles` grant SELECT to exactly the same three roles — billing manager,
+  // support representative, super administrator — so any staff member who can
+  // see a subscription row can also see which profiles are samples. An editor
+  // reads neither and sees zero either way. That equivalence is what stops the
+  // filter from being silently empty while the numbers it filters are not; if
+  // either policy is ever widened, this has to be revisited.
+  const { data: sampleProfiles } = await supabase
+    .from('profiles')
+    .select('id')
+    .eq('is_sample', true);
+  const sampleUserIds = (sampleProfiles ?? []).map(
+    (row: { id: string }) => row.id,
+  );
+  const realSubscribers = <
+    T extends { not: (c: string, o: 'in', v: string) => T },
+  >(
+    query: T,
+  ): T =>
+    sampleUserIds.length === 0
+      ? query
+      : query.not('user_id', 'in', sampleUserIdList(sampleUserIds));
 
   const head = (table: string) =>
     supabase.from(table).select('id', { count: 'exact', head: true });
@@ -67,20 +93,32 @@ export default async function AdminDashboardPage() {
       head('reports').in('status', ['draft', 'internal_review', 'approved']),
     ),
     countRows(
-      head('subscriptions').in('status', ['past_due', 'unpaid', 'incomplete']),
+      realSubscribers(
+        head('subscriptions').in('status', [
+          'past_due',
+          'unpaid',
+          'incomplete',
+        ]),
+      ),
     ),
-    countRows(head('subscriptions').in('status', ['active', 'trialing'])),
+    countRows(
+      realSubscribers(
+        head('subscriptions').in('status', ['active', 'trialing']),
+      ),
+    ),
     supabase
       .from('audit_logs')
       .select('id, action, entity_type, entity_id, created_at')
       .order('created_at', { ascending: false })
       .limit(12),
-    supabase
-      .from('subscriptions')
-      .select(
-        'status, subscription_plans ( code, monthly_price, annual_price )',
-      )
-      .in('status', ['active', 'trialing']),
+    realSubscribers(
+      supabase
+        .from('subscriptions')
+        .select(
+          'status, billing_interval, subscription_plans ( code, monthly_price, annual_price )',
+        )
+        .in('status', ['active', 'trialing']),
+    ),
     supabase
       .from('job_runs')
       .select(
@@ -90,14 +128,24 @@ export default async function AdminDashboardPage() {
       .limit(10),
   ]);
 
-  // Monthly recurring revenue, normalising annual plans to a monthly figure.
-  const mrr = (subscriptions.data ?? []).reduce((total, row) => {
-    const plan = Array.isArray(row.subscription_plans)
-      ? row.subscription_plans[0]
-      : row.subscription_plans;
-    if (!plan) return total;
-    return total + Number(plan.monthly_price ?? 0);
-  }, 0);
+  // Monthly recurring revenue. The arithmetic lives in `lib/billing/mrr.ts`
+  // and is unit-tested; this only shapes the join into its input. It used to be
+  // an inline reduce that added `monthly_price` for every subscription
+  // regardless of interval, under a comment claiming it normalised annual plans
+  // — so an annual subscriber was counted at the monthly rate they do not pay.
+  const mrrTotal = monthlyRecurringRevenue(
+    (subscriptions.data ?? []).map((row) => {
+      const plan = Array.isArray(row.subscription_plans)
+        ? row.subscription_plans[0]
+        : row.subscription_plans;
+      return {
+        billingInterval: row.billing_interval,
+        monthlyPrice: plan?.monthly_price,
+        annualPrice: plan?.annual_price,
+      };
+    }),
+  );
+  const mrr = centsToDollars(mrrTotal.cents);
 
   const metrics = [
     {
