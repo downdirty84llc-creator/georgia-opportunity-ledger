@@ -90,7 +90,7 @@ and appeared the first time something actually ran:
 npm ci
 npm run typecheck && npm run lint && npm run format:check
 npm run schedules:check          # deploy cron config must match the job registry
-npm test                         # 201 tests
+npm test                         # 240 tests
 npm run build
 npx playwright test --project=desktop-chrome   # 12 skip without a seeded DB — correct
 ./scripts/verify-schema.sh       # 31 migrations from empty + 15 RLS assertions
