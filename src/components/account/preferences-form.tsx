@@ -59,6 +59,7 @@ export function PreferencesForm({
     emailAlertsEnabled: (initial.email_alerts_enabled as boolean) ?? true,
     marketingEmailEnabled:
       (initial.marketing_email_enabled as boolean) ?? false,
+    analyticsEnabled: (initial.analytics_enabled as boolean) ?? true,
     timezone: (initial.timezone as string) ?? 'America/New_York',
     minimumScore: (initial.minimum_score as number) ?? 0,
   });
@@ -125,6 +126,7 @@ export function PreferencesForm({
           preferredFrequency: form.preferredFrequency,
           emailAlertsEnabled: form.emailAlertsEnabled,
           marketingEmailEnabled: form.marketingEmailEnabled,
+          analyticsEnabled: form.analyticsEnabled,
           timezone: form.timezone,
           minimumScore: Number(form.minimumScore),
           preferredCountyIds: countyIds,
@@ -478,6 +480,23 @@ export function PreferencesForm({
             <span>
               Send me occasional product and marketing email. Off by default,
               and never required.
+            </span>
+          </label>
+
+          <label className="flex items-start gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={form.analyticsEnabled}
+              onChange={(event) =>
+                setForm({ ...form, analyticsEnabled: event.target.checked })
+              }
+              className="mt-0.5 rounded border-ink-300"
+            />
+            <span>
+              Include my usage in product analytics. This records which pages
+              and records you open so we can see where the product is working.
+              Switching it off costs you no functionality, and it is the control
+              the cookie policy refers to.
             </span>
           </label>
 

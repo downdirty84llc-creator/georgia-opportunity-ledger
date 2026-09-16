@@ -21,6 +21,11 @@ export const RATE_LIMITS = {
   // limit is about protecting the scanner and the function's memory, not
   // about abuse: editorial staff rarely attach more than a handful an hour.
   upload: { limit: 40, windowSeconds: 3600 },
+  // Destructive or data-disclosing, and none is something a member needs to do
+  // repeatedly.
+  accountDeletion: { limit: 5, windowSeconds: 3600 },
+  dataExport: { limit: 3, windowSeconds: 3600 },
+  refund: { limit: 30, windowSeconds: 3600 },
 } as const;
 
 export type RateLimitAction = keyof typeof RATE_LIMITS;
