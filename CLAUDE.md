@@ -118,10 +118,44 @@ nine and the three that state our own practice is pinned in
 
 ## Current state
 
-- Production Supabase project `bbgikfblcahhvrpxiqnd` came back **empty** after a
-  pause and restore in September. The schema is fully reproducible from the 31
-  migrations plus `supabase/seed.sql`; whether to restore a dashboard backup or
-  re-push is an open owner decision.
+- Production Supabase project `bbgikfblcahhvrpxiqnd` is **healthy and fully
+  migrated**. Verified 2026-09-16 against the live database: all 31 migrations
+  applied, reference data present (4 plans, 159 counties, 12 industries), zero
+  sample rows, zero tables without RLS, and both August security fixes confirmed
+  live — the six service-role-only functions are unreachable by `anon` and
+  `authenticated`, and `refresh_opportunity_search_vector` uses PL/pgSQL control
+  flow rather than the `CASE` expression. Stripe's live catalogue is complete:
+  four products, monthly and annual price ids on all three paid tiers.
+- `opportunities` and `profiles` are both 0. No application has ever talked to
+  this database.
+- An earlier note here said this project "came back empty" after a September
+  pause and restore. That was wrong. The check ran about two minutes after the
+  restore was initiated: Postgres answered, the data had not finished restoring,
+  and an in-progress restore was read as data loss. Nothing was ever lost. Wait
+  for a restore to complete before concluding anything from an empty schema.
 - `gol-staging` (`bahdfxljazvegvgccvxy`) exists and is inactive.
-- Remaining launch blockers are not code: legal review, a card through each
-  tier, point-in-time recovery, a human accessibility audit, a scanner endpoint.
+
+## Deploying on Vercel — two hobby-plan limits bite
+
+The team is on the **hobby** plan, and the committed configuration does not fit
+it:
+
+- **Cron cadence.** Hobby enforces a once-per-day minimum, and an expression
+  that fires more often fails at deploy time. Six of the fourteen schedules in
+  `vercel.json` fire more often than daily.
+- **Function duration.** Hobby caps functions at 60 seconds.
+  `/api/v1/jobs/[job]` declares `maxDuration = 300`. Pro allows far more.
+
+So one of these has to be true before a Vercel deploy succeeds: the team is on
+Pro, or the crons are driven externally (an external caller hitting
+`/api/v1/jobs/{job}` with the `CRON_SECRET` bearer token, as already described
+for Netlify in `docs/RUNBOOK.md`) and the long jobs fit inside 60 seconds.
+
+Linking the repository also requires the Vercel GitHub App to be installed on
+it — https://github.com/apps/vercel.
+
+## Remaining launch blockers — none of them code
+
+Legal review of the nine documents, a card through each tier, point-in-time
+recovery, a human accessibility audit, and a scanner endpoint for
+`FILE_SCANNER_URL`.
