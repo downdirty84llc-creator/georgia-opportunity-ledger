@@ -7,7 +7,7 @@ import { runJob } from '@/lib/jobs/runner';
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 // Jobs iterate over the whole member list; the default 10s budget is not enough.
-export const maxDuration = 300;
+export const maxDuration = 60;
 
 type RouteContext = { params: Promise<{ job: string }> };
 
