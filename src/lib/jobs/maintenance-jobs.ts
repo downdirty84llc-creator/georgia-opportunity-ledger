@@ -1,4 +1,5 @@
 import { DELETION_GRACE_DAYS } from '@/lib/account/deletion';
+import { excludeSampleUsersFilter } from '@/lib/analytics/sample-data';
 import { createAdminClient } from '@/lib/db/admin';
 import { runExportJob, type ExportJobRow } from '@/lib/exports/service';
 import { planForPriceId } from '@/lib/billing/plans';
@@ -288,11 +289,31 @@ export const aggregateAnalyticsJob: JobDefinition = {
     const supabase = createAdminClient();
     const start = new Date(now.getTime() - 24 * 60 * 60 * 1000);
 
-    const { data, error } = await supabase
+    // Seeded demo accounts must not move the numbers staff make decisions on.
+    // This client is service-role, so the lookup sees every profile regardless
+    // of RLS; in production the result is empty and the filter is skipped.
+    const { data: sampleProfiles, error: sampleError } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('is_sample', true);
+    if (sampleError) throw new Error(sampleError.message);
+
+    const sampleUserIds = (sampleProfiles ?? []).map(
+      (row: { id: string }) => row.id,
+    );
+    const excludeSample = excludeSampleUsersFilter(sampleUserIds);
+
+    let query = supabase
       .from('analytics_events')
       .select('event_name')
       .gte('occurred_at', start.toISOString())
       .limit(20000);
+    // An event with no `user_id` is anonymous traffic from a real visitor and
+    // must be kept, which is why this is an `or` and not a bare `not.in` — see
+    // `lib/analytics/sample-data.ts`.
+    if (excludeSample) query = query.or(excludeSample);
+
+    const { data, error } = await query;
 
     if (error) throw new Error(error.message);
 
