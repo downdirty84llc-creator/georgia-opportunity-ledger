@@ -37,6 +37,7 @@ export const ANALYTICS_EVENTS = [
   'source_link_clicked',
   'correction_submitted',
   'support_ticket_submitted',
+  'account_deletion_requested',
 ] as const;
 
 export type AnalyticsEvent = (typeof ANALYTICS_EVENTS)[number];
@@ -88,6 +89,60 @@ export function scrubProperties(
   return clean;
 }
 
+/**
+ * Consent lookup, memoised for a short window.
+ *
+ * `user_preferences.analytics_enabled` has existed in the database since the
+ * `analytics_consent` migration, and nothing read it — so the Privacy and
+ * Cookie policies promised an opt-out that the software did not honour. The
+ * column being present made it look done from the schema side, which is the
+ * worst version of a missing control.
+ *
+ * A signed-in member generates several events per page and each would
+ * otherwise cost a round trip for one boolean. The window is deliberately
+ * short: someone who switches analytics off should stop being recorded within
+ * seconds, not at the end of their session.
+ */
+const CONSENT_TTL_MS = 30_000;
+const consentCache = new Map<string, { allowed: boolean; expiresAt: number }>();
+
+export function clearAnalyticsConsentCache(): void {
+  consentCache.clear();
+}
+
+async function analyticsAllowedFor(userId: string): Promise<boolean> {
+  const cached = consentCache.get(userId);
+  if (cached && cached.expiresAt > Date.now()) return cached.allowed;
+
+  const supabase = createAdminClient();
+  const { data, error } = await supabase
+    .from('user_preferences')
+    .select('analytics_enabled')
+    .eq('user_id', userId)
+    .maybeSingle();
+
+  if (error) {
+    // Fail *closed*, unlike the rate limiter. Recording someone whose consent
+    // cannot be confirmed is the outcome the policy forbids; the cost of the
+    // alternative is one lost event. The preferences row is created by trigger
+    // at signup, so a read failure here means the database is unwell and the
+    // insert below would fail anyway.
+    console.error('[analytics] consent lookup failed, not recording', {
+      userId,
+      error: error.message,
+    });
+    return false;
+  }
+
+  // A missing row counts as consent, matching the column default every
+  // existing account carries.
+  const allowed =
+    (data as { analytics_enabled?: boolean } | null)?.analytics_enabled ?? true;
+
+  consentCache.set(userId, { allowed, expiresAt: Date.now() + CONSENT_TTL_MS });
+  return allowed;
+}
+
 export async function track(
   event: AnalyticsEvent,
   options: {
@@ -99,6 +154,11 @@ export async function track(
   const properties = scrubProperties(options.properties ?? {});
 
   try {
+    // Checked before anything is written or forwarded, so an opted-out member
+    // reaches neither destination. The vendor is the one that matters most: it
+    // sits outside our retention policy.
+    if (options.userId && !(await analyticsAllowedFor(options.userId))) return;
+
     const supabase = createAdminClient();
     await supabase.from('analytics_events').insert({
       user_id: options.userId ?? null,
