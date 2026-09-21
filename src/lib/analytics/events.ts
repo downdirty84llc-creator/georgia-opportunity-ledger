@@ -139,7 +139,17 @@ async function analyticsAllowedFor(userId: string): Promise<boolean> {
   const allowed =
     (data as { analytics_enabled?: boolean } | null)?.analytics_enabled ?? true;
 
-  consentCache.set(userId, { allowed, expiresAt: Date.now() + CONSENT_TTL_MS });
+  // Sweep expired entries before inserting. Without this the map only ever
+  // grows: entries expire logically but are never removed, so a long-lived
+  // instance accumulates one per member who has ever been seen. The sweep is
+  // cheap because the map is small for the same reason it needs sweeping —
+  // entries live thirty seconds.
+  const now = Date.now();
+  for (const [key, entry] of consentCache) {
+    if (entry.expiresAt <= now) consentCache.delete(key);
+  }
+
+  consentCache.set(userId, { allowed, expiresAt: now + CONSENT_TTL_MS });
   return allowed;
 }
 

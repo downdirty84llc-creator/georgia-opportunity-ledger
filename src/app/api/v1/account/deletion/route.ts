@@ -14,7 +14,12 @@ import {
   rateLimitHeaders,
   rateLimitIdentity,
 } from '@/lib/http/rate-limit';
-import { apiError, ok, rateLimited, withErrorHandling } from '@/lib/http/responses';
+import {
+  apiError,
+  ok,
+  rateLimited,
+  withErrorHandling,
+} from '@/lib/http/responses';
 
 export const dynamic = 'force-dynamic';
 

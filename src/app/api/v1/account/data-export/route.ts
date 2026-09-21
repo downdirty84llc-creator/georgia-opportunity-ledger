@@ -57,15 +57,25 @@ export const GET = withErrorHandling(
       tickets,
       corrections,
     ] = await Promise.all([
-      supabase.from('profiles').select('*').eq('id', viewer.userId).maybeSingle(),
+      supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', viewer.userId)
+        .maybeSingle(),
       supabase
         .from('user_preferences')
         .select('*')
         .eq('user_id', viewer.userId)
         .maybeSingle(),
-      supabase.from('saved_opportunities').select('*').eq('user_id', viewer.userId),
+      supabase
+        .from('saved_opportunities')
+        .select('*')
+        .eq('user_id', viewer.userId),
       supabase.from('saved_searches').select('*').eq('user_id', viewer.userId),
-      supabase.from('alert_preferences').select('*').eq('user_id', viewer.userId),
+      supabase
+        .from('alert_preferences')
+        .select('*')
+        .eq('user_id', viewer.userId),
       supabase
         .from('notifications')
         .select('id, notification_type, title, message, sent_at, read_at')
@@ -78,6 +88,40 @@ export const GET = withErrorHandling(
         .select('*')
         .eq('submitted_by_user_id', viewer.userId),
     ]);
+
+    // Every read is checked before anything is serialised. Each result was
+    // previously taken as `?? null` or `?? []`, so a failed read became an
+    // empty section in a file that still says "Everything held about this
+    // account" — a subject-access response that is silently incomplete while
+    // presenting itself as complete. That is the worse failure: an error the
+    // member can see is recoverable, a quiet omission is not.
+    const sections: Array<[string, { error: { message: string } | null }]> = [
+      ['profile', profile],
+      ['preferences', preferences],
+      ['savedOpportunities', saved],
+      ['savedSearches', searches],
+      ['alertPreferences', alerts],
+      ['notifications', notifications],
+      ['supportTickets', tickets],
+      ['correctionRequests', corrections],
+    ];
+
+    const failed = sections.filter(([, result]) => result.error !== null);
+    if (failed.length > 0) {
+      console.error('[data-export] refusing to return a partial export', {
+        userId: viewer.userId,
+        failed: failed.map(([name, result]) => ({
+          section: name,
+          error: result.error?.message,
+        })),
+      });
+      return apiError(
+        'internal_error',
+        'Your export could not be assembled in full, so nothing was returned. ' +
+          'Please try again; if it keeps failing, contact support.',
+        { sections: failed.map(([name]) => name) },
+      );
+    }
 
     const payload = {
       exportedAt: new Date().toISOString(),

@@ -28,9 +28,8 @@ vi.mock('@/lib/analytics/posthog', () => ({
   captureToPostHog: (...args: unknown[]) => captureToPostHog(...args),
 }));
 
-const { track, clearAnalyticsConsentCache, scrubProperties } = await import(
-  '@/lib/analytics/events'
-);
+const { track, clearAnalyticsConsentCache, scrubProperties } =
+  await import('@/lib/analytics/events');
 
 function consent(analytics_enabled: boolean | null, error: unknown = null) {
   maybeSingle.mockResolvedValue({
@@ -101,8 +100,14 @@ describe('analytics consent', () => {
 
   it('keeps the cache per member, so one opt-out does not silence another', async () => {
     maybeSingle
-      .mockResolvedValueOnce({ data: { analytics_enabled: false }, error: null })
-      .mockResolvedValueOnce({ data: { analytics_enabled: true }, error: null });
+      .mockResolvedValueOnce({
+        data: { analytics_enabled: false },
+        error: null,
+      })
+      .mockResolvedValueOnce({
+        data: { analytics_enabled: true },
+        error: null,
+      });
 
     await track('opportunity_viewed', { userId: 'opted-out' });
     await track('opportunity_viewed', { userId: 'opted-in' });

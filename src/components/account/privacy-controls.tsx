@@ -64,7 +64,9 @@ export function PrivacyControls({
         setError(body?.error?.message ?? 'The request could not be recorded.');
         return;
       }
-      setNotice(body?.data?.message ?? 'Your account is scheduled for deletion.');
+      setNotice(
+        body?.data?.message ?? 'Your account is scheduled for deletion.',
+      );
       window.location.reload();
     } catch {
       setError('The request could not be recorded. Please try again.');
