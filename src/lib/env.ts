@@ -67,14 +67,28 @@ export function serverEnv(): ServerEnv {
       'SUPABASE_SERVICE_ROLE_KEY',
       process.env.SUPABASE_SERVICE_ROLE_KEY,
     ),
-    stripeSecretKey: required(
-      'STRIPE_SECRET_KEY',
-      process.env.STRIPE_SECRET_KEY,
-    ),
-    stripeWebhookSecret: required(
-      'STRIPE_WEBHOOK_SECRET',
-      process.env.STRIPE_WEBHOOK_SECRET,
-    ),
+
+    // Required when Stripe is actually used, not when the environment is read.
+    //
+    // Eleven modules call serverEnv(); three touch Stripe. Demanding these up
+    // front meant an unconfigured payment provider took down everything that
+    // reads any server variable at all — the job runner, which contains no
+    // Stripe reference, returned 500 for that reason alone.
+    //
+    // Getters rather than optional fields: the type stays `string`, every call
+    // site is unchanged, and reaching for a key that is not configured still
+    // fails immediately with the same message. What changes is only *when* —
+    // at the point of use, by the code that needs it, instead of at boot by
+    // code that does not.
+    get stripeSecretKey(): string {
+      return required('STRIPE_SECRET_KEY', process.env.STRIPE_SECRET_KEY);
+    },
+    get stripeWebhookSecret(): string {
+      return required(
+        'STRIPE_WEBHOOK_SECRET',
+        process.env.STRIPE_WEBHOOK_SECRET,
+      );
+    },
     emailProvider: (process.env.EMAIL_PROVIDER ?? 'console') as
       'resend' | 'postmark' | 'console',
     emailApiKey: process.env.EMAIL_API_KEY ?? '',
