@@ -90,7 +90,7 @@ and appeared the first time something actually ran:
 npm ci
 npm run typecheck && npm run lint && npm run format:check
 npm run schedules:check          # deploy cron config must match the job registry
-npm test                         # 258 tests
+npm test                         # 267 tests
 npm run build
 npx playwright test --project=desktop-chrome   # 12 skip without a seeded DB — correct
 ./scripts/verify-schema.sh       # 31 migrations from empty + 15 RLS assertions
@@ -250,6 +250,33 @@ falling back to free; a catalogue mismatch must not revoke paid access.
 
 The price → plan lookup is shared by both in `src/lib/billing/plans.ts`, so the
 webhook and the job cannot disagree about what a price means.
+
+**Finishing a Checkout session is not paying for it.** A delayed payment method
+— ACH debit, bank transfer, some wallets — completes the session with
+`payment_status: 'unpaid'` and settles, or fails, days later. So
+`onCheckoutCompleted` records the customer id and then stops when the session
+is unpaid; `checkout.session.async_payment_succeeded` re-enters the same
+handler once the money is there. Nothing on this account uses such a method
+today, which is exactly the point: enabling one is a Dashboard toggle that
+touches no code, and without the guard the symptom would be free paid access
+rather than an error.
+
+Eight events are subscribed, and the code and the endpoint must be changed
+together — a handler for an event the endpoint does not send is dead code, and
+Stripe sending one nothing handles is a silent gap:
+
+```
+checkout.session.completed                 customer.subscription.created
+checkout.session.async_payment_succeeded   customer.subscription.updated
+checkout.session.async_payment_failed      customer.subscription.deleted
+invoice.payment_succeeded                  invoice.payment_failed
+```
+
+`invoice.payment_succeeded` fires on every renewal, not only on recovery, so it
+notifies the member only when the stored status was `past_due` or `unpaid` —
+otherwise it would send a "your payment worked" message twelve times a year. It
+reconciles by re-reading the subscription from Stripe rather than setting the
+status itself, keeping one writer for that field.
 
 ## Deploying on Vercel — two hobby-plan limits bite
 

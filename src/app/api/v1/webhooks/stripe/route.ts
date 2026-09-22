@@ -149,9 +149,11 @@ export async function POST(request: Request): Promise<NextResponse> {
       })
       .eq('stripe_event_id', event.id);
 
-    // Leave `processed` false and ask Stripe to retry. The reconciliation job
-    // also sweeps unprocessed events, so a permanently failing event surfaces
-    // on the admin dashboard rather than disappearing.
+    // Leave `processed` false and ask Stripe to retry; the redelivery
+    // reprocesses rather than being dismissed as a duplicate. The
+    // reconciliation job counts what is still unprocessed, so an event failing
+    // repeatedly surfaces on the admin dashboard — it does not reprocess them,
+    // and an earlier version of this comment wrongly said it did.
     return NextResponse.json(
       { error: { code: 'internal_error', message: 'Processing failed.' } },
       { status: 500 },
@@ -161,14 +163,28 @@ export async function POST(request: Request): Promise<NextResponse> {
 
 async function handleEvent(event: Stripe.Event): Promise<void> {
   switch (event.type) {
+    // `completed` fires when the customer finishes the session, which is not
+    // the same as the money having arrived. `async_payment_succeeded` is the
+    // moment a delayed payment method actually settles, and it carries the
+    // same session, so the same handler provisions from both — the difference
+    // is entirely in `payment_status`, which that handler checks.
     case 'checkout.session.completed':
+    case 'checkout.session.async_payment_succeeded':
       await onCheckoutCompleted(event.data.object as Stripe.Checkout.Session);
+      break;
+
+    case 'checkout.session.async_payment_failed':
+      await onAsyncPaymentFailed(event.data.object as Stripe.Checkout.Session);
       break;
 
     case 'customer.subscription.created':
     case 'customer.subscription.updated':
     case 'customer.subscription.deleted':
       await onSubscriptionChanged(event.data.object as Stripe.Subscription);
+      break;
+
+    case 'invoice.payment_succeeded':
+      await onPaymentSucceeded(event.data.object as Stripe.Invoice);
       break;
 
     case 'invoice.payment_failed':
@@ -221,6 +237,26 @@ async function onCheckoutCompleted(
         typeof session.customer === 'string' ? session.customer : null,
     })
     .eq('user_id', userId);
+
+  // Finishing the session is not the same as paying for it. A delayed payment
+  // method — ACH debit, bank transfer, some wallets — completes the session
+  // with `payment_status: 'unpaid'` and settles hours or days later, and can
+  // still fail. Provisioning here would grant paid access for money that has
+  // not arrived and may never.
+  //
+  // Nothing on this account uses such a method today, so this guard changes no
+  // current behaviour. It exists because enabling one is a Dashboard toggle
+  // that touches no code: without this, someone turning on ACH would open the
+  // hole silently, and the symptom would be free access rather than an error.
+  // `checkout.session.async_payment_succeeded` re-enters this function once the
+  // payment clears, and by then `payment_status` is `paid`.
+  if (session.payment_status === 'unpaid') {
+    console.info('[stripe-webhook] session complete but unpaid, deferring', {
+      sessionId: session.id,
+      userId,
+    });
+    return;
+  }
 
   if (typeof session.subscription === 'string') {
     const subscription = await stripe().subscriptions.retrieve(
@@ -317,6 +353,113 @@ async function onSubscriptionChanged(
       properties: { plan: plan?.code ?? 'unknown', status },
     });
   }
+}
+
+/**
+ * The subscription an invoice belongs to.
+ *
+ * Stripe moved this: older API versions put `subscription` on the invoice,
+ * newer ones nest it under `parent.subscription_details.subscription`. Reading
+ * whichever is present matches how `current_period_end` is already handled
+ * elsewhere in this file, and means an API version bump does not quietly turn
+ * every renewal into a no-op.
+ */
+function subscriptionIdOf(invoice: Stripe.Invoice): string | null {
+  const record = invoice as unknown as Record<string, unknown>;
+
+  if (typeof record.subscription === 'string') return record.subscription;
+
+  const parent = record.parent as
+    { subscription_details?: { subscription?: unknown } } | undefined;
+  const nested = parent?.subscription_details?.subscription;
+  return typeof nested === 'string' ? nested : null;
+}
+
+/**
+ * A payment went through.
+ *
+ * Fires on every successful renewal as well as on recovery from a failure, so
+ * the two are told apart before anything is said to the member: nobody wants a
+ * "your payment worked" message twelve times a year.
+ *
+ * The subscription is re-read from Stripe rather than the status being set
+ * here. `customer.subscription.updated` usually arrives alongside this event
+ * and carries the same transition, but "usually" is not a guarantee — and the
+ * status logic already exists in one place. Converging on Stripe's own state
+ * keeps one writer rather than two that can disagree.
+ */
+async function onPaymentSucceeded(invoice: Stripe.Invoice): Promise<void> {
+  const customerId =
+    typeof invoice.customer === 'string' ? invoice.customer : null;
+  const userId = await resolveUserId(customerId);
+  if (!userId) return;
+
+  const supabase = createAdminClient();
+
+  const { data: before } = await supabase
+    .from('subscriptions')
+    .select('status')
+    .eq('user_id', userId)
+    .maybeSingle();
+
+  const wasBehind =
+    before?.status === 'past_due' || before?.status === 'unpaid';
+
+  const subscriptionId = subscriptionIdOf(invoice);
+  if (subscriptionId) {
+    const subscription = await stripe().subscriptions.retrieve(subscriptionId);
+    await onSubscriptionChanged(subscription, userId);
+  }
+
+  // Only when they were actually behind. This is the counterpart to the
+  // "we could not process your payment" notice, and leaving that as the last
+  // thing a member heard — after the charge has since succeeded — is its own
+  // small failure.
+  if (wasBehind) {
+    await supabase.from('notifications').insert({
+      user_id: userId,
+      notification_type: 'billing_notice',
+      title: 'Your payment went through',
+      message:
+        'Thanks — your latest payment was successful and your access ' +
+        'continues as normal. No action is needed.',
+      action_url: '/account/billing',
+      dedupe_key: `payment_recovered:${invoice.id}`,
+    });
+  }
+}
+
+/**
+ * A delayed payment method failed to settle after the session completed.
+ *
+ * No access is revoked here. The subscription's own status is Stripe's to
+ * decide and arrives as `customer.subscription.updated`; duplicating that
+ * judgement from an invoice event is how two writers end up disagreeing about
+ * what somebody paid for. What this does is tell the member, because a payment
+ * that fails days after checkout is otherwise completely silent — they left
+ * the checkout page believing they had subscribed.
+ */
+async function onAsyncPaymentFailed(
+  session: Stripe.Checkout.Session,
+): Promise<void> {
+  const userId = await resolveUserId(
+    typeof session.customer === 'string' ? session.customer : null,
+    session.metadata?.user_id ?? session.client_reference_id,
+  );
+  if (!userId) return;
+
+  const supabase = createAdminClient();
+  await supabase.from('notifications').insert({
+    user_id: userId,
+    notification_type: 'billing_notice',
+    title: 'Your payment could not be completed',
+    message:
+      'The payment you started did not complete, so your subscription has ' +
+      'not begun. You can try again from the billing page — nothing you ' +
+      'have saved has been affected.',
+    action_url: '/account/billing',
+    dedupe_key: `async_payment_failed:${session.id}`,
+  });
 }
 
 async function onPaymentFailed(invoice: Stripe.Invoice): Promise<void> {
