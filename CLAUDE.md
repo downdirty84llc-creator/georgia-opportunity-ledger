@@ -108,7 +108,7 @@ and appeared the first time something actually ran:
 npm ci
 npm run typecheck && npm run lint && npm run format:check
 npm run schedules:check          # deploy cron config must match the job registry
-npm test                         # 267 tests
+npm test                         # 273 tests
 npm run build
 npx playwright test --project=desktop-chrome   # 12 skip without a seeded DB — correct
 ./scripts/verify-schema.sh       # 31 migrations from empty + 15 RLS assertions
@@ -297,6 +297,31 @@ notifies the member only when the stored status was `past_due` or `unpaid` —
 otherwise it would send a "your payment worked" message twelve times a year. It
 reconciles by re-reading the subscription from Stripe rather than setting the
 status itself, keeping one writer for that field.
+
+## A missing key is not a bad signature
+
+`stripe()` builds its client from `serverEnv().stripeSecretKey`, which throws
+when the variable is unset — and the webhook route calls
+`stripe().webhooks.constructEvent(...)`. So while `STRIPE_SECRET_KEY` is
+missing, **the webhook cannot verify anything at all**: the failure happens
+before verification is attempted. It is not only checkout that stops.
+
+Both that call and `env.stripeWebhookSecret` used to throw inside the
+verification `try`, so the log said "signature verification failed" and the
+response said `Invalid signature` — a configuration fault dressed as a caller
+error, and the reason this went unnoticed in production while every delivery
+was rejected. Reading configuration now happens in its own block, and returns
+`Stripe is not configured.`
+
+The status mattered more than the message. **Stripe treats 4xx as permanent and
+does not retry**, so every event that arrived while the key was missing was
+discarded rather than deferred. It is a 500 now, which Stripe retries, so the
+backlog lands once the variable is set.
+
+The general lesson is the one already in "Verify by running": a 400 observed
+from outside proved nothing here, because two unrelated faults produced the
+same status and the same body. Check the runtime log for the reason, not the
+status code for the shape.
 
 ## Stripe Tax and Smart Retries
 

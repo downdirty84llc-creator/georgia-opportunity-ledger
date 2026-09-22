@@ -43,12 +43,45 @@ export async function POST(request: Request): Promise<NextResponse> {
 
   const rawBody = await request.text();
 
+  // Reading configuration is separated from verifying the signature, because
+  // the two fail for opposite reasons and deserve opposite answers.
+  //
+  // Both `stripe()` and `stripeWebhookSecret` throw when their variable is
+  // missing, and both used to throw *inside* the verification try — so an
+  // unset STRIPE_SECRET_KEY was logged as "signature verification failed" and
+  // answered 400. That is the readiness-check bug again: a configuration fault
+  // wearing the costume of a caller error.
+  //
+  // The status matters more than the message. Stripe treats 4xx as permanent
+  // and does not retry, so every event arriving while the key was missing was
+  // discarded rather than deferred. A 500 is retried, which means the events
+  // land once the configuration is fixed instead of being lost.
+  let stripeClient: Stripe;
+  let webhookSecret: string;
+  try {
+    stripeClient = stripe();
+    webhookSecret = env.stripeWebhookSecret;
+  } catch (error) {
+    console.error('[stripe-webhook] Stripe is not configured', {
+      message: error instanceof Error ? error.message : String(error),
+    });
+    return NextResponse.json(
+      {
+        error: {
+          code: 'internal_error',
+          message: 'Stripe is not configured.',
+        },
+      },
+      { status: 500 },
+    );
+  }
+
   let event: Stripe.Event;
   try {
-    event = stripe().webhooks.constructEvent(
+    event = stripeClient.webhooks.constructEvent(
       rawBody,
       signature,
-      env.stripeWebhookSecret,
+      webhookSecret,
     );
   } catch (error) {
     console.error('[stripe-webhook] signature verification failed', {
