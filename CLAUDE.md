@@ -197,9 +197,10 @@ sufficient alone:
    the old host as canonical, which is the whole reason this matters.
 2. The `ledger_site_url` Vault secret — this is what `pg_cron` dispatches to.
    Getting this wrong is what breaks the scheduler.
-3. The Stripe webhook endpoint URL — `we_1UIRt3INLKqe1c6gKR3e3bab`. Changing
-   the URL does **not** change the signing secret, so `STRIPE_WEBHOOK_SECRET`
-   stays as it is.
+3. The Stripe webhook endpoint URL — now `we_1UIXEvAhiRY2d5kX1wB1MwCN` on the
+   Ledger's own account. Changing an endpoint's URL does **not** change its
+   signing secret, so a domain move leaves `STRIPE_WEBHOOK_SECRET` alone.
+   Replacing the endpoint, as the account migration did, does not.
 4. `EMAIL_FROM` / `EMAIL_REPLY_TO`. These pointed at `gaopportunityledger.com`,
    where SPF and DKIM can never be published because we do not hold its DNS.
    Mail from that address could not have been delivered. Latent only because
@@ -220,14 +221,20 @@ lookup keys `gol_<code>_<monthly|annual>`.
 the Ledger no longer bills through it. It still carries four abandoned
 `georgia_opportunity_ledger` products beside DD84's own, and its old endpoint
 `we_1UIRt3INLKqe1c6gKR3e3bab` still points at
-`georgiaopportunityledger.com/api/v1/webhooks/stripe`. **That endpoint should
-be disabled.** `STRIPE_WEBHOOK_SECRET` now holds the new account's secret, so
-anything DD84 delivers fails signature verification — a stream of 400s, and
-eventually a Stripe warning that the endpoint is failing.
+`georgiaopportunityledger.com/api/v1/webhooks/stripe`. It should be disabled
+for tidiness, but it is **not** urgent: the runtime logs show it delivering
+nothing at all. An earlier version of this note claimed it was producing "a
+stream of 400s and eventually a Stripe warning" — that was reasoning about what
+a misdirected endpoint _would_ do, asserted without looking. The only requests
+that endpoint's URL received in hours of watching were probes sent from here.
+
+If it ever does deliver, `STRIPE_WEBHOOK_SECRET` holds the new account's
+secret, so verification fails and Stripe retries rather than anything being
+mis-processed. Wrong-account events cannot be accepted.
 
 Disabling it needs DD84 in the Stripe connector, and connecting the Ledger's
 account **replaced** DD84 rather than adding to it, so only one is reachable at
-a time. Re-add DD84 to do it.
+a time. Its own Stripe Dashboard is the shorter path.
 
 Billing through DD84 would have made the tuning company merchant of record on
 every subscription — its name on the customer's statement, its revenue, its
