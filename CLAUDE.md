@@ -135,6 +135,58 @@ nine and the three that state our own practice is pinned in
   for a restore to complete before concluding anything from an empty schema.
 - `gol-staging` (`bahdfxljazvegvgccvxy`) exists and is inactive.
 
+## The live site and its domain
+
+Production is **`https://georgiaopportunityledger.com`**, registered through
+Vercel on 2026-09-22 (expires 2027-09-22, auto-renew on). Vercel is both
+registrar and DNS host — `serviceType: zeit.world`, nameservers
+`ns1`/`ns2.vercel-dns.com` — so there is no third-party control panel in the
+path. `georgia-opportunity-ledger.vercel.app` remains attached and serving.
+
+`gaopportunityledger.com` is a different domain and **is not ours to route**.
+It is attached to the project, but its nameservers are authoritative at
+`globaldomaingroup.com`, a registrar nobody here has a login for. It returns
+404 and always will until that changes. Leave it attached; it costs nothing.
+
+**`verified: true` on a Vercel domain does not mean the domain serves the
+site.** It means ownership was proven. `gaopportunityledger.com` has reported
+`verified: true` throughout while returning 404. Cutting over on that flag once
+pointed the scheduler at a dead host and stopped every job for about three
+minutes. Before moving anything, fetch the domain and require a **200**.
+
+The sandbox proxy refuses `CONNECT` to these hosts, so `curl` from here proves
+nothing — the same shape as the `smoke.sh` bug. Check from outside instead:
+
+```sql
+select net.http_get('https://georgiaopportunityledger.com/');   -- returns an id
+select id, status_code, error_msg from net._http_response where id = <id>;
+```
+
+A fresh domain answers `SSL connect error` for the first minute or so while the
+certificate is issued. That is not a failure; re-check rather than concluding.
+
+To prove the scheduler can authenticate against a host **without running a
+job**: POST to `/api/v1/jobs/<nonexistent>` with the real `ledger_cron_secret`.
+The route checks the secret before it looks the job up, so a valid secret gives
+404 with the job registry and a wrong one gives 401. Run both — a guard nobody
+has watched refuse is not a guard.
+
+A domain cutover is **four** changes that move together, none of which is
+sufficient alone:
+
+1. `NEXT_PUBLIC_SITE_URL` in Vercel — inlined at build time, so it does nothing
+   until a **redeploy**. Until then `robots.txt` and `sitemap.xml` keep naming
+   the old host as canonical, which is the whole reason this matters.
+2. The `ledger_site_url` Vault secret — this is what `pg_cron` dispatches to.
+   Getting this wrong is what breaks the scheduler.
+3. The Stripe webhook endpoint URL — `we_1UIRt3INLKqe1c6gKR3e3bab`. Changing
+   the URL does **not** change the signing secret, so `STRIPE_WEBHOOK_SECRET`
+   stays as it is.
+4. `EMAIL_FROM` / `EMAIL_REPLY_TO`. These pointed at `gaopportunityledger.com`,
+   where SPF and DKIM can never be published because we do not hold its DNS.
+   Mail from that address could not have been delivered. Latent only because
+   `EMAIL_PROVIDER=console` sends nothing.
+
 ## Deploying on Vercel — two hobby-plan limits bite
 
 The team is on the **hobby** plan, and the committed configuration does not fit
