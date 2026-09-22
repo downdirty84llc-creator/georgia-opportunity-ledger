@@ -90,7 +90,7 @@ and appeared the first time something actually ran:
 npm ci
 npm run typecheck && npm run lint && npm run format:check
 npm run schedules:check          # deploy cron config must match the job registry
-npm test                         # 245 tests
+npm test                         # 258 tests
 npm run build
 npx playwright test --project=desktop-chrome   # 12 skip without a seeded DB — correct
 ./scripts/verify-schema.sh       # 31 migrations from empty + 15 RLS assertions
@@ -225,6 +225,31 @@ production database would otherwise write test price ids onto the live plans —
 failing at the till rather than at deploy time. The guard lives in
 `scripts/stripe-mode.ts` so it can be tested without executing the script, and
 `tests/unit/scripts/stripe-mode.test.ts` watches it refuse in every direction.
+
+## Webhooks: recorded is not processed
+
+`billing_events.stripe_event_id` is unique, and the insert is the idempotency
+lock. The row is written **before** the event is handled, so a conflict means
+the event was _recorded_ before — not that it was _handled_. Conflating those
+two silently discarded events: a handler that threw left `processed = false`
+and answered 500, Stripe retried, the retry hit the conflict and was
+acknowledged as a duplicate, and the one mechanism meant to recover the event
+was the one throwing it away. Nothing swept it up either — `sync-subscriptions`
+counts unprocessed rows for a dashboard number and does not reprocess them.
+
+So a conflict is a duplicate to acknowledge **only when `processed` is true**.
+Otherwise the delivery reprocesses, carrying `attempt_count` forward so an
+event failing for the fifth time does not read as a first attempt.
+
+`sync-subscriptions` reconciles the **plan** as well as the status. It did not,
+which left the one field deciding what a member may read outside the safety
+net: an upgrade or downgrade whose webhook failed kept its old `plan_id`, and
+therefore its old access rank, permanently — status recovered on the next run,
+entitlement never did. An unrecognised price leaves the plan alone rather than
+falling back to free; a catalogue mismatch must not revoke paid access.
+
+The price → plan lookup is shared by both in `src/lib/billing/plans.ts`, so the
+webhook and the job cannot disagree about what a price means.
 
 ## Deploying on Vercel — two hobby-plan limits bite
 

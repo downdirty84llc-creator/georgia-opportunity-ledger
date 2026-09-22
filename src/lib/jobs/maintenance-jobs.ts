@@ -1,6 +1,7 @@
 import { DELETION_GRACE_DAYS } from '@/lib/account/deletion';
 import { createAdminClient } from '@/lib/db/admin';
 import { runExportJob, type ExportJobRow } from '@/lib/exports/service';
+import { planForPriceId } from '@/lib/billing/plans';
 import { fromStripeStatus } from '@/lib/billing/subscription';
 import { stripe, toDate } from '@/lib/billing/stripe';
 import { dailyKey, type JobDefinition } from '@/lib/jobs/runner';
@@ -63,14 +64,23 @@ export const processExportsJob: JobDefinition = {
 
 export const syncSubscriptionsJob: JobDefinition = {
   name: 'sync-subscriptions',
+  // It does not retry unprocessed webhook events, though it once said it did.
+  // Reprocessing happens in the webhook route, on Stripe's own retry. What
+  // this job contributes is the count of events still unprocessed, which is a
+  // signal that something is failing repeatedly rather than a recovery of it.
   description:
-    'Reconciles local subscription state against Stripe and retries unprocessed webhooks.',
+    'Reconciles local subscription state, including the plan, against Stripe.',
   handler: async ({ note }) => {
     const supabase = createAdminClient();
 
     const { data: subscriptions, error } = await supabase
       .from('subscriptions')
-      .select('id, user_id, stripe_subscription_id, status, current_period_end')
+      // One string literal, not a concatenation: the Supabase client derives
+      // the row type from this literal, and splitting it across an expression
+      // collapses the result to an untyped error shape.
+      .select(
+        'id, user_id, stripe_subscription_id, status, current_period_end, plan_id, billing_interval',
+      )
       .not('stripe_subscription_id', 'is', null)
       .limit(500);
 
@@ -96,9 +106,26 @@ export const syncSubscriptionsJob: JobDefinition = {
           null;
         const remotePeriodEnd = toDate(periodEnd)?.toISOString() ?? null;
 
+        // The plan is reconciled too, not just the status. It previously was
+        // not, which left the one piece of state that decides what a member
+        // may read outside the safety net: an upgrade or downgrade whose
+        // webhook failed kept the old `plan_id`, and therefore the old access
+        // rank, permanently. Status recovered on the next sync; entitlement
+        // never did.
+        const priceId = ((
+          remote.items.data[0]?.price as { id?: string } | undefined
+        )?.id ?? null) as string | null;
+        const plan = await planForPriceId(priceId, supabase);
+
+        const planChanged =
+          plan !== null &&
+          (plan.id !== record.plan_id ||
+            plan.interval !== record.billing_interval);
+
         if (
           status !== record.status ||
-          remotePeriodEnd !== record.current_period_end
+          remotePeriodEnd !== record.current_period_end ||
+          planChanged
         ) {
           await supabase
             .from('subscriptions')
@@ -106,6 +133,13 @@ export const syncSubscriptionsJob: JobDefinition = {
               status,
               current_period_end: remotePeriodEnd,
               cancel_at_period_end: remote.cancel_at_period_end,
+              // Only when the price resolved to a known plan. An unrecognised
+              // price means the catalogue and the database disagree, and
+              // guessing — most likely by falling back to free — would revoke
+              // paid access over a bookkeeping mismatch.
+              ...(plan
+                ? { plan_id: plan.id, billing_interval: plan.interval }
+                : {}),
             })
             .eq('id', record.id);
           corrected += 1;

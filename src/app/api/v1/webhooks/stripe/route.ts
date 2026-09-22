@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import type Stripe from 'stripe';
 
 import { track } from '@/lib/analytics/events';
+import { planForPriceId } from '@/lib/billing/plans';
 import { fromStripeStatus } from '@/lib/billing/subscription';
 import { stripe, toDate } from '@/lib/billing/stripe';
 import { createAdminClient } from '@/lib/db/admin';
@@ -19,9 +20,11 @@ export const runtime = 'nodejs';
  * process idempotently, record every event, retry safe failures, log errors.
  *
  * Idempotency is enforced by the unique index on
- * `billing_events.stripe_event_id`: the insert is the lock. If it conflicts,
- * this delivery is a Stripe retry of an event we have already recorded, and we
- * acknowledge without reprocessing.
+ * `billing_events.stripe_event_id`: the insert is the lock. A conflict means
+ * the event was recorded before — which is not the same as saying it was
+ * handled. The row is written before processing, so a conflict is only a
+ * duplicate to be acknowledged when `processed` is true; when it is false the
+ * previous delivery failed part-way and this one reprocesses it.
  *
  * The distinction between a 200 and a 500 here matters: a 500 makes Stripe
  * retry. We return 500 only for faults that a retry could plausibly fix
@@ -66,20 +69,62 @@ export async function POST(request: Request): Promise<NextResponse> {
     processed: false,
   });
 
+  // Carried across deliveries so a permanently failing event reads as such
+  // instead of looking like a first attempt every time.
+  let priorAttempts = 0;
+
   if (insertError) {
     if (insertError.code === '23505') {
-      // Already recorded. Stripe is retrying; acknowledge and stop.
-      return NextResponse.json({ received: true, duplicate: true });
+      // Recorded before — but "recorded" is not "processed", and conflating
+      // the two silently dropped events. The row is written before processing,
+      // so a handler that threw left `processed = false` behind and returned a
+      // 500. Stripe's retry then landed here and was acknowledged as a
+      // duplicate, which meant the one mechanism designed to recover the event
+      // was the mechanism that discarded it. Nothing swept it up afterwards
+      // either: the reconciliation job counts unprocessed rows for a dashboard
+      // number and does not reprocess them.
+      const { data: existing, error: readError } = await supabase
+        .from('billing_events')
+        .select('processed, attempt_count')
+        .eq('stripe_event_id', event.id)
+        .maybeSingle();
+
+      if (readError) {
+        console.error('[stripe-webhook] could not read recorded event', {
+          eventId: event.id,
+          message: readError.message,
+        });
+        return NextResponse.json(
+          {
+            error: {
+              code: 'internal_error',
+              message: 'Could not read event.',
+            },
+          },
+          { status: 500 },
+        );
+      }
+
+      if (existing?.processed) {
+        // Genuinely done. This is Stripe re-delivering something we completed.
+        return NextResponse.json({ received: true, duplicate: true });
+      }
+
+      // Recorded but never completed. Fall through and process it.
+      priorAttempts = existing?.attempt_count ?? 0;
+    } else {
+      console.error('[stripe-webhook] could not record event', {
+        eventId: event.id,
+        message: insertError.message,
+      });
+      // A retry may succeed once the database recovers.
+      return NextResponse.json(
+        {
+          error: { code: 'internal_error', message: 'Could not record event.' },
+        },
+        { status: 500 },
+      );
     }
-    console.error('[stripe-webhook] could not record event', {
-      eventId: event.id,
-      message: insertError.message,
-    });
-    // A retry may succeed once the database recovers.
-    return NextResponse.json(
-      { error: { code: 'internal_error', message: 'Could not record event.' } },
-      { status: 500 },
-    );
   }
 
   try {
@@ -100,7 +145,7 @@ export async function POST(request: Request): Promise<NextResponse> {
       .from('billing_events')
       .update({
         processing_error: message,
-        attempt_count: 1,
+        attempt_count: priorAttempts + 1,
       })
       .eq('stripe_event_id', event.id);
 
@@ -151,34 +196,6 @@ async function resolveUserId(
     .eq('stripe_customer_id', customerId)
     .maybeSingle();
   return data?.user_id ?? null;
-}
-
-async function planForPriceId(priceId: string | null): Promise<{
-  id: string;
-  code: string;
-  access_rank: number;
-  interval: 'monthly' | 'annual';
-} | null> {
-  if (!priceId) return null;
-  const supabase = createAdminClient();
-
-  const { data } = await supabase
-    .from('subscription_plans')
-    .select(
-      'id, code, access_rank, stripe_monthly_price_id, stripe_annual_price_id',
-    )
-    .or(
-      `stripe_monthly_price_id.eq.${priceId},stripe_annual_price_id.eq.${priceId}`,
-    )
-    .maybeSingle();
-
-  if (!data) return null;
-  return {
-    id: data.id,
-    code: data.code,
-    access_rank: data.access_rank,
-    interval: data.stripe_annual_price_id === priceId ? 'annual' : 'monthly',
-  };
 }
 
 async function onCheckoutCompleted(
@@ -238,11 +255,11 @@ async function onSubscriptionChanged(
     );
   }
 
+  const supabase = createAdminClient();
+
   const item = subscription.items.data[0];
   const priceId = item?.price?.id ?? null;
-  const plan = await planForPriceId(priceId);
-
-  const supabase = createAdminClient();
+  const plan = await planForPriceId(priceId, supabase);
 
   // A deleted subscription drops the member to the free plan, but only after
   // the period they paid for has elapsed — `effectiveAccessRank` handles the
