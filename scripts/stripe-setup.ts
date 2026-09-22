@@ -43,6 +43,32 @@ interface PlanSpec {
 
 const PRODUCT_LINE = 'georgia_opportunity_ledger';
 
+/**
+ * Stripe Tax product category: "Website Information Services - Business Use".
+ *
+ * Stripe defines it as an online service furnishing information to customers,
+ * including online search and data comparison, where the customer uses a SaaS
+ * program to reach the content — which is what a subscription to a searchable
+ * database of published records is. Business use, because subscribers are
+ * businesses researching commercial property and funding programmes; the
+ * business/personal split only affects US sales, which is all of ours.
+ *
+ * Not left to the account default. That default is
+ * `txcd_10000000`, "General - Electronically Supplied Services", whose own
+ * description says to prefer a more specific category especially for US
+ * sales — and on a shared account the default belongs to whichever business
+ * set it, not to this one. Setting it per product keeps the determination with
+ * the product it describes.
+ *
+ * Two neighbours were considered and rejected: `txcd_10701410` (information
+ * delivered electronically *without* a SaaS program, which does not describe a
+ * web application) and `txcd_10503005` (individual articles and newsletters
+ * viewable by subscription, which describes a publication rather than a
+ * searchable database). If an accountant disagrees, this is one constant and a
+ * re-run of this script.
+ */
+const PRODUCT_TAX_CODE = 'txcd_10701400';
+
 const PLANS: readonly PlanSpec[] = [
   {
     code: 'free',
@@ -118,13 +144,34 @@ async function ensureProduct(
 ): Promise<Stripe.Product> {
   const existing = await findProduct(stripe, plan.code);
   if (existing) {
-    console.log(`  product ${plan.code}: reusing ${existing.id}`);
+    // Reuse, but do not let a stale tax category ride along. Unlike a price,
+    // a product is mutable and its tax code decides what is charged in every
+    // US state where tax is collected — so "already exists" must not mean
+    // "left as whatever it was", which for a product created before this
+    // constant existed is the account-wide default.
+    const currentTaxCode =
+      typeof existing.tax_code === 'string'
+        ? existing.tax_code
+        : (existing.tax_code?.id ?? null);
+
+    if (currentTaxCode !== PRODUCT_TAX_CODE) {
+      await stripe.products.update(existing.id, {
+        tax_code: PRODUCT_TAX_CODE,
+      });
+      console.log(
+        `  product ${plan.code}: reusing ${existing.id}, tax code ` +
+          `${currentTaxCode ?? 'unset'} -> ${PRODUCT_TAX_CODE}`,
+      );
+    } else {
+      console.log(`  product ${plan.code}: reusing ${existing.id}`);
+    }
     return existing;
   }
 
   const created = await stripe.products.create({
     name: plan.name,
     description: plan.description,
+    tax_code: PRODUCT_TAX_CODE,
     metadata: {
       plan_code: plan.code,
       access_rank: String(plan.accessRank),

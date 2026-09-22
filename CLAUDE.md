@@ -278,6 +278,51 @@ otherwise it would send a "your payment worked" message twelve times a year. It
 reconciles by re-reading the subscription from Stripe rather than setting the
 status itself, keeping one writer for that field.
 
+## Stripe Tax and Smart Retries
+
+**Tax category is set per product, not per account.** The four Ledger products
+carry `txcd_10701400`, "Website Information Services - Business Use": an online
+service furnishing information, including search and data comparison, reached
+through a SaaS program. Business use because subscribers are businesses, and
+that split only affects US sales, which is all of ours. `stripe-setup.ts` holds
+the constant, sets it on create, and corrects it on reuse — a product is
+mutable and its tax code decides what is charged, so "already exists" must not
+mean "left as whatever it was".
+
+It is deliberately not left to the account default. That default is
+`txcd_10000000`, whose own description says to prefer something more specific
+for US sales, and on a shared account the default belongs to whichever business
+set it. Two neighbours were rejected: `txcd_10701410` (information delivered
+electronically _without_ a SaaS program) and `txcd_10503005` (articles and
+newsletters by subscription — a publication, not a searchable database).
+
+**Account-wide tax settings on `acct_1QBl8ZINLKqe1c6g` were left alone**, and
+should stay that way while that account is shared. Its head office is
+`419 Thomas Road, Hull, GA` — DD84's address, not the Ledger's — and its
+default tax code applies to stickers and tuning work too. Changing either to
+suit the Ledger would be the cross-contamination the separation exists to
+prevent. Set the head office on the Ledger's own account instead.
+
+There are **no tax registrations**, which is correct: with no obligations yet,
+Stripe Tax monitors sales against each state's economic-nexus threshold for
+free and warns before one is crossed. Nothing is collected, and no code change
+is needed to keep it that way.
+
+**Smart Retries has no API.** Every Stripe doc routes to the Dashboard:
+Billing → Revenue recovery → Retries. It cannot be scripted, so it is not in
+this repository and will not appear in any diff — which is exactly why it is
+written down here. Stripe's recommended policy is 8 attempts over 2 weeks.
+Enable the failed-payment emails alongside it under Settings → Billing →
+Subscriptions and emails; they are complementary, not redundant. Smart Retries
+recovers silently, while `invoice.payment_failed` gates access and tells the
+member.
+
+`PAST_DUE_GRACE_DAYS` is 3 and the retry window is a fortnight, so a member can
+lose access while Stripe is still retrying. That is deliberate — three days is
+how long paid access survives a failed charge — but the two numbers are related
+and changing the retry window without revisiting the grace period will surprise
+somebody.
+
 ## Deploying on Vercel — two hobby-plan limits bite
 
 The team is on the **hobby** plan, and the committed configuration does not fit
