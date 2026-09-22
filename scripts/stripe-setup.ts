@@ -6,12 +6,18 @@
  *
  *   npm run stripe:setup          # uses STRIPE_SECRET_KEY from the environment
  *
- * The mode is decided entirely by the key you give it. A `sk_test_…` key builds
- * the test catalogue, a `sk_live_…` key builds the live one, and neither can
- * see the other — which is the point. There are no price ids committed to this
+ * The mode is decided by the key you give it. A `sk_test_…` key builds the test
+ * catalogue, a `sk_live_…` key builds the live one, and neither can see the
+ * other — which is the point. There are no price ids committed to this
  * repository for exactly that reason: an id is only meaningful in the mode that
  * minted it, and hardcoding one guarantees that somebody eventually points a
  * live key at a test price.
+ *
+ * The key alone is not enough, though, because it says nothing about *which*
+ * database receives the ids or *which* Stripe account minted them. Both have
+ * gone wrong here before. So the script now refuses to run when the key's mode
+ * and `NEXT_PUBLIC_ENVIRONMENT` disagree, and prints the resolved Stripe
+ * account id and target database host before it writes anything.
  *
  * Idempotent. Products are matched on `metadata.plan_code`, prices on their
  * lookup key, so running it twice changes nothing. Prices are immutable in
@@ -22,6 +28,8 @@
 
 import { createClient } from '@supabase/supabase-js';
 import Stripe from 'stripe';
+
+import { assertModeMatchesEnvironment, modeOf } from './stripe-mode';
 
 interface PlanSpec {
   code: string;
@@ -175,17 +183,40 @@ async function ensurePrice(
 
 async function main(): Promise<void> {
   const secretKey = required('STRIPE_SECRET_KEY');
-  const mode = secretKey.startsWith('sk_live_') ? 'LIVE' : 'test';
+  const supabaseUrl = required('NEXT_PUBLIC_SUPABASE_URL');
+
+  assertModeMatchesEnvironment(secretKey, process.env.NEXT_PUBLIC_ENVIRONMENT);
+  const mode = modeOf(secretKey);
 
   const stripe = new Stripe(secretKey, {
     typescript: true,
     appInfo: { name: 'Georgia Opportunity Ledger setup', version: '0.1.0' },
   });
 
-  console.log(`Stripe catalogue — ${mode} mode\n`);
+  // Name the account out loud before writing anything. "Which Stripe account"
+  // is not visible in the key, and plan rows have already pointed at products
+  // belonging to a different account than the one the keys opened — a failure
+  // that looked fine in every listing until a real checkout said "No such
+  // price". One line here makes the wrong account obvious before the write.
+  const account = await stripe.accounts.retrieve();
+  console.log(`Stripe catalogue — ${mode.toUpperCase()} mode`);
+  console.log(
+    `  account:  ${account.id}` +
+      (account.settings?.dashboard?.display_name
+        ? ` (${account.settings.dashboard.display_name})`
+        : ''),
+  );
+  console.log(`  database: ${new URL(supabaseUrl).host}`);
+  if (mode === 'live' && account.charges_enabled === false) {
+    console.warn(
+      '  WARNING: this account cannot accept charges yet. The catalogue will\n' +
+        '  be created, but checkout stays broken until the account is activated.',
+    );
+  }
+  console.log('');
 
   const supabase = createClient(
-    required('NEXT_PUBLIC_SUPABASE_URL'),
+    supabaseUrl,
     required('SUPABASE_SERVICE_ROLE_KEY'),
     { auth: { autoRefreshToken: false, persistSession: false } },
   );
@@ -214,7 +245,7 @@ async function main(): Promise<void> {
   }
 
   console.log(
-    `Done. Verify with a ${mode === 'LIVE' ? 'real card on a plan you can refund' : 'test card (4242 4242 4242 4242)'} ` +
+    `Done. Verify with a ${mode === 'live' ? 'real card on a plan you can refund' : 'test card (4242 4242 4242 4242)'} ` +
       'at /pricing, then check the subscription row and the audit trail.',
   );
 }

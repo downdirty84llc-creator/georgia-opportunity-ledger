@@ -90,7 +90,7 @@ and appeared the first time something actually ran:
 npm ci
 npm run typecheck && npm run lint && npm run format:check
 npm run schedules:check          # deploy cron config must match the job registry
-npm test                         # 201 tests
+npm test                         # 245 tests
 npm run build
 npx playwright test --project=desktop-chrome   # 12 skip without a seeded DB — correct
 ./scripts/verify-schema.sh       # 31 migrations from empty + 15 RLS assertions
@@ -186,6 +186,45 @@ sufficient alone:
    where SPF and DKIM can never be published because we do not hold its DNS.
    Mail from that address could not have been delivered. Latent only because
    `EMAIL_PROVIDER=console` sends nothing.
+
+## Stripe — two accounts, and the Ledger is moving to its own
+
+There are two, and the difference is the separation rule applied to money:
+
+- **`acct_1QBl8ZINLKqe1c6g` — "Down Dirty 84 llc".** Holds the live catalogue
+  the plan rows currently point at, the live webhook
+  `we_1UIRt3INLKqe1c6gKR3e3bab`, and DD84's own tuning and sticker products
+  side by side with the four `georgia_opportunity_ledger` ones. Billing the
+  Ledger here makes the tuning company merchant of record on every
+  subscription — its name on the customer's statement, its revenue, its 1099-K.
+- **`acct_1UIWH6AhiRY2d5kX` — "georgia-opportunity-ledger".** The account the
+  Ledger is moving to, decided by the owner 2026-09-22. Empty catalogue, and
+  **`charges_enabled: false`** — it cannot take a payment until activated.
+
+The move is `npm run stripe:setup` with that account's **live** key. The script
+already does the whole job: it creates the four products and six prices and
+writes the ids onto `subscription_plans`, matching products on
+`metadata.plan_code` and prices on lookup key, so it is safe to re-run. What it
+does **not** do is the webhook — create a new endpoint on the new account for
+`/api/v1/webhooks/stripe` and put its signing secret in `STRIPE_WEBHOOK_SECRET`.
+
+The catalogue to reproduce, for checking the result: weekly $15/$150, detailed
+$39/$390, premium $99/$990, free has no price at all. Lookup keys are
+`gol_<code>_<monthly|annual>`.
+
+While confirming this, `subscription_plans.free.stripe_product_id` was found to
+be `prod_V9odG9TGmnpjcB`, a product that **does not exist** in either account.
+Harmless — the free plan has no prices and never reaches Checkout — but it is
+the same class of error as the wrong-account price ids, and `stripe:setup`
+overwrites it.
+
+`stripe-setup.ts` now refuses to run when the key's mode and
+`NEXT_PUBLIC_ENVIRONMENT` disagree, and prints the resolved Stripe account id
+and target database host before writing. A `sk_test_` key against the
+production database would otherwise write test price ids onto the live plans —
+failing at the till rather than at deploy time. The guard lives in
+`scripts/stripe-mode.ts` so it can be tested without executing the script, and
+`tests/unit/scripts/stripe-mode.test.ts` watches it refuse in every direction.
 
 ## Deploying on Vercel — two hobby-plan limits bite
 
