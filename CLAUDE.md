@@ -187,36 +187,38 @@ sufficient alone:
    Mail from that address could not have been delivered. Latent only because
    `EMAIL_PROVIDER=console` sends nothing.
 
-## Stripe — two accounts, and the Ledger is moving to its own
+## Stripe — the Ledger bills through its own account
 
-There are two, and the difference is the separation rule applied to money:
+**`acct_1UIWH6AhiRY2d5kX` — "georgia-opportunity-ledger"** is the live account
+as of 2026-09-22. Activated: `charges_enabled`, `details_submitted` and
+`payouts_enabled` all true, nothing `currently_due`. It holds the four products
+and six prices, all carrying `txcd_10701400`, and the webhook endpoint
+`we_1UIXEvAhiRY2d5kX1wB1MwCN` with eight events. `subscription_plans` points at
+its ids, verified against the live catalogue rather than merely populated:
+weekly $15/$150, detailed $39/$390, premium $99/$990, free no price at all,
+lookup keys `gol_<code>_<monthly|annual>`.
 
-- **`acct_1QBl8ZINLKqe1c6g` — "Down Dirty 84 llc".** Holds the live catalogue
-  the plan rows currently point at, the live webhook
-  `we_1UIRt3INLKqe1c6gKR3e3bab`, and DD84's own tuning and sticker products
-  side by side with the four `georgia_opportunity_ledger` ones. Billing the
-  Ledger here makes the tuning company merchant of record on every
-  subscription — its name on the customer's statement, its revenue, its 1099-K.
-- **`acct_1UIWH6AhiRY2d5kX` — "georgia-opportunity-ledger".** The account the
-  Ledger is moving to, decided by the owner 2026-09-22. Empty catalogue, and
-  **`charges_enabled: false`** — it cannot take a payment until activated.
+**`acct_1QBl8ZINLKqe1c6g` — "Down Dirty 84 llc"** is the tuning company's, and
+the Ledger no longer bills through it. It still carries four abandoned
+`georgia_opportunity_ledger` products beside DD84's own, and its old endpoint
+`we_1UIRt3INLKqe1c6gKR3e3bab` still points at
+`georgiaopportunityledger.com/api/v1/webhooks/stripe`. **That endpoint should
+be disabled.** `STRIPE_WEBHOOK_SECRET` now holds the new account's secret, so
+anything DD84 delivers fails signature verification — a stream of 400s, and
+eventually a Stripe warning that the endpoint is failing.
 
-The move is `npm run stripe:setup` with that account's **live** key. The script
-already does the whole job: it creates the four products and six prices and
-writes the ids onto `subscription_plans`, matching products on
-`metadata.plan_code` and prices on lookup key, so it is safe to re-run. What it
-does **not** do is the webhook — create a new endpoint on the new account for
-`/api/v1/webhooks/stripe` and put its signing secret in `STRIPE_WEBHOOK_SECRET`.
+Disabling it needs DD84 in the Stripe connector, and connecting the Ledger's
+account **replaced** DD84 rather than adding to it, so only one is reachable at
+a time. Re-add DD84 to do it.
 
-The catalogue to reproduce, for checking the result: weekly $15/$150, detailed
-$39/$390, premium $99/$990, free has no price at all. Lookup keys are
-`gol_<code>_<monthly|annual>`.
+Billing through DD84 would have made the tuning company merchant of record on
+every subscription — its name on the customer's statement, its revenue, its
+1099-K. That is why this moved, and why the two accounts stay apart.
 
-While confirming this, `subscription_plans.free.stripe_product_id` was found to
-be `prod_V9odG9TGmnpjcB`, a product that **does not exist** in either account.
-Harmless — the free plan has no prices and never reaches Checkout — but it is
-the same class of error as the wrong-account price ids, and `stripe:setup`
-overwrites it.
+`subscription_plans.free.stripe_product_id` used to be `prod_V9odG9TGmnpjcB`, a
+product existing in neither account. Harmless, since the free plan has no price
+and never reaches Checkout, but the same class of error as the wrong-account
+price ids. It now points at `prod_VJ9Tb0VMNhpwP6`.
 
 `stripe-setup.ts` now refuses to run when the key's mode and
 `NEXT_PUBLIC_ENVIRONMENT` disagree, and prints the resolved Stripe account id
