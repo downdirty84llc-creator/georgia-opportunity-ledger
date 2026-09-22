@@ -217,24 +217,33 @@ its ids, verified against the live catalogue rather than merely populated:
 weekly $15/$150, detailed $39/$390, premium $99/$990, free no price at all,
 lookup keys `gol_<code>_<monthly|annual>`.
 
-**`acct_1QBl8ZINLKqe1c6g` — "Down Dirty 84 llc"** is the tuning company's, and
-the Ledger no longer bills through it. It still carries four abandoned
-`georgia_opportunity_ledger` products beside DD84's own, and its old endpoint
-`we_1UIRt3INLKqe1c6gKR3e3bab` still points at
-`georgiaopportunityledger.com/api/v1/webhooks/stripe`. It should be disabled
-for tidiness, but it is **not** urgent: the runtime logs show it delivering
-nothing at all. An earlier version of this note claimed it was producing "a
-stream of 400s and eventually a Stripe warning" — that was reasoning about what
-a misdirected endpoint _would_ do, asserted without looking. The only requests
-that endpoint's URL received in hours of watching were probes sent from here.
+**Three accounts are named "Down Dirty 84 llc"** —
+`acct_1QBl8ZINLKqe1c6g`, `acct_1SGHSjL9R5PTdFyY` and `acct_1U9UzJA7O7B8jKDv`.
+The name does not identify one; always select by id. The Ledger's history is in
+`acct_1QBl8ZINLKqe1c6g` alone: it holds the four abandoned
+`georgia_opportunity_ledger` products beside DD84's own, and held the old
+webhook endpoint. The other two have no webhook endpoints at all.
 
-If it ever does deliver, `STRIPE_WEBHOOK_SECRET` holds the new account's
-secret, so verification fails and Stripe retries rather than anything being
-mis-processed. Wrong-account events cannot be accepted.
+That endpoint, `we_1UIRt3INLKqe1c6gKR3e3bab`, is **disabled** as of 2026-09-22
+and its description records why. It pointed at
+`georgiaopportunityledger.com/api/v1/webhooks/stripe`, which now belongs to the
+Ledger's own account.
 
-Disabling it needs DD84 in the Stripe connector, and connecting the Ledger's
-account **replaced** DD84 rather than adding to it, so only one is reachable at
-a time. Its own Stripe Dashboard is the shorter path.
+Two things this note previously asserted without checking, both wrong:
+
+- That the endpoint was producing "a stream of 400s and eventually a Stripe
+  warning". The runtime logs showed it delivering **nothing**. That was
+  reasoning about what a misdirected endpoint _would_ do, written as though
+  observed.
+- That connecting the Ledger's account **replaced** DD84 in the Stripe
+  connector, so only one was reachable at a time. All four are connected
+  simultaneously. Whatever made DD84 disappear earlier, it was not a
+  one-at-a-time limit, and no dashboard round trip was needed to disable the
+  endpoint — the API did it.
+
+Either way a wrong-account event could not have been mis-processed:
+`STRIPE_WEBHOOK_SECRET` holds the Ledger account's secret, so verification
+fails closed.
 
 Billing through DD84 would have made the tuning company merchant of record on
 every subscription — its name on the customer's statement, its revenue, its
