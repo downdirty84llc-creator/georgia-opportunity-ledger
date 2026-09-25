@@ -131,6 +131,13 @@ See `RUNBOOK.md` for the checklist.
    three — editorial standards, corrections, data sources — are statements of
    our own practice and do not go to a lawyer; that split is pinned in
    `tests/unit/legal/documents.test.ts` rather than left to memory.
+
+   `docs/LEGAL-REVIEW.md` is the packet to send: the inventory, what was
+   verified as accurate against this code, and seventeen grouped questions. It
+   carries one open item of our own — the Acceptable Use Policy points at
+   export limits the pricing page does not publish — which is an owner decision
+   to take before counsel starts, not a code change.
+
 2. **A virus scanner endpoint in production.** The pipeline is built and
    tested; `FILE_SCANNER_URL` needs to point at something.
    `docker-compose.yml` runs one locally and the runbook has the EICAR

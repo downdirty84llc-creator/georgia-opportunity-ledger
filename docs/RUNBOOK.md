@@ -359,7 +359,9 @@ sitemap. What it marks `you` is what no machine can close.
       banner until cleared. This is the hard blocker. The other three —
       editorial standards, corrections, data sources — state our own practice
       and do not need counsel; the split is pinned in
-      `tests/unit/legal/documents.test.ts`.
+      `tests/unit/legal/documents.test.ts`. Send counsel
+      `docs/LEGAL-REVIEW.md` — it compares every document against what this
+      code actually does, so the review starts from an accurate description.
 - [ ] Stripe live mode: `npm run stripe:setup` with the live key, then the
       webhook endpoint. Confirm `subscription_plans` carries all six price ids.
 - [ ] Tier-by-tier test payment verifying each plan grants the correct access
