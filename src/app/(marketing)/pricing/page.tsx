@@ -4,7 +4,24 @@ import { PlanGrid } from '@/components/pricing/plan-grid';
 import { SectionHeading } from '@/components/ui/primitives';
 import { getSessionContext } from '@/lib/auth/session';
 import { PLAN_FEATURE_DEFAULTS, type PlanCode } from '@/lib/access/ranks';
+import { ASYNC_EXPORT_THRESHOLD } from '@/lib/exports/csv';
+import { MAX_EXPORT_ROWS } from '@/lib/exports/service';
+import { RATE_LIMITS } from '@/lib/http/rate-limit';
 import { loadPlans } from '@/lib/public-data';
+
+/**
+ * The export caps are read from the constants the server enforces rather than
+ * written out here.
+ *
+ * The Acceptable Use Policy tells members that export is "subject to the
+ * limits published on the pricing page". For a while this page published no
+ * numbers at all, so that sentence pointed at nothing. Publishing them makes
+ * the policy true — but only for as long as the two agree, and a figure typed
+ * into marketing copy drifts from the code the first time somebody raises the
+ * ceiling. Importing them means a change to the limit changes the published
+ * term in the same commit, which is the only version that stays honest.
+ */
+const EXPORTS_PER_HOUR = RATE_LIMITS.export.limit;
 
 export const metadata: Metadata = {
   title: 'Membership plans',
@@ -57,6 +74,14 @@ const COMPARISON_ROWS: ReadonlyArray<{
   {
     label: 'CSV export',
     render: (code) => (PLAN_FEATURE_DEFAULTS[code].csvExport ? 'Yes' : 'No'),
+  },
+  {
+    label: 'Export limits',
+    render: (code) =>
+      PLAN_FEATURE_DEFAULTS[code].csvExport
+        ? `${MAX_EXPORT_ROWS.toLocaleString('en-GB')} rows per export, ` +
+          `${EXPORTS_PER_HOUR} exports an hour`
+        : 'Not included',
   },
   {
     label: 'Weekly report',
@@ -124,6 +149,18 @@ const BILLING_FAQ = [
       'Cancel any time and your access continues to the end of the period you ' +
       'have paid for. If something has gone wrong — a record we got badly ' +
       'wrong, a billing error — contact support and we will make it right.',
+  },
+  {
+    question: 'How much can I export?',
+    answer:
+      `Up to ${MAX_EXPORT_ROWS.toLocaleString('en-GB')} rows in a single ` +
+      `export, and ${EXPORTS_PER_HOUR} exports an hour. Anything larger than ` +
+      `${ASYNC_EXPORT_THRESHOLD} rows is prepared in the background rather ` +
+      'than making you wait, and the download becomes available on the export ' +
+      'itself once it is ready, usually within a few minutes. ' +
+      'These are the figures the server enforces, and they apply to the ' +
+      'tiers that include export. Scripted or bulk collection is a separate ' +
+      'matter and is covered by the acceptable use policy.',
   },
   {
     question: 'Is my payment information stored here?',
