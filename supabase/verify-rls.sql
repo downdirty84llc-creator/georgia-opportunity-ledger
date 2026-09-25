@@ -335,6 +335,50 @@ begin
 end;
 $$;
 
+-- --- The rate limiter actually refuses ---------------------------------------
+--
+-- `check_rate_limit` raised `column reference "window_start" is ambiguous` on
+-- every call for as long as it existed: a PL/pgSQL variable shadowed the
+-- column of the same name. The application fails open on limiter faults, so
+-- the symptom was never an error — just thirteen limits that silently did not
+-- apply.
+--
+-- Asserting that the first call is allowed would have passed against the
+-- broken function too, because a fail-open caller returns allowed either way.
+-- This drives a key past its limit inside the database and requires the
+-- refusal, which is the only part that proves the guard is alive.
+
+do $$
+declare
+  probe_key text := 'verify-rls:rate-limit-probe';
+  result record;
+begin
+  raise notice 'Rate limiting';
+
+  select * into result from public.check_rate_limit(probe_key, 2, 3600);
+  if not result.allowed or result.remaining <> 1 then
+    raise exception
+      'RLS CHECK FAILED — first call under the limit was refused or miscounted (allowed=%, remaining=%)',
+      result.allowed, result.remaining;
+  end if;
+
+  select * into result from public.check_rate_limit(probe_key, 2, 3600);
+  if not result.allowed or result.remaining <> 0 then
+    raise exception
+      'RLS CHECK FAILED — second call at the limit was refused or miscounted (allowed=%, remaining=%)',
+      result.allowed, result.remaining;
+  end if;
+
+  select * into result from public.check_rate_limit(probe_key, 2, 3600);
+  if result.allowed then
+    raise exception
+      'RLS CHECK FAILED — the limiter allowed a third call against a limit of 2';
+  end if;
+
+  raise notice '  ok  check_rate_limit refuses once the limit is spent';
+end;
+$$;
+
 -- --- Every table is protected ------------------------------------------------
 
 do $$
