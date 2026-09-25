@@ -101,8 +101,25 @@ and appeared the first time something actually ran:
 - `smoke.sh` reported "nothing sensitive is advertised" against a server that
   was not running — `curl` returned nothing, `grep` found nothing in it.
 - A readiness check reported a DNS **timeout** as "SPF record missing".
+- `check_rate_limit` declared a PL/pgSQL variable named `window_start`, the
+  name of a column on `rate_limit_counters`, so Postgres could not resolve the
+  `ON CONFLICT` target and **every call raised 42702**. All thirteen limits in
+  `RATE_LIMITS` were inert from the day they were written — login, password
+  reset, registration, export, search. Fixed
+  `20260925164500_fix_rate_limit_ambiguous_window_start.sql`.
 
 **Run what you build, and prove a guard can fail before trusting it.**
+
+**A guard that fails open needs a test that watches it refuse.** The rate
+limiter is the case that proves it. `checkRateLimit` returns `allowed: true` on
+any limiter fault — deliberate, because a database hiccup should not lock every
+member out of search — so a total failure and a clean pass produce the same
+response, the same status and the same behaviour. The only trace was one
+`console.error`, and it went unread for months because nothing had ever
+registered. A test asserting that the first call is allowed would have passed
+against the broken function for exactly the same reason. So the assertion in
+`supabase/verify-rls.sql` drives a key **past** its limit and requires the
+refusal; anything less tests the fail-open branch and calls it success.
 
 ```bash
 npm ci
@@ -111,15 +128,21 @@ npm run schedules:check          # deploy cron config must match the job registr
 npm test                         # 312 tests
 npm run build
 npx playwright test --project=desktop-chrome   # 12 skip without a seeded DB — correct
-./scripts/verify-schema.sh       # 31 migrations from empty + 15 RLS assertions
+./scripts/verify-schema.sh       # 33 migrations from empty + 16 RLS assertions
 npm run preflight                # production readiness; `??` means COULD NOT CHECK
 ```
 
 ## Migrations
 
-31, and five of them were recovered from the production database after being
+33, and five of them were recovered from the production database after being
 applied there and never committed (`b811d3a`). Their filenames keep the live
 version numbers so the two histories reconcile. Do not renumber them.
+
+A migration in `supabase/migrations` is **not** applied by a deploy. Vercel
+builds the application; nothing in that path touches the database. A schema
+change reaches production only when somebody applies it, so commit and apply
+are two steps and the second is easy to forget — the file being on `main` is
+not evidence the live database has it.
 
 `npm run db:seed` fails closed three ways: unset `NEXT_PUBLIC_ENVIRONMENT`,
 `=production`, or a non-localhost target without `--remote`. Do not defeat any
@@ -137,14 +160,16 @@ nine and the three that state our own practice is pinned in
 ## Current state
 
 - Production Supabase project `bbgikfblcahhvrpxiqnd` is **healthy and fully
-  migrated**. Verified 2026-09-16 against the live database: all 31 migrations
-  applied, reference data present (4 plans, 159 counties, 12 industries), zero
+  migrated**. Verified 2026-09-16 against the live database: all migrations of
+  the day applied, reference data present (4 plans, 159 counties, 12 industries), zero
   sample rows, zero tables without RLS, and both August security fixes confirmed
   live — the six service-role-only functions are unreachable by `anon` and
   `authenticated`, and `refresh_opportunity_search_vector` uses PL/pgSQL control
   flow rather than the `CASE` expression. (The Stripe catalogue that check
   described was the DD84 account's; the live one is now the Ledger's own — see
-  the Stripe section below.)
+  the Stripe section below.) `20260925164500_fix_rate_limit_ambiguous_window_start.sql`
+  has since been applied on top and verified there: the limiter allows two
+  calls against a limit of two and refuses the third.
 - **`STRIPE_SECRET_KEY` is set** (2026-09-25), verified against `/v1/account`
   before it was stored: `acct_1UIWH6AhiRY2d5kX`, live mode, charges enabled. The
   webhook route now answers `400 Invalid signature` to a bad signature rather
@@ -155,8 +180,19 @@ nine and the three that state our own practice is pinned in
   Checkout, so the path from a Checkout session to a provisioned subscription
   has never executed end to end. Treat "configured and verified" as exactly
   that, and not as "billing works".
-- `opportunities` and `profiles` are both 0. No application has ever talked to
-  this database.
+- **The first real account exists** (2026-09-25): one row in `auth.users`,
+  confirmed. So `/register` works, and the claim below that no application had
+  ever talked to this database no longer holds. `opportunities` is still 0.
+- **Supabase Auth still points at localhost.** The first confirmation email
+  proved it: `email_confirmed_at` was set, but `GET /auth/callback` never
+  appeared in the Vercel logs and the browser landed on an unreachable page.
+  The application asks for the right destination —
+  `register/route.ts` sets `emailRedirectTo` to `${siteUrl}/auth/callback`, and
+  the route exists — but Supabase only honours `redirect_to` when it matches
+  the **Redirect URLs** allow-list, and otherwise falls back to **Site URL**.
+  Fix both under Authentication → URL Configuration; there is no MCP tool for
+  auth settings, so it is a Dashboard change. Confirming an address still
+  works, so an account created before the fix can simply sign in at `/login`.
 - An earlier note here said this project "came back empty" after a September
   pause and restore. That was wrong. The check ran about two minutes after the
   restore was initiated: Postgres answered, the data had not finished restoring,
@@ -278,6 +314,22 @@ production database would otherwise write test price ids onto the live plans —
 failing at the till rather than at deploy time. The guard lives in
 `scripts/stripe-mode.ts` so it can be tested without executing the script, and
 `tests/unit/scripts/stripe-mode.test.ts` watches it refuse in every direction.
+
+**A verification probe against this account belongs in a sandbox.** Creating
+live Checkout Sessions to confirm the six prices resolved left six payable
+`cs_live_` URLs sitting open for their full 24-hour life, each carrying
+`client_reference_id: "probe-checkout-flow"` — a user id matching no account.
+Paying one would have taken real money and provisioned nothing: the webhook
+fires, `onCheckoutCompleted` looks the user up, finds no profile. The owner
+nearly paid one, having reasonably assumed a Stripe page reached mid-test was
+the one the site had just created.
+
+A sandbox proves a price id resolves exactly as well. If a live probe is
+genuinely unavoidable, expire the session in the same breath that creates it —
+and note that this connector exposes create, retrieve and list for Checkout
+Sessions but **not expire**, so "I will clean it up after" is a promise the
+tooling may not let you keep. The six had to be expired by hand in the
+Dashboard.
 
 ## Webhooks: recorded is not processed
 
