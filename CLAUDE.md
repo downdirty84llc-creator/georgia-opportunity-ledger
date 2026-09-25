@@ -260,6 +260,12 @@ Billing through DD84 would have made the tuning company merchant of record on
 every subscription — its name on the customer's statement, its revenue, its
 1099-K. That is why this moved, and why the two accounts stay apart.
 
+Moving it did not make the Ledger merchant of record either. **Managed Payments
+is enabled on this account, so Stripe is** — it collects from the customer and
+pays us out, and it owns the tax, fraud and dispute obligations that go with
+that. What changed is whose business the subscription belongs to, which is the
+part that mattered. See "Stripe Tax and Smart Retries" below.
+
 `subscription_plans.free.stripe_product_id` used to be `prod_V9odG9TGmnpjcB`, a
 product existing in neither account. Harmless, since the free plan has no price
 and never reaches Checkout, but the same class of error as the wrong-account
@@ -368,17 +374,43 @@ set it. Two neighbours were rejected: `txcd_10701410` (information delivered
 electronically _without_ a SaaS program) and `txcd_10503005` (articles and
 newsletters by subscription — a publication, not a searchable database).
 
-**Account-wide tax settings on `acct_1QBl8ZINLKqe1c6g` were left alone**, and
-should stay that way while that account is shared. Its head office is
-`419 Thomas Road, Hull, GA` — DD84's address, not the Ledger's — and its
-default tax code applies to stickers and tuning work too. Changing either to
-suit the Ledger would be the cross-contamination the separation exists to
-prevent. Set the head office on the Ledger's own account instead.
+The code must stay on Stripe's **Managed Payments eligible list** — see below.
+`txcd_10701400` was added to it on 2025-08-22 and is eligible; the neighbours
+rejected above are not all on that list. Changing this constant to something
+ineligible breaks tax calculation at the till rather than at deploy time.
 
-There are **no tax registrations**, which is correct: with no obligations yet,
-Stripe Tax monitors sales against each state's economic-nexus threshold for
-free and warns before one is crossed. Nothing is collected, and no code change
-is needed to keep it that way.
+**Managed Payments is enabled, so Stripe is the merchant of record.** Every
+Checkout Session on `acct_1UIWH6AhiRY2d5kX` comes back with
+`managed_payments: {enabled: true}`, `automatic_tax` enabled and
+`liability.type: stripe`. The app sets none of that; it is account
+configuration, and it required accepting a separate Terms of Service. Confirmed
+deliberate by the owner 2026-09-25.
+
+What it means, from Stripe's own documentation rather than inference: Stripe
+calculates, collects, files and remits indirect tax in 80+ countries; handles
+fraud, disputes and transaction-level customer support; emails receipts,
+invoices and some subscription notices to customers directly; and turns on Link
+and Adaptive Pricing, so customers may be quoted in their local currency.
+
+So **do not reason about tax from this account's own tax settings.** They read
+`status: pending` with `head_office` missing and no registrations, which under
+any other arrangement would mean "nothing is calculated". Under Managed
+Payments, Stripe's registrations apply instead. For countries Managed Payments
+does not cover, the liability is still ours and Stripe Tax can calculate it at
+no extra charge.
+
+An earlier version of this section described tax settings, registrations and
+threshold monitoring as though they were the Ledger's. **They were read from
+`acct_1QBl8ZINLKqe1c6g`, the DD84 account, and generalised without checking
+this one.** Leave DD84's account-wide settings alone regardless — its head
+office is `419 Thomas Road, Hull, GA` and its default tax code covers stickers
+and tuning work, so editing either to suit the Ledger is exactly the
+cross-contamination the separation exists to prevent.
+
+`payment_method_types` on a live session is `["card", "cashapp"]`. Nothing in
+the code requests Cash App Pay; Managed Payments brings its own payment-method
+set. This is the case the unpaid-session guard was written for, arriving
+without a deploy.
 
 **Smart Retries has no API.** Every Stripe doc routes to the Dashboard:
 Billing → Revenue recovery → Retries. It cannot be scripted, so it is not in
@@ -388,6 +420,15 @@ Enable the failed-payment emails alongside it under Settings → Billing →
 Subscriptions and emails; they are complementary, not redundant. Smart Retries
 recovers silently, while `invoice.payment_failed` gates access and tells the
 member.
+
+**Managed Payments does not supersede Smart Retries**, though it was asserted
+here that it did. Retries are Billing-level dunning against a subscription's
+invoices, and nothing in Stripe's documentation says Managed Payments takes
+them over; what it takes over is tax, fraud, disputes and transaction support.
+Still to be enabled on `acct_1UIWH6AhiRY2d5kX`. The one genuine overlap is
+email: Managed Payments already writes to customers directly, so check what a
+member actually receives before adding the Dashboard failed-payment email on
+top of it.
 
 `PAST_DUE_GRACE_DAYS` is 3 and the retry window is a fortnight, so a member can
 lose access while Stripe is still retrying. That is deliberate — three days is
