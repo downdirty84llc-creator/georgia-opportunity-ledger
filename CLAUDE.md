@@ -142,8 +142,19 @@ nine and the three that state our own practice is pinned in
   sample rows, zero tables without RLS, and both August security fixes confirmed
   live — the six service-role-only functions are unreachable by `anon` and
   `authenticated`, and `refresh_opportunity_search_vector` uses PL/pgSQL control
-  flow rather than the `CASE` expression. Stripe's live catalogue is complete:
-  four products, monthly and annual price ids on all three paid tiers.
+  flow rather than the `CASE` expression. (The Stripe catalogue that check
+  described was the DD84 account's; the live one is now the Ledger's own — see
+  the Stripe section below.)
+- **`STRIPE_SECRET_KEY` is set** (2026-09-25), verified against `/v1/account`
+  before it was stored: `acct_1UIWH6AhiRY2d5kX`, live mode, charges enabled. The
+  webhook route now answers `400 Invalid signature` to a bad signature rather
+  than `500 Stripe is not configured`, which is the first time that guard has
+  actually run — every earlier "Invalid signature" was the missing-key path
+  wearing the same status and body.
+- What is still **unproven** is a real payment. No card has been through
+  Checkout, so the path from a Checkout session to a provisioned subscription
+  has never executed end to end. Treat "configured and verified" as exactly
+  that, and not as "billing works".
 - `opportunities` and `profiles` are both 0. No application has ever talked to
   this database.
 - An earlier note here said this project "came back empty" after a September
