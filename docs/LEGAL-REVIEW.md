@@ -17,18 +17,21 @@ on trust.
 
 ---
 
-## Before counsel opens this: four promise-vs-product gaps are closed, one is open
+## Before counsel opens this: all five promise-vs-product gaps are closed
 
 This section records the places where the documents described behaviour the
-software did not have. **Four have been built** rather than reworded, so
-counsel is reviewing an accurate description — which was the point of settling
-them first. Each is kept below with what was built, because the implementation
-is what counsel is signing off, not the promise.
+software did not have. **Every one has been settled in the software or on the
+published page** rather than by softening the document, so counsel is reviewing
+an accurate description — which was the point of settling them first. Each is
+kept below with what was built, because the implementation is what counsel is
+signing off, not the promise.
 
-**One gap is open** (§5) and is a copy decision for the owner, not a defect.
+Four were built (§1–§4). The fifth (§5) was closed by publishing figures the
+server already enforced, on an owner decision of 2026-09-25; no legal document
+was changed to close it.
 
-The remaining questions for counsel are further down and are ordinary drafting
-and jurisdiction questions.
+**Nothing here is waiting on us.** The remaining questions for counsel are
+further down and are ordinary drafting and jurisdiction questions.
 
 ### 1. Account deletion — ~~promised, not built~~ **built**
 
@@ -120,32 +123,39 @@ claim a refund that did not happen; if the entry itself fails the response says
 Refunds still require a note explaining the approval, which is stored on both
 the Stripe refund metadata and the audit entry.
 
-### 5. Export limits — **open: the policy points at limits we do not publish**
+### 5. Export limits — ~~the policy pointed at limits we did not publish~~ **closed**
 
 > _Acceptable Use Policy, "Automated access":_ "Export exists for the
 > legitimate version of this need and is subject to the limits published on the
 > pricing page."
 
-**Not resolved, and deliberately not resolved by an engineer.** Limits do
-exist and are enforced — `MAX_EXPORT_ROWS = 5000` per export in
-`src/lib/exports/service.ts`, and ten exports per hour in `RATE_LIMITS.export`
-— but the pricing page publishes CSV export only as a yes/no row per tier. It
-publishes no numbers, so the sentence sends a member to a page that does not
-answer the question.
+The limits existed and were enforced, but the pricing page published CSV export
+only as a yes/no row per tier and no numbers at all, so the sentence sent a
+member to a page that did not answer the question.
 
-Two ways to close it, and both are the owner's call rather than a refactor:
+**Resolved on 2026-09-25 by owner decision: publish the numbers.** The
+alternative on the table was rewording the policy; the owner chose to make the
+page match the sentence rather than soften the sentence to match the page.
 
-- **Publish the numbers** on the pricing page and leave the policy as drafted.
-  This is the honest version, and it makes the cap a stated term of the paid
-  product — which is exactly why it needs owner sign-off under the
-  material-claim rule rather than a quiet edit.
-- **Reword the policy** to say limits apply and are enforced, without pointing
-  at a page that does not state them.
+The pricing page now carries an **Export limits** row in the feature
+comparison and a "How much can I export?" entry in the billing questions,
+stating 5,000 rows per export and ten exports an hour, with anything over 500
+rows prepared in the background.
 
-Flagged rather than fixed because changing either the published price-page
-terms or a legal document's wording is a material claim change. No member has
-been misled in a way that costs them anything — the cap is generous and the
-enforcement is real — but the cross-reference is wrong today.
+**No legal document changed.** That is the point of this option — the
+Acceptable Use Policy was already drafted correctly, and it became true the
+moment the page it points at carried the figures.
+
+Two properties worth counsel knowing:
+
+- The published figures are **imported from the constants the server
+  enforces** (`MAX_EXPORT_ROWS`, `RATE_LIMITS.export`,
+  `ASYNC_EXPORT_THRESHOLD`) rather than typed into marketing copy. A change to
+  a limit changes the published term in the same commit. A stated term that
+  can silently drift from the enforced one is the failure mode this avoids.
+- The caps are **global, not per-tier** — they apply to whichever tiers include
+  export. They are presented that way rather than implying a per-plan
+  allowance that does not exist.
 
 ---
 

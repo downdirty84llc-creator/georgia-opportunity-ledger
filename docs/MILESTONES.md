@@ -133,10 +133,11 @@ See `RUNBOOK.md` for the checklist.
    `tests/unit/legal/documents.test.ts` rather than left to memory.
 
    `docs/LEGAL-REVIEW.md` is the packet to send: the inventory, what was
-   verified as accurate against this code, and seventeen grouped questions. It
-   carries one open item of our own — the Acceptable Use Policy points at
-   export limits the pricing page does not publish — which is an owner decision
-   to take before counsel starts, not a code change.
+   verified as accurate against this code, and seventeen grouped questions.
+   Nothing in it is waiting on us — the last open item, the Acceptable Use
+   Policy pointing at export limits the pricing page did not publish, was
+   closed on 2026-09-25 by publishing the figures rather than by rewording the
+   policy. The packet is ready to send.
 
 2. **A virus scanner endpoint in production.** The pipeline is built and
    tested; `FILE_SCANNER_URL` needs to point at something.
