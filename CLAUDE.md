@@ -191,8 +191,20 @@ nine and the three that state our own practice is pinned in
   the route exists — but Supabase only honours `redirect_to` when it matches
   the **Redirect URLs** allow-list, and otherwise falls back to **Site URL**.
   Fix both under Authentication → URL Configuration; there is no MCP tool for
-  auth settings, so it is a Dashboard change. Confirming an address still
-  works, so an account created before the fix can simply sign in at `/login`.
+  auth settings, the sandbox proxy refuses `api.supabase.com`, and no access
+  token is in the environment, so it is a Dashboard change. Confirming an
+  address still works, so an account created before the fix can simply sign in
+  at `/login`.
+
+  `npm run preflight` now decides this rather than trusting it — see
+  `scripts/auth-redirect.ts`. The setting is invisible to every client, so the
+  check asks GoTrue to verify a deliberately invalid token with our callback as
+  `redirect_to` and reads the `Location` header **without following it**: the
+  token is refused either way, and the host it names is the setting. A host that
+  is not ours is a `fail`, not an `unknown`. Run it from somewhere that can
+  reach the Supabase host — from this sandbox the proxy answers 403 first and
+  the row is correctly `unknown`, which is why the row never names who replied.
+
 - An earlier note here said this project "came back empty" after a September
   pause and restore. That was wrong. The check ran about two minutes after the
   restore was initiated: Postgres answered, the data had not finished restoring,

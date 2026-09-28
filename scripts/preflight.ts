@@ -34,6 +34,12 @@ import { resolveTxt } from 'node:dns/promises';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
 import { LEGAL_DOCUMENTS } from '../src/lib/legal/documents';
+import {
+  probeUrl,
+  redirectCheckRow,
+  redirectVerdict,
+  type RedirectProbe,
+} from './auth-redirect';
 
 type Status = 'pass' | 'fail' | 'unknown' | 'human';
 
@@ -493,6 +499,55 @@ async function checkEmailDns(): Promise<void> {
   );
 }
 
+/**
+ * Email confirmation has to come back to this site.
+ *
+ * See `auth-redirect.ts` for why this is a behavioural probe rather than a
+ * configuration read: the setting that decides it is not visible to any client,
+ * and every signal the application does see reports success.
+ */
+async function checkAuthRedirect(): Promise<void> {
+  const name = 'Email confirmation returns to this site';
+  const supabaseUrl = env('NEXT_PUBLIC_SUPABASE_URL');
+  const siteUrl = env('NEXT_PUBLIC_SITE_URL');
+
+  if (!supabaseUrl || !siteUrl) {
+    record(
+      'blocking',
+      name,
+      'unknown',
+      'NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SITE_URL is not set',
+    );
+    return;
+  }
+
+  const callback = `${siteUrl.replace(/\/$/, '')}/auth/callback`;
+
+  let probe: RedirectProbe;
+  try {
+    // `redirect: 'manual'` is the whole point — following the redirect would
+    // report on whatever host GoTrue picked, which is the question being asked.
+    const response = await fetch(probeUrl(supabaseUrl, callback), {
+      redirect: 'manual',
+      headers: { apikey: env('NEXT_PUBLIC_SUPABASE_ANON_KEY') },
+      signal: AbortSignal.timeout(15_000),
+    });
+    probe = {
+      status: response.status,
+      location: response.headers.get('location'),
+    };
+  } catch (error) {
+    probe = {
+      status: 0,
+      location: null,
+      reason: error instanceof Error ? error.message : String(error),
+    };
+  }
+
+  const row = redirectCheckRow(redirectVerdict(probe, callback));
+  record('blocking', name, row.status, row.detail);
+}
+
 async function checkPublicSite(): Promise<void> {
   const base = env('NEXT_PUBLIC_SITE_URL');
   if (!base || base.includes('localhost') || base.includes('127.0.0.1')) {
@@ -665,7 +720,12 @@ async function main(): Promise<void> {
   checkConfiguration();
   checkLegal();
   await checkDatabase();
-  await Promise.all([checkScanner(), checkEmailDns(), checkPublicSite()]);
+  await Promise.all([
+    checkScanner(),
+    checkEmailDns(),
+    checkPublicSite(),
+    checkAuthRedirect(),
+  ]);
   recordHumanWork();
 
   if (process.argv.includes('--json')) {
