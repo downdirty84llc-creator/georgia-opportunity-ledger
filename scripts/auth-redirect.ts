@@ -18,6 +18,26 @@
  * either way — that is fine, and deliberately so. What the header reveals is
  * the *host* GoTrue chose, which is the setting we cannot otherwise read.
  *
+ * **What this measures, precisely: the Site URL. Not the allow-list.**
+ *
+ * The first version of this file claimed to test whether `redirect_to` was
+ * honoured. It does not, and the difference was found by running the probe
+ * twice against the live project — once with our own allow-listed callback and
+ * once with `https://example.com/definitely-not-allow-listed`. Both answers
+ * were byte-for-byte identical, and both redirected to a host that was neither,
+ * while our domain and `example.com` were each independently reachable from the
+ * same client. On a **refused** token GoTrue does not consult `redirect_to` at
+ * all; it goes straight to the Site URL.
+ *
+ * That still catches the fault that broke this project, because a wrong Site
+ * URL is exactly what broke it. But two limits follow, and both matter:
+ *
+ *   - A project with the right Site URL and an **empty allow-list** passes this
+ *     check while real confirmations land on the site root rather than
+ *     `/auth/callback`, so no session is established. Set both.
+ *   - A pass means "Site URL is an origin we own", not "the redirect chain
+ *     works". Only a real signup proves the latter.
+ *
  * The logic lives here rather than inline in `preflight.ts` so it can be tested
  * against each shape of answer without a network or a Supabase project, the
  * same reason `stripe-mode.ts` is a separate module.
@@ -36,11 +56,14 @@ export interface RedirectProbe {
 }
 
 export type RedirectVerdict =
-  /** `redirect_to` was honoured: confirmation will land on our callback. */
+  /**
+   * The redirect landed on an origin we own, so the Site URL is ours. It does
+   * not follow that the allow-list is set — see the note at the top of the file.
+   */
   | { kind: 'honoured'; origin: string }
   /**
-   * GoTrue substituted its own Site URL. Confirmation lands somewhere that is
-   * not ours — the failure this whole module exists to catch.
+   * The redirect went somewhere that is not ours: the Site URL is still wrong.
+   * The failure this module exists to catch.
    */
   | { kind: 'substituted'; origin: string }
   /** A redirect was expected and none came, so the probe proves nothing. */
@@ -116,16 +139,21 @@ export function redirectCheckRow(verdict: RedirectVerdict): {
     case 'honoured':
       return {
         status: 'pass',
-        detail: `email confirmation returns to ${verdict.origin}`,
+        // Deliberately not "confirmation works". This probe sees the Site URL
+        // and nothing else; the allow-list is invisible to it, and an empty
+        // allow-list still breaks the callback. Only a signup proves the chain.
+        detail:
+          `Supabase Site URL resolves to ${verdict.origin} — ` +
+          'allow-list not checked by this probe',
       };
     case 'substituted':
       return {
         status: 'fail',
         detail:
-          `email confirmation goes to ${verdict.origin}, not this site — ` +
-          'Supabase is ignoring redirect_to and using its own Site URL. ' +
-          'Set Site URL and add the callback to Redirect URLs under ' +
-          'Authentication → URL Configuration.',
+          `Supabase sends email confirmation to ${verdict.origin}, not this ` +
+          'site. Set Site URL, and add the callback to Redirect URLs, under ' +
+          'Authentication → URL Configuration — checking the project ref in ' +
+          'the Dashboard URL, since the account has more than one project.',
       };
     case 'no-redirect':
       return {

@@ -188,6 +188,24 @@ describe('redirectCheckRow', () => {
     expect(row.detail).not.toMatch(/GoTrue answered|Supabase answered/);
   });
 
+  it('does not overstate a pass as working confirmation', () => {
+    // Found by running the probe twice against the live project: once with the
+    // allow-listed callback and once with https://example.com/not-allow-listed.
+    // The answers were identical and neither host was the destination, while
+    // both were independently reachable — so on a refused token GoTrue never
+    // consults redirect_to. This probe sees the Site URL only. A project with
+    // the right Site URL and an empty allow-list passes here and still drops
+    // members on the site root with no session, so the row must not promise
+    // more than it checked.
+    const row = redirectCheckRow({
+      kind: 'honoured',
+      origin: 'https://georgiaopportunityledger.com',
+    });
+
+    expect(row.detail).toMatch(/Site URL/);
+    expect(row.detail).toMatch(/allow-list not checked/);
+  });
+
   it('passes only when the callback origin was honoured', () => {
     const row = redirectCheckRow({
       kind: 'honoured',

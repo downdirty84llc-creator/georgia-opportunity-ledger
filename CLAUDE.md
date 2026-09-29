@@ -205,6 +205,24 @@ nine and the three that state our own practice is pinned in
   reach the Supabase host — from this sandbox the proxy answers 403 first and
   the row is correctly `unknown`, which is why the row never names who replied.
 
+  **That check measures the Site URL, not the allow-list**, though it first
+  claimed otherwise. Running the probe twice against the live project — once
+  with the allow-listed callback, once with `https://example.com/not-allow-
+listed` — gave identical answers, and neither host was the destination while
+  both were independently reachable from the same client. On a **refused** token
+  GoTrue never consults `redirect_to`. So a project with the right Site URL and
+  an empty allow-list passes the check and still drops members on the site root
+  with no session. Set both, and treat a pass as "Site URL is ours", not
+  "confirmation works" — only a real signup proves the chain.
+
+- **The account has three Supabase projects, two of them active**:
+  `bbgikfblcahhvrpxiqnd` (the Ledger), `eamulcufzjggkmgxkqtd` (`dd84-ai-tuning`,
+  created 2026-09-24, the other business) and the inactive `gol-staging`. The
+  Dashboard project picker shows all three, so check the ref in the URL before
+  changing an auth setting. `dd84-ai-tuning` was probed read-only on 2026-09-29
+  and its Site URL is still the untouched `localhost` default — nothing of the
+  Ledger's has leaked into it, and nothing of ours belongs there.
+
 - An earlier note here said this project "came back empty" after a September
   pause and restore. That was wrong. The check ran about two minutes after the
   restore was initiated: Postgres answered, the data had not finished restoring,
