@@ -107,8 +107,42 @@ and appeared the first time something actually ran:
   `RATE_LIMITS` were inert from the day they were written — login, password
   reset, registration, export, search. Fixed
   `20260925164500_fix_rate_limit_ambiguous_window_start.sql`.
+- `/auth/callback` read only `code`. GoTrue signals a refused link with
+  `?error=access_denied&error_code=otp_expired`, which arrives _instead_ of a
+  code, so it fell into the no-code branch and was discarded. Meanwhile
+  `login-form.tsx` read `next` from the query string and never `error`, so the
+  `?error=link_expired` the route had been emitting since it was written **had
+  never once been displayed to anybody**. Fixed in `857b1ef`.
 
 **Run what you build, and prove a guard can fail before trusting it.**
+
+**A route that forwards no reason makes every failure look identical.** The
+confirmation-link path is the case. A refused link, a code exchange that could
+not complete, and somebody simply opening `/auth/callback` all ended on the
+same unexplained sign-in page, so no member could tell which had happened and
+neither could we. Two lessons, and the second is the one that bites:
+
+- Emitting a reason is not reporting one. The route emitted
+  `?error=link_expired` for months and the page that received it never read the
+  parameter. A signal nobody consumes is indistinguishable from no signal, and
+  only running the flow shows which you have.
+- **Do not render the reason from the query string.** The notice resolves
+  through a closed set in `src/lib/auth/callback-notice.ts`, because reflecting
+  `?notice=` onto our own sign-in page lets anyone put their words under our
+  styling — a phishing message wearing our branding is worse than no message.
+  The lookup goes through `hasOwnProperty` so `?notice=constructor` cannot
+  render a function body either. Both guards were watched to fail before being
+  trusted.
+
+**Name the cause you observed, not the one that is usually true.** A failed
+code exchange was reported as an expired link. Expiry is one cause; the
+ordinary one is the email being opened in a different browser from the one that
+registered, where the PKCE verifier cookie does not exist — the link is fine,
+and "request a new one" sends the member round the same loop. This is the third
+time this defect has appeared here, after a DNS timeout read as a missing SPF
+record and a missing Stripe key read as a bad signature. The pattern is always
+the same: one observable, several causes, and the most familiar one written
+into the message as though it had been checked.
 
 **A guard that fails open needs a test that watches it refuse.** The rate
 limiter is the case that proves it. `checkRateLimit` returns `allowed: true` on
@@ -125,7 +159,7 @@ refusal; anything less tests the fail-open branch and calls it success.
 npm ci
 npm run typecheck && npm run lint && npm run format:check
 npm run schedules:check          # deploy cron config must match the job registry
-npm test                         # 312 tests
+npm test                         # 348 tests
 npm run build
 npx playwright test --project=desktop-chrome   # 12 skip without a seeded DB — correct
 ./scripts/verify-schema.sh       # 33 migrations from empty + 16 RLS assertions
