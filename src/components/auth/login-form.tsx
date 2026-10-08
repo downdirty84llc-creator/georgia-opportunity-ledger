@@ -2,11 +2,12 @@
 
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { Button } from '@/components/ui/primitives';
 import {
   callbackNoticeMessage,
+  noticeForCallbackHash,
   safeNextPath,
 } from '@/lib/auth/callback-notice';
 
@@ -25,11 +26,30 @@ export function LoginForm() {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [isError, setIsError] = useState(false);
+  const [hashNotice, setHashNotice] = useState<string | null>(null);
+
+  // GoTrue reports a refused link in the **fragment**, not the query string, so
+  // no server route can see it. It survives the redirect from `/auth/callback`
+  // because a 3xx Location without a fragment inherits the original one, which
+  // leaves the browser as the only place it can be read. In an effect because
+  // `location.hash` does not exist during server rendering, and clearing the
+  // hash afterwards so a reload does not resurrect a stale message.
+  useEffect(() => {
+    const notice = noticeForCallbackHash(window.location.hash);
+    if (!notice) return;
+    setHashNotice(callbackNoticeMessage(notice));
+    window.history.replaceState(
+      null,
+      '',
+      window.location.pathname + window.location.search,
+    );
+  }, []);
 
   // Why `/auth/callback` sent them here, when it did. Resolved through a closed
   // set, so an unrecognised `?notice=` renders nothing rather than rendering
   // itself onto our sign-in page.
-  const callbackNotice = callbackNoticeMessage(searchParams.get('notice'));
+  const callbackNotice =
+    callbackNoticeMessage(searchParams.get('notice')) ?? hashNotice;
 
   // Three tones, not two. A failed sign-in is an error, a sent magic link is a
   // success, and a callback notice is neither — it explains why this page was

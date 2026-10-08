@@ -4,6 +4,7 @@ import {
   CALLBACK_NOTICES,
   callbackNoticeMessage,
   noticeForCallbackError,
+  noticeForCallbackHash,
   safeNextPath,
 } from '@/lib/auth/callback-notice';
 
@@ -46,6 +47,40 @@ describe('noticeForCallbackError', () => {
 
   it('returns null for an empty query, so a bare visit is not an error', () => {
     expect(noticeForCallbackError(params(''))).toBeNull();
+  });
+});
+
+describe('noticeForCallbackHash', () => {
+  it('reads the error GoTrue actually sends, which is in the fragment', () => {
+    // Copied from the live project the day Site URL was corrected. This is the
+    // real shape, and the reason the server-side check alone was useless: a
+    // fragment never reaches the server, so the route saw neither a code nor
+    // an error and sent the member to an unexplained page.
+    const observed =
+      '#error=access_denied&error_code=otp_expired' +
+      '&error_description=Email+link+is+invalid+or+has+expired&sb=';
+
+    expect(noticeForCallbackHash(observed)).toBe('link_error');
+  });
+
+  it('works with or without the leading hash', () => {
+    expect(noticeForCallbackHash('#error=access_denied')).toBe('link_error');
+    expect(noticeForCallbackHash('error=access_denied')).toBe('link_error');
+  });
+
+  it('returns null for an empty or absent fragment', () => {
+    // The ordinary case: somebody opening /login directly must see nothing.
+    for (const hash of ['', '#']) {
+      expect(noticeForCallbackHash(hash)).toBeNull();
+    }
+  });
+
+  it('returns null for a fragment carrying no error', () => {
+    // A successful implicit-flow confirmation puts tokens here, not an error.
+    // It must not be reported as a failure.
+    expect(
+      noticeForCallbackHash('#access_token=abc&refresh_token=def&type=signup'),
+    ).toBeNull();
   });
 });
 

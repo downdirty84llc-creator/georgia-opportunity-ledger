@@ -56,6 +56,34 @@ export function noticeForCallbackError(
 }
 
 /**
+ * The same question asked of a URL **fragment**, which is where GoTrue actually
+ * puts it.
+ *
+ * Observed on the live project once Site URL was corrected:
+ *
+ *     https://georgiaopportunityledger.com/auth/callback
+ *       #error=access_denied&error_code=otp_expired
+ *       &error_description=Email+link+is+invalid+or+has+expired
+ *
+ * A fragment is never transmitted to a server, so `noticeForCallbackError`
+ * above — called from a route handler reading `searchParams` — cannot see this
+ * and never fires for a refused link. That is the whole real-world case.
+ *
+ * It still reaches the member, because RFC 7231 §7.1.2 requires a user agent to
+ * carry the original fragment through a 3xx whose `Location` has none. So
+ * `/auth/callback` redirecting to `/login` arrives as `/login#error=…`, and the
+ * browser can read what the server could not.
+ *
+ * Takes the raw `location.hash`, leading `#` and all, and tolerates an empty
+ * one.
+ */
+export function noticeForCallbackHash(hash: string): CallbackNotice | null {
+  const trimmed = hash.startsWith('#') ? hash.slice(1) : hash;
+  if (!trimmed) return null;
+  return noticeForCallbackError(new URLSearchParams(trimmed));
+}
+
+/**
  * Resolves a `notice` query value to copy, or `null` for anything unrecognised.
  *
  * The closed-set lookup is the guard: `?notice=<anything else>` renders

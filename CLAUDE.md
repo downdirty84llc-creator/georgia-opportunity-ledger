@@ -113,6 +113,16 @@ and appeared the first time something actually ran:
   `login-form.tsx` read `next` from the query string and never `error`, so the
   `?error=link_expired` the route had been emitting since it was written **had
   never once been displayed to anybody**. Fixed in `857b1ef`.
+- That fix then read `searchParams` in a route handler, which **cannot work**:
+  GoTrue reports a refused link in the URL **fragment**, and a fragment is
+  never transmitted to a server. Observed on the live project the day Site URL
+  was corrected:
+  `#error=access_denied&error_code=otp_expired&error_description=Email+link+is+invalid+or+has+expired`.
+  So the server-side check fired for no real case at all. The fragment does
+  survive the hop — RFC 7231 §7.1.2 makes a user agent carry it through a 3xx
+  whose `Location` has none — so `/login` receives it and
+  `noticeForCallbackHash` reads it in the browser, which is the only place it
+  exists.
 
 **Run what you build, and prove a guard can fail before trusting it.**
 
@@ -159,7 +169,7 @@ refusal; anything less tests the fail-open branch and calls it success.
 npm ci
 npm run typecheck && npm run lint && npm run format:check
 npm run schedules:check          # deploy cron config must match the job registry
-npm test                         # 348 tests
+npm test                         # 352 tests
 npm run build
 npx playwright test --project=desktop-chrome   # 12 skip without a seeded DB — correct
 ./scripts/verify-schema.sh       # 33 migrations from empty + 16 RLS assertions
@@ -217,9 +227,24 @@ nine and the three that state our own practice is pinned in
 - **The first real account exists** (2026-09-25): one row in `auth.users`,
   confirmed. So `/register` works, and the claim below that no application had
   ever talked to this database no longer holds. `opportunities` is still 0.
-- **Supabase Auth still points at localhost.** The first confirmation email
-  proved it: `email_confirmed_at` was set, but `GET /auth/callback` never
-  appeared in the Vercel logs and the browser landed on an unreachable page.
+- **Supabase Auth Site URL is correct as of 2026-10-08**, and this was checked
+  rather than taken on trust. The probe in `scripts/auth-redirect.ts` now
+  completes and names our own host:
+  `https://georgiaopportunityledger.com/auth/callback#error=access_denied&error_code=otp_expired&…`.
+  It took four rounds to land, and the reason is worth keeping: the change was
+  applied to **`eamulcufzjggkmgxkqtd` (`dd84-ai-tuning`)** first, a different
+  project in the same picker. Three failed probes in a row, each with a healthy
+  control, were all reporting the Ledger's project accurately.
+
+  What is **still unproven** is a successful confirmation. Every observation so
+  far comes from a deliberately invalid token, so only the refusal path has
+  been seen. A real signup is the one test that exercises the allow-list and
+  `/auth/callback` together — nothing here substitutes for it.
+
+- **Supabase Auth pointed at localhost until 2026-10-08.** The first
+  confirmation email proved it: `email_confirmed_at` was set, but
+  `GET /auth/callback` never appeared in the Vercel logs and the browser landed
+  on an unreachable page.
   The application asks for the right destination —
   `register/route.ts` sets `emailRedirectTo` to `${siteUrl}/auth/callback`, and
   the route exists — but Supabase only honours `redirect_to` when it matches
@@ -229,7 +254,6 @@ nine and the three that state our own practice is pinned in
   token is in the environment, so it is a Dashboard change. Confirming an
   address still works, so an account created before the fix can simply sign in
   at `/login`.
-
   `npm run preflight` now decides this rather than trusting it — see
   `scripts/auth-redirect.ts`. The setting is invisible to every client, so the
   check asks GoTrue to verify a deliberately invalid token with our callback as
@@ -253,9 +277,17 @@ listed` — gave identical answers, and neither host was the destination while
   `bbgikfblcahhvrpxiqnd` (the Ledger), `eamulcufzjggkmgxkqtd` (`dd84-ai-tuning`,
   created 2026-09-24, the other business) and the inactive `gol-staging`. The
   Dashboard project picker shows all three, so check the ref in the URL before
-  changing an auth setting. `dd84-ai-tuning` was probed read-only on 2026-09-29
-  and its Site URL is still the untouched `localhost` default — nothing of the
-  Ledger's has leaked into it, and nothing of ours belongs there.
+  changing an auth setting. **This is not hypothetical: the URL Configuration
+  change intended for the Ledger was applied here first**, which is what three
+  consecutive failed probes were correctly reporting.
+
+  `dd84-ai-tuning` was probed read-only on 2026-09-29 and its **Site URL** was
+  the untouched `localhost` default. That is all the probe can see, and the
+  earlier claim here that "nothing of the Ledger's has leaked into it" went
+  further than the evidence: the probe cannot read the **Redirect URLs**
+  allow-list, so a Ledger callback allow-listed on the tuning company's project
+  would be invisible to it. Check that list by hand and remove anything of
+  ours; nothing of ours belongs there.
 
 - An earlier note here said this project "came back empty" after a September
   pause and restore. That was wrong. The check ran about two minutes after the
