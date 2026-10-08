@@ -5,6 +5,16 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useState } from 'react';
 
 import { Button } from '@/components/ui/primitives';
+import {
+  callbackNoticeMessage,
+  safeNextPath,
+} from '@/lib/auth/callback-notice';
+
+const BANNER_STYLES = {
+  error: 'bg-red-50 text-red-900',
+  success: 'bg-emerald-50 text-emerald-900',
+  notice: 'bg-amber-50 text-amber-900',
+} as const;
 
 export function LoginForm() {
   const router = useRouter();
@@ -15,6 +25,22 @@ export function LoginForm() {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [isError, setIsError] = useState(false);
+
+  // Why `/auth/callback` sent them here, when it did. Resolved through a closed
+  // set, so an unrecognised `?notice=` renders nothing rather than rendering
+  // itself onto our sign-in page.
+  const callbackNotice = callbackNoticeMessage(searchParams.get('notice'));
+
+  // Three tones, not two. A failed sign-in is an error, a sent magic link is a
+  // success, and a callback notice is neither — it explains why this page was
+  // reached. Anything the member's own submit produced outranks the notice,
+  // which describes a navigation that has already been superseded.
+  const banner: { tone: 'error' | 'success' | 'notice'; text: string } | null =
+    message !== null
+      ? { tone: isError ? 'error' : 'success', text: message }
+      : callbackNotice !== null
+        ? { tone: 'notice', text: callbackNotice }
+        : null;
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
@@ -49,12 +75,7 @@ export function LoginForm() {
       }
 
       // The `next` parameter only ever navigates within this site.
-      const next = searchParams.get('next');
-      const destination =
-        next && next.startsWith('/') && !next.startsWith('//')
-          ? next
-          : '/dashboard';
-      router.push(destination);
+      router.push(safeNextPath(searchParams.get('next')));
       router.refresh();
     } catch {
       setIsError(true);
@@ -131,16 +152,12 @@ export function LoginForm() {
         </div>
       ) : null}
 
-      {message ? (
+      {banner ? (
         <p
-          role={isError ? 'alert' : 'status'}
-          className={
-            isError
-              ? 'rounded-lg bg-red-50 px-3 py-2 text-sm text-red-900'
-              : 'rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-900'
-          }
+          role={banner.tone === 'error' ? 'alert' : 'status'}
+          className={`rounded-lg px-3 py-2 text-sm ${BANNER_STYLES[banner.tone]}`}
         >
-          {message}
+          {banner.text}
         </p>
       ) : null}
 
