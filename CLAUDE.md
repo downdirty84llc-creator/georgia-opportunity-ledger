@@ -169,7 +169,7 @@ refusal; anything less tests the fail-open branch and calls it success.
 npm ci
 npm run typecheck && npm run lint && npm run format:check
 npm run schedules:check          # deploy cron config must match the job registry
-npm test                         # 352 tests
+npm test                         # 357 tests
 npm run build
 npx playwright test --project=desktop-chrome   # 12 skip without a seeded DB — correct
 ./scripts/verify-schema.sh       # 33 migrations from empty + 16 RLS assertions
@@ -224,9 +224,46 @@ nine and the three that state our own practice is pinned in
   Checkout, so the path from a Checkout session to a provisioned subscription
   has never executed end to end. Treat "configured and verified" as exactly
   that, and not as "billing works".
-- **The first real account exists** (2026-09-25): one row in `auth.users`,
-  confirmed. So `/register` works, and the claim below that no application had
-  ever talked to this database no longer holds. `opportunities` is still 0.
+- **The signup flow was run end to end on 2026-10-08** against production, by
+  posting to `/api/v1/auth/register` and then reading `confirmation_token`
+  straight out of `auth.users` to build the link GoTrue would have emailed. No
+  inbox needed. What it established:
+  - Registration works. The triggers make the profile and the free-plan
+    subscription (rank 0), and `first_name`/`last_name` arrive from metadata.
+  - **Confirmation succeeds, and returns `?code=…` in the query string** — not
+    a fragment. So the server-side `code` branch in `/auth/callback` is the
+    right shape, and the fragment reader covers only the refusal path. Both
+    shapes are now observed rather than assumed.
+  - **`terms_accepted_at` was never recorded.** The route updated `profiles`
+    with the request-scoped client, and with confirmation required `signUp`
+    returns no session — so `auth.uid()` is null, `profiles_update_own`
+    (`id = auth.uid()`) matched nothing, and the update wrote zero rows with
+    nobody reading the error. The form requires accepting the terms, so consent
+    was collected and then not stored. **Every account created before this fix
+    has `terms_accepted_at` null**, which matters for a product whose legal
+    position is the whole of this file. `track('account_created')` in the same
+    block worked throughout, because it already used the admin client — which
+    is what pinned the diagnosis.
+- **Deleting a user directly in SQL exceeds 60 seconds** and the cause is not
+  yet known. There are **no `DELETE` triggers** on `auth.users` or `profiles`,
+  and the twelve unindexed foreign keys below cannot explain it while the
+  tables are empty, so the obvious suspects are ruled out rather than blamed.
+  Worth settling, because the `prune` job purges accounts with
+  `auth.admin.deleteUser` and the hobby plan caps a function at 60 seconds: if
+  the admin endpoint is as slow, account deletion cannot complete in
+  production. Deleting from the Dashboard uses that same endpoint and so is the
+  cheapest way to find out.
+- **Twelve foreign keys referencing `public.profiles` have no index on the
+  referencing column**, all of them `on delete set null`:
+  `attachments.uploaded_by`, `billing_events.user_id`,
+  `correction_requests.reviewed_by` and `.submitted_by_user_id`,
+  `opportunities.created_by` and `.published_by`,
+  `opportunity_score_components.adjusted_by`,
+  `opportunity_versions.changed_by`, `reports.approved_by` and `.created_by`,
+  `source_checks.checked_by`, `support_tickets.assigned_to`. Postgres has to
+  scan each of those tables in full on every profile delete. Harmless now and
+  quadratic later; the de-identification design in the `prune` job depends on
+  these columns, so they are not going away.
 - **Supabase Auth Site URL is correct as of 2026-10-08**, and this was checked
   rather than taken on trust. The probe in `scripts/auth-redirect.ts` now
   completes and names our own host:
@@ -236,10 +273,8 @@ nine and the three that state our own practice is pinned in
   project in the same picker. Three failed probes in a row, each with a healthy
   control, were all reporting the Ledger's project accurately.
 
-  What is **still unproven** is a successful confirmation. Every observation so
-  far comes from a deliberately invalid token, so only the refusal path has
-  been seen. A real signup is the one test that exercises the allow-list and
-  `/auth/callback` together — nothing here substitutes for it.
+  A real signup has since confirmed successfully through this path — see the
+  end-to-end run recorded above.
 
 - **Supabase Auth pointed at localhost until 2026-10-08.** The first
   confirmation email proved it: `email_confirmed_at` was set, but

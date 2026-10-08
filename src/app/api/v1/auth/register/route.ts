@@ -2,6 +2,7 @@ import type { NextResponse } from 'next/server';
 import { z } from 'zod';
 
 import { track } from '@/lib/analytics/events';
+import { createAdminClient } from '@/lib/db/admin';
 import { createServerSupabaseClient } from '@/lib/db/server';
 import { publicEnv } from '@/lib/env';
 import { checkRateLimit, rateLimitIdentity } from '@/lib/http/rate-limit';
@@ -73,7 +74,18 @@ export const POST = withErrorHandling(
 
     if (data.user) {
       const now = new Date().toISOString();
-      await supabase
+
+      // Service-role, not the request client. Email confirmation is required,
+      // so `signUp` returns no session — `auth.uid()` is null, the
+      // `profiles_update_own` policy (`id = auth.uid()`) matches nothing, and
+      // this update silently wrote zero rows. Consent was collected on the form
+      // and then not recorded: every account created before this fix has
+      // `terms_accepted_at` null. `track()` below worked throughout, because it
+      // already used the admin client.
+      //
+      // The row itself is made by the trigger on `auth.users`, so this only
+      // ever fills in columns on a row that exists, scoped to the one id.
+      const { error: profileError } = await createAdminClient()
         .from('profiles')
         .update({
           company_name: parsed.data.companyName ?? null,
@@ -81,6 +93,17 @@ export const POST = withErrorHandling(
           privacy_accepted_at: now,
         })
         .eq('id', data.user.id);
+
+      // Not fatal — the account exists and the address still needs confirming,
+      // so failing the request would be worse than an incomplete profile. But
+      // it is never silent again: an unrecorded acceptance is the kind of gap
+      // that is only ever noticed when somebody asks for proof of it.
+      if (profileError) {
+        console.error('[auth] recording terms acceptance failed', {
+          userId: data.user.id,
+          message: profileError.message,
+        });
+      }
 
       await track('account_created', {
         userId: data.user.id,
