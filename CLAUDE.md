@@ -172,13 +172,13 @@ npm run schedules:check          # deploy cron config must match the job registr
 npm test                         # 357 tests
 npm run build
 npx playwright test --project=desktop-chrome   # 12 skip without a seeded DB — correct
-./scripts/verify-schema.sh       # 33 migrations from empty + 16 RLS assertions
+./scripts/verify-schema.sh       # 34 migrations from empty + 17 schema/RLS assertions
 npm run preflight                # production readiness; `??` means COULD NOT CHECK
 ```
 
 ## Migrations
 
-33, and five of them were recovered from the production database after being
+34, and five of them were recovered from the production database after being
 applied there and never committed (`b811d3a`). Their filenames keep the live
 version numbers so the two histories reconcile. Do not renumber them.
 
@@ -244,26 +244,31 @@ nine and the three that state our own practice is pinned in
     position is the whole of this file. `track('account_created')` in the same
     block worked throughout, because it already used the admin client — which
     is what pinned the diagnosis.
-- **Deleting a user directly in SQL exceeds 60 seconds** and the cause is not
-  yet known. There are **no `DELETE` triggers** on `auth.users` or `profiles`,
-  and the twelve unindexed foreign keys below cannot explain it while the
-  tables are empty, so the obvious suspects are ruled out rather than blamed.
-  Worth settling, because the `prune` job purges accounts with
-  `auth.admin.deleteUser` and the hobby plan caps a function at 60 seconds: if
-  the admin endpoint is as slow, account deletion cannot complete in
-  production. Deleting from the Dashboard uses that same endpoint and so is the
-  cheapest way to find out.
-- **Twelve foreign keys referencing `public.profiles` have no index on the
-  referencing column**, all of them `on delete set null`:
+- **The confirmed signup probe was deleted through Authentication → Users on
+  2026-10-08**, before any index changes. The dashboard had completed and the
+  account was absent at the first follow-up observation, 8.6 seconds after
+  clicking Delete (an upper bound, not measured API latency). A subsequent
+  production SQL query confirmed zero matching auth users, profiles, and
+  subscriptions. The dashboard/admin deletion path therefore completed within
+  60 seconds for this account. This does not benchmark a full `prune` batch or
+  explain the earlier direct-SQL deletion timeout; its cause remains unknown.
+- **The twelve missing indexes on foreign keys referencing `public.profiles`
+  were added in `20261008180000_index_profile_deidentification.sql`**, applied
+  to production and recorded in `supabase_migrations.schema_migrations` on
+  2026-10-08. They cover:
   `attachments.uploaded_by`, `billing_events.user_id`,
   `correction_requests.reviewed_by` and `.submitted_by_user_id`,
   `opportunities.created_by` and `.published_by`,
   `opportunity_score_components.adjusted_by`,
   `opportunity_versions.changed_by`, `reports.approved_by` and `.created_by`,
-  `source_checks.checked_by`, `support_tickets.assigned_to`. Postgres has to
-  scan each of those tables in full on every profile delete. Harmless now and
-  quadratic later; the de-identification design in the `prune` job depends on
-  these columns, so they are not going away.
+  `source_checks.checked_by`, `support_tickets.assigned_to`. All nine affected
+  tables were empty immediately before application. The indexes support
+  finding a deleted profile's references as these tables grow; every
+  `on delete set null` relationship is preserved. They are not presented as
+  the cause or cure of the earlier timeout. `supabase/verify-rls.sql` now checks
+  every profile foreign key for a valid index with the FK columns leading it;
+  the check failed on exactly these twelve before the migration and passed
+  afterward.
 - **Supabase Auth Site URL is correct as of 2026-10-08**, and this was checked
   rather than taken on trust. The probe in `scripts/auth-redirect.ts` now
   completes and names our own host:

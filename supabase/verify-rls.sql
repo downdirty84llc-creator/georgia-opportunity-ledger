@@ -400,4 +400,43 @@ begin
 end;
 $$;
 
+-- --- Account deletion can find referencing rows without full-table scans -----
+-- Check the catalog rather than index names: a composite index counts only
+-- when the FK columns lead it; INCLUDE columns and partial indexes do not.
+
+do $$
+declare
+  unindexed text;
+begin
+  select string_agg(format('%s (%s)', fk.conrelid::regclass, fk.conname), ', '
+                    order by fk.conrelid::regclass::text, fk.conname)
+    into unindexed
+  from pg_constraint fk
+  where fk.contype = 'f'
+    and fk.confrelid = 'public.profiles'::regclass
+    and not exists (
+      select 1
+      from pg_index i
+      join pg_class idx on idx.oid = i.indexrelid
+      join pg_am am on am.oid = idx.relam
+      where i.indrelid = fk.conrelid
+        and i.indisvalid and i.indisready and i.indislive
+        and i.indpred is null and am.amname = 'btree'
+        and i.indnkeyatts >= cardinality(fk.conkey)
+        and array(
+          select key.attnum
+          from unnest(i.indkey) with ordinality as key(attnum, position)
+          where key.position <= cardinality(fk.conkey)
+          order by key.attnum
+        ) = array(select attnum from unnest(fk.conkey) as attnum order by attnum)
+    );
+
+  if unindexed is not null then
+    raise exception 'SCHEMA CHECK FAILED — profile foreign keys without a usable index: %',
+      unindexed;
+  end if;
+  raise notice '  ok  every profile foreign key has a valid leading-column index';
+end;
+$$;
+
 rollback;
