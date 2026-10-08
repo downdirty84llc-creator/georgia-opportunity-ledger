@@ -126,7 +126,9 @@ See `RUNBOOK.md` for the checklist.
 ## What is still not built
 
 1. **Legal review of the nine documents that need counsel.** The hard launch
-   blocker, and the only remaining item nothing in this repository can move.
+   blocker, and the one that needs a lawyer rather than a change here. Items
+   2 and 3 below are also outside this repository, but they are configuration
+   somebody can set this afternoon rather than a professional opinion.
    Each renders an "awaiting legal review" banner until cleared. The other
    three — editorial standards, corrections, data sources — are statements of
    our own practice and do not go to a lawyer; that split is pinned in
@@ -139,20 +141,66 @@ See `RUNBOOK.md` for the checklist.
    closed on 2026-09-25 by publishing the figures rather than by rewording the
    policy. The packet is ready to send.
 
-2. **A virus scanner endpoint in production.** The pipeline is built and
+2. **Custom SMTP on Supabase Auth.** Nobody outside the project team can
+   create an account. Supabase's own documentation is explicit: _"Unless you
+   configure a custom SMTP server for your project, Supabase Auth will refuse
+   to deliver messages to addresses that are not part of the project's
+   team,"_ and the default service is "best-effort only" and intended for
+   demos and toy projects. So sign-up confirmation, magic links and password
+   resets reach us and nobody else, and a member who forgets their password
+   has no route back in.
+
+   This is worse than the delivery gap below, because that one fails after
+   somebody has become a member while this one stops them becoming one.
+
+   **Not verifiable from here.** Auth SMTP settings live only in the
+   dashboard (Authentication → Emails → SMTP Settings) — neither the
+   repository nor the Management API exposes them, so this has to be checked
+   by hand. One piece of evidence that looks like proof is not: the
+   `otp_expired` fragment observed in production (see
+   `src/lib/auth/callback-notice.ts`) shows a link was delivered to a team
+   address, which is exactly what the built-in service does, and says nothing
+   about whether custom SMTP is configured.
+
+   Note for when it is set: Supabase then defaults to 30 new users per hour.
+   Fine at launch, worth raising before any campaign.
+
+3. **An email API key, and a redeploy to pick it up.** `EMAIL_PROVIDER` is
+   `resend` in production and deliberately stays `console` in preview and
+   development — a preview deployment shares the production database, so a
+   real provider on a branch build would email real members. `EMAIL_API_KEY`
+   is not set, in any environment.
+
+   The failure mode is the dangerous kind. `sendEmail()` falls back to console
+   logging when the key is empty **and returns `ok: true` with a
+   `console-<timestamp>` identifier**, so the weekly report and alert jobs
+   record a successful delivery. Nothing leaves the building while the admin
+   dashboard reports healthy sending. A loud failure would be better.
+
+   `scripts/preflight.ts` does not catch it either: `checkEmailDns()` verifies
+   SPF and DMARC but nothing checks that `EMAIL_PROVIDER` has left `console`.
+   The checklist can go green on the harder half and miss the trivial one.
+
+   Two smaller things in the same area. Vercel applies environment changes to
+   new deployments only, so setting the key does nothing until a redeploy.
+   And `EMAIL_REPLY_TO` is `support@georgiaopportunityledger.com`, where no
+   mailbox exists — Resend sends but does not receive, so a member replying to
+   an alert bounces.
+
+4. **A virus scanner endpoint in production.** The pipeline is built and
    tested; `FILE_SCANNER_URL` needs to point at something.
    `docker-compose.yml` runs one locally and the runbook has the EICAR
    verification. Until it is set, files store as `skipped` and production logs
    a warning on every upload.
-3. **The tier-by-tier test-payment matrix.** The live catalogue now exists and
+5. **The tier-by-tier test-payment matrix.** The live catalogue now exists and
    `npm run stripe:setup` builds a test-mode one against a test key. What
    remains is running a card through each tier and confirming the access rank
    that results, which needs a deployed environment rather than more code.
-4. **A human accessibility audit.** Automated rules run on every push and the
+6. **A human accessibility audit.** Automated rules run on every push and the
    public pages are clean against WCAG 2.1 AA. That covers roughly a third of
    real defects. The accessibility statement says so in those words rather
    than claiming conformance we have not tested for.
-5. **`/pricing` and `/support` remain server-rendered per request.** Both
+7. **`/pricing` and `/support` remain server-rendered per request.** Both
    genuinely personalise — pricing marks the plan you are on, support knows
    whether you are signed in — so this is a deliberate exception rather than a
    gap. `/georgia/[county]` is cached on demand rather than prerendered,
