@@ -158,9 +158,9 @@ A fourth instance, and the one that reached this file: three `execute_sql`
 calls returning `timed out after 60s` were recorded as "deleting a user takes
 over 60 seconds". That was a **client deadline reported as a server
 measurement**. The admin endpoint deleted the same account in 239 ms. **Whose
-clock stopped matters as much as what it read** — a tool timeout, a proxy 403
-and a `curl` against nothing all produce confident-looking results about a
-system that was never reached.
+clock stopped matters as much as what it read** — a tool timeout or proxy
+response does not measure database execution time. A tool timeout also does
+not establish whether the request reached the database.
 
 **A guard that fails open needs a test that watches it refuse.** The rate
 limiter is the case that proves it. `checkRateLimit` returns `allowed: true` on
@@ -260,31 +260,38 @@ nine and the three that state our own practice is pinned in
   and subscriptions, and the account's `analytics_events` row survives with
   `user_id` null, which is the de-identification the retention design intends.
   This does not benchmark a full `prune` batch.
-- **The earlier "direct SQL deletion takes over 60 seconds" finding was wrong**,
-  and the way it was wrong is the reusable part. Three `execute_sql` calls
+- **The earlier "direct SQL deletion takes over 60 seconds" finding was
+  unsupported.** Three `execute_sql` calls
   returned `timed out after 60s`, which is the **MCP tool's deadline, not
   Postgres execution time** — and it was written into this file as though it
-  measured the database. The admin endpoint deleting the same account in 239 ms
-  settles it: there was never evidence of a slow delete, and the inference
-  hanging off it — that the `prune` job might not finish inside the hobby
-  plan's 60-second function cap — rested on nothing.
+  measured the database. The admin endpoint completed the real deletion in
+  239 ms, so those tool errors do not establish that account deletion would
+  exceed the `prune` job's function deadline. The SQL and admin paths are
+  distinct observations; the admin result does not explain the SQL failures.
 
-  Two mechanics worth keeping:
+  What the follow-up established:
 
-  - `set statement_timeout = '25s'` on its own did **not** bind the following
-    statement, which is why that call ran to the tool deadline instead of
-    erroring at 25 s. Bind it with `begin; set local statement_timeout = …;`
-    inside an explicit transaction, and add `set local lock_timeout` so a lock
-    wait is distinguishable from work.
-  - Bounded that way, `explain (analyze, buffers)` on a `delete from
-auth.users` returns through this connector in **0.951 ms** execution,
-    0.837 ms planning. So nothing about reaching that table through this path
-    is slow. (It matched zero rows, so it benchmarks no cascade — it rules out
-    the connector, not the delete.)
+  - One original request included `set statement_timeout = '25s'`, but no
+    PostgreSQL timeout error or effective-setting measurement was returned.
+    That does **not** prove the setting failed. PostgreSQL's
+    [SET documentation](https://www.postgresql.org/docs/current/sql-set.html)
+    specifies that plain `SET` changes the current session; `SET LOCAL`
+    scopes the change to the current transaction. The retest used an explicit
+    transaction with `SET LOCAL` and `ROLLBACK` to contain its settings and
+    any writes, not because plain `SET` is inherently ineffective.
+  - On 2026-10-09, the original Claude connector successfully returned
+    `EXPLAIN (ANALYZE, BUFFERS)` for a delete scoped to the already-deleted
+    probe's UUID and email. It requested a 3-second lock timeout and a
+    10-second statement timeout, then rolled back. PostgreSQL reported
+    **0.951 ms execution** and **0.837 ms planning**; these are database
+    timings, not connector wall-clock latency. Zero rows matched, so no
+    account cascade was exercised. This confirms that the connector completed
+    this request; it does not rule out an earlier transient connector fault.
 
-  The cause of the three stalls is still unknown. A lock wait that had cleared
-  before `pg_stat_activity` was checked is the leading candidate, and "unknown"
-  is the honest entry until something observes it.
+  The cause of the three stalls remains unknown. No observation identifies a
+  lock wait, a connector fault, or another cause as the leading explanation.
+  A recurrence would need connector timing and simultaneous database activity
+  to distinguish them.
 
 - **The twelve missing indexes on foreign keys referencing `public.profiles`
   were added in `20261008180000_index_profile_deidentification.sql`**, applied
