@@ -1,16 +1,18 @@
 'use client';
 
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
 import { Button } from '@/components/ui/primitives';
-import { createBrowserSupabaseClient } from '@/lib/db/browser';
+import { noticeForCallbackHash } from '@/lib/auth/callback-notice';
 
 type Mode = 'checking' | 'request' | 'set';
 
 export function ResetPasswordForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const notice = searchParams.get('notice');
   const [mode, setMode] = useState<Mode>('checking');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -19,20 +21,44 @@ export function ResetPasswordForm() {
   const [message, setMessage] = useState<string | null>(null);
   const [isError, setIsError] = useState(false);
 
-  // A recovery link puts a session in place before this page renders. Its
-  // presence is what distinguishes "set a new password" from "send me a link".
+  // The callback establishes a session in HttpOnly cookies. Ask the server
+  // about that session; a browser Supabase client cannot read those cookies.
   useEffect(() => {
     let cancelled = false;
 
     async function detect() {
+      const refusedLink = noticeForCallbackHash(window.location.hash);
+      if (
+        refusedLink ||
+        notice === 'link_error' ||
+        notice === 'signin_required'
+      ) {
+        setMode('request');
+        setIsError(true);
+        setMessage(
+          notice === 'signin_required'
+            ? 'We could not open this reset link here. Request a new link and open it in the same browser.'
+            : 'That password reset link could not be used. Request a new link below.',
+        );
+        return;
+      }
+
       try {
-        const supabase = createBrowserSupabaseClient();
-        const {
-          data: { session },
-        } = await supabase.auth.getSession();
-        if (!cancelled) setMode(session ? 'set' : 'request');
+        const response = await fetch('/api/v1/auth/session', {
+          cache: 'no-store',
+        });
+        if (!response.ok) throw new Error('Session check failed');
+        const payload = await response.json();
+        if (!cancelled)
+          setMode(payload?.data?.authenticated === true ? 'set' : 'request');
       } catch {
-        if (!cancelled) setMode('request');
+        if (!cancelled) {
+          setMode('request');
+          setIsError(true);
+          setMessage(
+            'We could not check your session. Reload this page and try again.',
+          );
+        }
       }
     }
 
@@ -40,7 +66,7 @@ export function ResetPasswordForm() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [notice]);
 
   async function requestLink(event: React.FormEvent) {
     event.preventDefault();
@@ -56,11 +82,11 @@ export function ResetPasswordForm() {
       });
       const payload = await response.json().catch(() => null);
 
-      if (response.status === 429) {
+      if (!response.ok) {
         setIsError(true);
         setMessage(
           payload?.error?.message ??
-            'Too many attempts. Wait a few minutes and try again.',
+            'The reset request could not be completed. Please try again.',
         );
         return;
       }
@@ -87,9 +113,9 @@ export function ResetPasswordForm() {
       setMessage('Those two passwords do not match.');
       return;
     }
-    if (password.length < 12) {
+    if (password.length < 12 || password.length > 200) {
       setIsError(true);
-      setMessage('Use at least 12 characters.');
+      setMessage('Use between 12 and 200 characters.');
       return;
     }
 
@@ -98,16 +124,20 @@ export function ResetPasswordForm() {
     setIsError(false);
 
     try {
-      const supabase = createBrowserSupabaseClient();
-      const { error } = await supabase.auth.updateUser({ password });
+      const response = await fetch('/api/v1/auth/password-reset', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password }),
+      });
+      const payload = await response.json().catch(() => null);
 
-      if (error) {
+      if (!response.ok) {
         setIsError(true);
         setMessage(
-          error.message.includes('expired')
-            ? 'That reset link has expired. Request a fresh one.'
-            : 'Your password could not be changed. Request a fresh link.',
+          payload?.error?.message ??
+            'Your password could not be changed. Request a fresh link.',
         );
+        if (response.status === 401) setMode('request');
         return;
       }
 
@@ -150,6 +180,7 @@ export function ResetPasswordForm() {
               autoComplete="new-password"
               required
               minLength={12}
+              maxLength={200}
               value={password}
               onChange={(event) => setPassword(event.target.value)}
               className="mt-1 w-full rounded-lg border border-ink-300 px-3 py-2 text-sm"
@@ -166,6 +197,7 @@ export function ResetPasswordForm() {
               autoComplete="new-password"
               required
               minLength={12}
+              maxLength={200}
               value={confirmation}
               onChange={(event) => setConfirmation(event.target.value)}
               className="mt-1 w-full rounded-lg border border-ink-300 px-3 py-2 text-sm"

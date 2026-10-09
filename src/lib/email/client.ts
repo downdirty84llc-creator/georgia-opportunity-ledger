@@ -109,7 +109,15 @@ async function sendViaPostmark(
 export async function sendEmail(message: EmailMessage): Promise<SendResult> {
   const env = serverEnv();
 
-  if (env.emailProvider === 'console' || !env.emailApiKey) {
+  if (env.emailProvider === 'console') {
+    if (publicEnv.environment === 'production') {
+      return {
+        ok: false,
+        providerMessageId: null,
+        error:
+          'Production email requires a delivery provider; console does not send mail.',
+      };
+    }
     console.info('[email] (not sent — console provider)', {
       to: message.to,
       subject: message.subject,
@@ -117,6 +125,21 @@ export async function sendEmail(message: EmailMessage): Promise<SendResult> {
       preview: message.text.slice(0, 200),
     });
     return { ok: true, providerMessageId: `console-${Date.now()}` };
+  }
+
+  if (!env.emailApiKey.trim()) {
+    return {
+      ok: false,
+      providerMessageId: null,
+      error: 'Email delivery is not configured: EMAIL_API_KEY is missing.',
+    };
+  }
+  if (env.emailProvider !== 'resend' && env.emailProvider !== 'postmark') {
+    return {
+      ok: false,
+      providerMessageId: null,
+      error: 'Email delivery provider is not supported.',
+    };
   }
 
   const from = env.emailFrom;

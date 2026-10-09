@@ -369,17 +369,21 @@ sitemap. What it marks `you` is what no machine can close.
 - [ ] Email domain authentication: SPF, DKIM and DMARC on the sending domain.
 - [ ] `EMAIL_API_KEY` set, and the deployment redeployed afterwards. Vercel
       applies environment changes to new deployments only, so setting the key
-      alone changes nothing. Until it is set, `sendEmail()` logs to the console
-      and returns success, so the report and alert jobs record deliveries that
-      never happened. `npm run preflight` checks this ("Email actually sends").
+      alone changes nothing. Since 2026-10-09, `sendEmail()` returns failure
+      when a provider key is missing or production uses the console provider,
+      so jobs no longer record those attempts as deliveries. `npm run preflight`
+      checks this configuration ("Email actually sends"); verify actual inbox
+      delivery separately.
 - [ ] **Custom SMTP on Supabase Auth** (Authentication → Emails → SMTP
       Settings). Until it is configured, Supabase refuses to deliver auth mail
       to any address outside the project team, so nobody else can confirm a
       sign-up, use a magic link or reset a password. Point it at the same
       provider as `EMAIL_API_KEY` so both halves share one sending domain and
-      reputation. Nothing in the repository or the Management API can see this
-      setting — it has to be checked in the dashboard, which is why it is on
-      this list rather than in the preflight.
+      reputation. **Verified OFF in the production dashboard on 2026-10-09.**
+      After setup, verify signup confirmation and password recovery in the
+      browser that requested the link. Recovery's HttpOnly session handling is
+      repaired and covered at the browser/API boundary, but those tests do not
+      establish live email delivery.
 - [ ] A real mailbox behind `EMAIL_REPLY_TO`, or a reply-to that has one. The
       address is currently `support@georgiaopportunityledger.com` and no mailbox
       exists there; a provider that sends does not necessarily receive, so a

@@ -25,6 +25,14 @@ export async function GET(request: Request): Promise<NextResponse> {
 
   const siteUrl = publicEnv.siteUrl.replace(/\/$/, '');
   const safeNext = safeNextPath(url.searchParams.get('next'));
+  const failurePath =
+    safeNext === '/auth/reset-password' ? '/auth/reset-password' : '/login';
+
+  function redirect(path: string) {
+    const response = NextResponse.redirect(`${siteUrl}${path}`);
+    response.headers.set('Cache-Control', 'private, no-store');
+    return response;
+  }
 
   // GoTrue refused the link. Read before `code`, because an error arrives
   // *instead* of a code and would otherwise be indistinguishable from someone
@@ -36,11 +44,11 @@ export async function GET(request: Request): Promise<NextResponse> {
       code: url.searchParams.get('error_code'),
       description: url.searchParams.get('error_description'),
     });
-    return NextResponse.redirect(`${siteUrl}/login?notice=${errorNotice}`);
+    return redirect(`${failurePath}?notice=${errorNotice}`);
   }
 
   if (!code) {
-    return NextResponse.redirect(`${siteUrl}/login`);
+    return redirect(failurePath);
   }
 
   const supabase = await createServerSupabaseClient();
@@ -52,8 +60,8 @@ export async function GET(request: Request): Promise<NextResponse> {
     // verifier cookie is absent — the link is fine, this browser is not the
     // one that started the flow. The real reason goes to the log.
     console.warn('[auth] code exchange failed', { message: error.message });
-    return NextResponse.redirect(`${siteUrl}/login?notice=signin_required`);
+    return redirect(`${failurePath}?notice=signin_required`);
   }
 
-  return NextResponse.redirect(`${siteUrl}${safeNext}`);
+  return redirect(safeNext);
 }

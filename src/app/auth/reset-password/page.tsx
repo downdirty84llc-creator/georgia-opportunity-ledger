@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { redirect } from 'next/navigation';
 import { Suspense } from 'react';
 
 import { SiteFooter } from '@/components/site/footer';
@@ -18,7 +19,19 @@ export const metadata: Metadata = {
  * "choose a new password" form instead — one URL, no dead end if a member
  * bookmarks it.
  */
-export default function ResetPasswordPage() {
+export default async function ResetPasswordPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ code?: string | string[] }>;
+}) {
+  const { code } = await searchParams;
+  // Keep already-issued links working. The callback can read the HttpOnly
+  // PKCE verifier and write session cookies; browser JavaScript cannot.
+  if (typeof code === 'string' && code) {
+    const query = new URLSearchParams({ code, next: '/auth/reset-password' });
+    redirect(`/auth/callback?${query}`);
+  }
+
   return (
     <div className="flex min-h-screen flex-col">
       <SiteHeader />

@@ -153,14 +153,14 @@ See `RUNBOOK.md` for the checklist.
    This is worse than the delivery gap below, because that one fails after
    somebody has become a member while this one stops them becoming one.
 
-   **Not verifiable from here.** Auth SMTP settings live only in the
-   dashboard (Authentication → Emails → SMTP Settings) — neither the
-   repository nor the Management API exposes them, so this has to be checked
-   by hand. One piece of evidence that looks like proof is not: the
-   `otp_expired` fragment observed in production (see
-   `src/lib/auth/callback-notice.ts`) shows a link was delivered to a team
-   address, which is exactly what the built-in service does, and says nothing
-   about whether custom SMTP is configured.
+   **Verified 2026-10-09:** Authentication → Emails → SMTP Settings on
+   `bbgikfblcahhvrpxiqnd` shows **Enable custom SMTP OFF**. This is a live
+   configuration blocker, not an inference from a delivered team email.
+   Password recovery's separate HttpOnly-session defect is repaired: the
+   server exchanges the email code and updates the authenticated user's
+   password. Regression tests cover that flow with mocked auth/API responses;
+   a real signup and recovery email round trip still needs verification after
+   SMTP setup.
 
    Note for when it is set: Supabase then defaults to 30 new users per hour.
    Fine at launch, worth raising before any campaign.
@@ -169,17 +169,18 @@ See `RUNBOOK.md` for the checklist.
    `resend` in production and deliberately stays `console` in preview and
    development — a preview deployment shares the production database, so a
    real provider on a branch build would email real members. `EMAIL_API_KEY`
-   is not set, in any environment.
+   was recorded as unset in the previous environment audit; that credential
+   state was not re-read during the 2026-10-09 repair.
 
-   The failure mode is the dangerous kind. `sendEmail()` falls back to console
-   logging when the key is empty **and returns `ok: true` with a
-   `console-<timestamp>` identifier**, so the weekly report and alert jobs
-   record a successful delivery. Nothing leaves the building while the admin
-   dashboard reports healthy sending. A loud failure would be better.
+   **Code repaired 2026-10-09:** `sendEmail()` returns `ok: false` with no
+   message identifier when a delivery provider's key is missing, or when
+   production is configured with the console provider. Report and alert jobs
+   can now record a failed attempt instead of a delivery that never happened.
+   Preview/development may still use the console deliberately.
 
-   `scripts/preflight.ts` does not catch it either: `checkEmailDns()` verifies
-   SPF and DMARC but nothing checks that `EMAIL_PROVIDER` has left `console`.
-   The checklist can go green on the harder half and miss the trivial one.
+   `scripts/preflight.ts` already checks the provider and key under "Email
+   actually sends", separately from SPF and DMARC. That configuration check
+   does not prove delivery to an inbox.
 
    Two smaller things in the same area. Vercel applies environment changes to
    new deployments only, so setting the key does nothing until a redeploy.
