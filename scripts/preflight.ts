@@ -140,6 +140,30 @@ function checkConfiguration(): void {
       : 'unset — every attachment stores as skipped, readable and unscanned',
   );
 
+  // The email equivalent of the scanner check above, and it exists because the
+  // failure is silent rather than loud. `sendEmail()` falls back to console
+  // logging when the provider is `console` or the key is empty — and returns
+  // `ok: true` with a `console-<timestamp>` identifier, so the report and alert
+  // jobs record a successful delivery and the admin dashboard shows healthy
+  // sending while nothing leaves the building. `checkEmailDns()` below verifies
+  // SPF and DMARC, which is the harder half; without this check the report can
+  // pass that and still describe a system that delivers nothing.
+  const emailProvider = env('EMAIL_PROVIDER') || 'console';
+  const emailKey = env('EMAIL_API_KEY');
+  const emailSends = emailProvider !== 'console' && Boolean(emailKey);
+  record(
+    'blocking',
+    'Email actually sends',
+    emailSends ? 'pass' : 'fail',
+    emailSends
+      ? `${emailProvider} with a key set`
+      : emailProvider === 'console'
+        ? 'EMAIL_PROVIDER is "console" — every send is logged, reported as ' +
+          'delivered, and received by nobody'
+        : `EMAIL_PROVIDER is "${emailProvider}" but EMAIL_API_KEY is unset — ` +
+          'sendEmail() falls back to console and still reports success',
+  );
+
   for (const [name, variable] of [
     ['Sentry configured', 'SENTRY_DSN'],
     ['PostHog configured', 'NEXT_PUBLIC_POSTHOG_KEY'],

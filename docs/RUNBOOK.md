@@ -367,6 +367,23 @@ sitemap. What it marks `you` is what no machine can close.
 - [ ] Tier-by-tier test payment verifying each plan grants the correct access
       (spec 28, milestone 3 acceptance).
 - [ ] Email domain authentication: SPF, DKIM and DMARC on the sending domain.
+- [ ] `EMAIL_API_KEY` set, and the deployment redeployed afterwards. Vercel
+      applies environment changes to new deployments only, so setting the key
+      alone changes nothing. Until it is set, `sendEmail()` logs to the console
+      and returns success, so the report and alert jobs record deliveries that
+      never happened. `npm run preflight` checks this ("Email actually sends").
+- [ ] **Custom SMTP on Supabase Auth** (Authentication → Emails → SMTP
+      Settings). Until it is configured, Supabase refuses to deliver auth mail
+      to any address outside the project team, so nobody else can confirm a
+      sign-up, use a magic link or reset a password. Point it at the same
+      provider as `EMAIL_API_KEY` so both halves share one sending domain and
+      reputation. Nothing in the repository or the Management API can see this
+      setting — it has to be checked in the dashboard, which is why it is on
+      this list rather than in the preflight.
+- [ ] A real mailbox behind `EMAIL_REPLY_TO`, or a reply-to that has one. The
+      address is currently `support@georgiaopportunityledger.com` and no mailbox
+      exists there; a provider that sends does not necessarily receive, so a
+      member replying to an alert bounces.
 - [ ] Database backups enabled with point-in-time recovery.
 - [ ] Administrator multi-factor enrolment for every staff account. The gate is
       enforced in code; each person still has to enrol at `/admin/security`.
