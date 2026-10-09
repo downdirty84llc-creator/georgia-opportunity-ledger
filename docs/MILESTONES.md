@@ -154,16 +154,18 @@ See `RUNBOOK.md` for the checklist.
    somebody has become a member while this one stops them becoming one.
 
    **Verified 2026-10-09:** Authentication → Emails → SMTP Settings on
-   `bbgikfblcahhvrpxiqnd` shows **Enable custom SMTP OFF**. This is a live
-   configuration blocker, not an inference from a delivered team email.
+   `bbgikfblcahhvrpxiqnd` shows **Enable custom SMTP OFF**, and Auth Hooks
+   lists no configured hooks. This is a live configuration blocker, not an
+   inference from a delivered team email.
    Password recovery's separate HttpOnly-session defect is repaired: the
    server exchanges the email code and updates the authenticated user's
    password. Regression tests cover that flow with mocked auth/API responses;
    a real signup and recovery email round trip still needs verification after
    SMTP setup.
 
-   Note for when it is set: Supabase then defaults to 30 new users per hour.
-   Fine at launch, worth raising before any campaign.
+   Supabase currently documents an initial custom-SMTP limit of 30 messages
+   per hour, not 30 new users. Review the project's actual rate limit before
+   a campaign ([SMTP documentation](https://supabase.com/docs/guides/auth/auth-smtp)).
 
 3. **An email API key, and a redeploy to pick it up.** `EMAIL_PROVIDER` is
    `resend` in production and deliberately stays `console` in preview and
