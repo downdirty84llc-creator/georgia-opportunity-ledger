@@ -3,7 +3,7 @@ import { z } from 'zod';
 
 import { createServerSupabaseClient } from '@/lib/db/server';
 import { publicEnv } from '@/lib/env';
-import { checkRateLimit, rateLimitIdentity } from '@/lib/http/rate-limit';
+import { checkAuthRateLimit } from '@/lib/http/auth-rate-limit';
 import {
   apiError,
   ok,
@@ -32,10 +32,7 @@ export const POST = withErrorHandling(
     const parsed = bodySchema.safeParse(await request.json());
     if (!parsed.success) return validationFailed(parsed.error);
 
-    // Limit per address as well as per IP, so a distributed attempt against one
-    // account is still throttled.
-    const identity = `${rateLimitIdentity(request, null)}|${parsed.data.email.toLowerCase()}`;
-    const limit = await checkRateLimit('login', identity);
+    const limit = await checkAuthRateLimit('login', request, parsed.data.email);
     if (!limit.allowed) return rateLimited(limit.resetAt);
 
     const supabase = await createServerSupabaseClient();

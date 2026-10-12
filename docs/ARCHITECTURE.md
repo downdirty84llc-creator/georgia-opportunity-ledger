@@ -127,7 +127,15 @@ maintained by trigger rather than as a generated column, with triggers on
 
 The application runs on serverless functions, so an in-process counter would be
 per-instance and effectively no limit at all. The counter lives in Postgres:
-`public.check_rate_limit` performs one atomic upsert per request.
+`public.check_rate_limit` performs one atomic upsert per counter check.
+
+Password and magic-link sign-in share independent IP and email counters:
+10 requests per 5 minutes for each dimension. Password-reset requests have
+separate IP and email counters at 5 per hour. Both checks must allow the
+request. A combined IP/email key would let either dimension change to evade
+the limit. The IP check runs first, so a refused IP does not consume email
+allowances; email counter keys use a SHA-256 digest of the lower-cased address.
+Authenticated password changes retain their separate per-user limit.
 
 Windows are fixed rather than sliding. A fixed window can admit up to 2× the
 limit across a boundary; that is an acceptable trade for a single indexed write,

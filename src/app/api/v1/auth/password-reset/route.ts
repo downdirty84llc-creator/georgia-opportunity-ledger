@@ -3,6 +3,7 @@ import { z } from 'zod';
 
 import { createServerSupabaseClient } from '@/lib/db/server';
 import { publicEnv } from '@/lib/env';
+import { checkAuthRateLimit } from '@/lib/http/auth-rate-limit';
 import { checkRateLimit, rateLimitIdentity } from '@/lib/http/rate-limit';
 import {
   apiError,
@@ -28,9 +29,10 @@ export const POST = withErrorHandling(
     const parsed = bodySchema.safeParse(await request.json());
     if (!parsed.success) return validationFailed(parsed.error);
 
-    const limit = await checkRateLimit(
+    const limit = await checkAuthRateLimit(
       'passwordReset',
-      `${rateLimitIdentity(request, null)}|${parsed.data.email.toLowerCase()}`,
+      request,
+      parsed.data.email,
     );
     if (!limit.allowed) return rateLimited(limit.resetAt);
 

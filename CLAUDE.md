@@ -177,7 +177,7 @@ refusal; anything less tests the fail-open branch and calls it success.
 npm ci
 npm run typecheck && npm run lint && npm run format:check
 npm run schedules:check          # deploy cron config must match the job registry
-npm test                         # 404 tests
+npm test                         # 413 tests
 npm run build
 npx playwright test --project=desktop-chrome   # 12 skip without a seeded DB — correct
 ./scripts/verify-schema.sh       # 34 migrations from empty + 17 schema/RLS assertions
@@ -211,6 +211,13 @@ nine and the three that state our own practice is pinned in
 
 ## Current state
 
+- Login and password-reset requests now enforce independent IP and email
+  limits (2026-10-12). The former combined key allowed either the address or
+  IP to change and receive a fresh allowance. Nine route tests with a counter
+  fixture reproduce both evasions for password login, magic links and reset
+  requests, and verify that a blocked IP cannot drain an email allowance.
+  All nine failed against the old handlers. Email keys are lower-cased and
+  hashed; authenticated password changes still use their per-user limit.
 - Magic-link sign-in explicitly forbids account creation (2026-10-12).
   Supabase's default previously let an unknown address create an account
   through login, skipping the registration form and its terms acceptance.
