@@ -44,6 +44,9 @@ export const POST = withErrorHandling(
       await supabase.auth.signInWithOtp({
         email: parsed.data.email,
         options: {
+          // Supabase otherwise creates an account for an unknown address,
+          // bypassing registration and its required terms acceptance.
+          shouldCreateUser: false,
           emailRedirectTo: `${publicEnv.siteUrl.replace(/\/$/, '')}/auth/callback`,
         },
       });

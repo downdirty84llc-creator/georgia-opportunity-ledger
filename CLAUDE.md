@@ -177,7 +177,7 @@ refusal; anything less tests the fail-open branch and calls it success.
 npm ci
 npm run typecheck && npm run lint && npm run format:check
 npm run schedules:check          # deploy cron config must match the job registry
-npm test                         # 384 tests
+npm test                         # 404 tests
 npm run build
 npx playwright test --project=desktop-chrome   # 12 skip without a seeded DB — correct
 ./scripts/verify-schema.sh       # 34 migrations from empty + 17 schema/RLS assertions
@@ -211,6 +211,13 @@ nine and the three that state our own practice is pinned in
 
 ## Current state
 
+- Magic-link sign-in explicitly forbids account creation (2026-10-12).
+  Supabase's default previously let an unknown address create an account
+  through login, skipping the registration form and its terms acceptance.
+  Four regression tests exercise the installed SDK with intercepted requests:
+  `create_user: false`, the callback/PKCE contract, indistinguishable responses
+  for existing and unknown addresses, rate limiting and invalid input. The
+  request test failed against the old handler with `create_user: true`.
 - Customer password recovery uses the server-owned HttpOnly session end to
   end (2026-10-09). Reset emails target `/auth/callback` with
   `next=/auth/reset-password`; already-issued links on the reset page forward
