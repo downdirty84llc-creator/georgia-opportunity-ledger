@@ -15,9 +15,11 @@ import { Button } from '@/components/ui/primitives';
 export function PrivacyControls({
   deletionRequestedAt,
   daysRemaining,
+  canWithdrawDeletion,
 }: {
   deletionRequestedAt: string | null;
   daysRemaining: number;
+  canWithdrawDeletion: boolean;
 }) {
   const [confirmation, setConfirmation] = useState('');
   const [pending, setPending] = useState<'export' | 'delete' | 'cancel' | null>(
@@ -128,7 +130,12 @@ export function PrivacyControls({
       <div className="surface p-5">
         <h3 className="text-base font-semibold">Delete your account</h3>
 
-        {deletionRequestedAt ? (
+        {deletionRequestedAt && !canWithdrawDeletion ? (
+          <p className="mt-1 text-sm text-ink-700">
+            This deletion request cannot be withdrawn here. Contact support if
+            you need help.
+          </p>
+        ) : deletionRequestedAt ? (
           <>
             <p className="mt-1 text-sm text-ink-700">
               Your account is closed and scheduled for permanent deletion in{' '}

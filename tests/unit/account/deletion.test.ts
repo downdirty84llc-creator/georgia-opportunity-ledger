@@ -44,6 +44,26 @@ describe('deletion grace window', () => {
     }
   });
 
+  it.each(['active', 'suspended'] as const)(
+    'does not treat a %s account with a leftover timestamp as pending or due',
+    (accountStatus) => {
+      const state = { requestedAt: requested, accountStatus };
+      expect(isDeletionPending(state, at(1))).toBe(false);
+      expect(canCancelDeletion(state, at(1))).toBe(false);
+      expect(isPurgeDue(state, at(31))).toBe(false);
+    },
+  );
+
+  it.each([new Date('invalid'), at(1)])(
+    'does not accept an invalid or future request date (%s)',
+    (requestedAt) => {
+      const state = { requestedAt, accountStatus: 'closed' as const };
+      expect(isDeletionPending(state, requested)).toBe(false);
+      expect(canCancelDeletion(state, requested)).toBe(false);
+      expect(isPurgeDue(state, requested)).toBe(false);
+    },
+  );
+
   it('becomes due at the boundary, not a day late', () => {
     const state = { requestedAt: requested, accountStatus: 'closed' as const };
     const boundary = at(DELETION_GRACE_DAYS);

@@ -45,15 +45,15 @@ export function isDeletionPending(
   state: DeletionState,
   now: Date = new Date(),
 ): boolean {
-  if (!state.requestedAt) return false;
-  return purgeDueAt(state.requestedAt) > now;
+  if (state.accountStatus !== 'closed' || !state.requestedAt) return false;
+  return state.requestedAt <= now && purgeDueAt(state.requestedAt) > now;
 }
 
 export function isPurgeDue(
   state: DeletionState,
   now: Date = new Date(),
 ): boolean {
-  if (!state.requestedAt) return false;
+  if (state.accountStatus !== 'closed' || !state.requestedAt) return false;
   return purgeDueAt(state.requestedAt) <= now;
 }
 
@@ -67,8 +67,8 @@ export function daysUntilPurge(
 }
 
 /**
- * A request can be withdrawn right up to the moment the purge runs. After
- * that there is no account left to withdraw it for.
+ * A request can be withdrawn only during the grace window, even if the daily
+ * purge has not run yet. The database enforces this under a profile row lock.
  */
 export function canCancelDeletion(
   state: DeletionState,

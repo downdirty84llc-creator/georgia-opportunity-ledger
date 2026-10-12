@@ -28,6 +28,7 @@ cd "$(dirname "$0")/.."
 BOOTSTRAP=supabase/ci-bootstrap.sql
 SEED=supabase/seed.sql
 VERIFY=supabase/verify-rls.sql
+VERIFY_DELETION=supabase/verify-account-deletion.sql
 
 # --- Mode 2: an existing database -------------------------------------------
 #
@@ -39,7 +40,8 @@ if [[ $# -gt 0 && "$1" != "--help" && "$1" != "-h" ]]; then
   echo "Checking the database you pointed at."
   echo "It writes fixtures and rolls them back, so do not aim this at production."
   echo
-  exec psql "$1" -v ON_ERROR_STOP=1 -f "${VERIFY}"
+  psql "$1" -v ON_ERROR_STOP=1 -f "${VERIFY}"
+  exec psql "$1" -v ON_ERROR_STOP=1 -f "${VERIFY_DELETION}"
 fi
 
 if [[ "${1:-}" == "--help" || "${1:-}" == "-h" ]]; then
@@ -140,5 +142,6 @@ fi
 grep -oE 'ok  .*' "${WORKDIR}/verify" | sed 's/^/  /'
 
 checks=$(grep -c 'ok  ' "${WORKDIR}/verify" || true)
+run "Account deletion window and direct-write guards" "${VERIFY_DELETION}"
 echo
-echo "${count} migrations applied, reference data idempotent, ${checks} checks passed."
+echo "${count} migrations applied, reference data idempotent, ${checks} schema/RLS checks and 17 deletion checks passed."

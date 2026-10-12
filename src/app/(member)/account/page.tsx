@@ -10,7 +10,7 @@ import {
   Pill,
   SectionHeading,
 } from '@/components/ui/primitives';
-import { daysUntilPurge } from '@/lib/account/deletion';
+import { canCancelDeletion, daysUntilPurge } from '@/lib/account/deletion';
 import { getSessionContext } from '@/lib/auth/session';
 import {
   needsPaymentAttention,
@@ -212,6 +212,12 @@ export default async function AccountPage() {
         <div className="mt-4">
           <PrivacyControls
             deletionRequestedAt={deletionRequestedAt}
+            canWithdrawDeletion={canCancelDeletion({
+              accountStatus: viewer.accountStatus,
+              requestedAt: deletionRequestedAt
+                ? new Date(deletionRequestedAt)
+                : null,
+            })}
             daysRemaining={
               deletionRequestedAt
                 ? daysUntilPurge(new Date(deletionRequestedAt))

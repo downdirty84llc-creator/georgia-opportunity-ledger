@@ -177,16 +177,16 @@ refusal; anything less tests the fail-open branch and calls it success.
 npm ci
 npm run typecheck && npm run lint && npm run format:check
 npm run schedules:check          # deploy cron config must match the job registry
-npm test                         # 421 tests
+npm test                         # 436 tests
 npm run build
 npx playwright test --project=desktop-chrome   # 12 skip without a seeded DB — correct
-./scripts/verify-schema.sh       # 34 migrations from empty + 17 schema/RLS assertions
+./scripts/verify-schema.sh       # 35 migrations + 17 schema/RLS and 17 deletion checks
 npm run preflight                # production readiness; `??` means COULD NOT CHECK
 ```
 
 ## Migrations
 
-34, and five of them were recovered from the production database after being
+35, and five of them were recovered from the production database after being
 applied there and never committed (`b811d3a`). Their filenames keep the live
 version numbers so the two histories reconcile. Do not renumber them.
 
@@ -211,6 +211,16 @@ nine and the three that state our own practice is pinned in
 
 ## Current state
 
+- Account-deletion cancellation is enforced in the database as well as the
+  application (2026-10-12). The RPC locks the profile, checks its status and
+  the 30 * 24-hour deadline, and then reopens it. Direct member profile writes
+  cannot move or clear the request date, reopen after expiry, or backdate a
+  new closure. Purge selection includes the deadline and refuses a grace
+  period shorter than 30 days. Eight database checks failed against the old
+  functions; all 17 deletion checks now pass. A two-session local check also
+  verifies cancellation rechecks state after waiting for a row lock. The
+  account page hides withdrawal when unavailable; 15 additional unit cases
+  cover status, deadline, authentication and database-error handling.
 - Password sign-in permits a closed account during its deletion grace period
   and sends it to `/account` to withdraw the request (2026-10-12). Previously
   the login handler signed out every closed account, contradicting the

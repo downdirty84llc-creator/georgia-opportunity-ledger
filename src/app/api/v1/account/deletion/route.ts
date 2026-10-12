@@ -98,20 +98,28 @@ export const DELETE = withErrorHandling(
 
     const supabase = await createServerSupabaseClient();
 
-    const { data: profile } = await supabase
+    const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('deletion_requested_at, account_status')
       .eq('id', viewer.userId)
       .maybeSingle();
 
+    if (profileError) {
+      return apiError(
+        'internal_error',
+        'Your account could not be checked. Please try again.',
+      );
+    }
+
     const requestedAt = (profile as { deletion_requested_at?: string } | null)
       ?.deletion_requested_at;
 
     if (
+      !profile ||
       !requestedAt ||
       !canCancelDeletion({
         requestedAt: new Date(requestedAt),
-        accountStatus: 'closed',
+        accountStatus: profile.account_status,
       })
     ) {
       return apiError('not_found', 'There is no deletion request to withdraw.');
@@ -119,6 +127,14 @@ export const DELETE = withErrorHandling(
 
     const { error } = await supabase.rpc('cancel_account_deletion');
     if (error) {
+      // The deadline or account state can change after the read above. The
+      // database checks again after locking the profile and is authoritative.
+      if (error.code === 'P0002') {
+        return apiError(
+          'not_found',
+          'There is no deletion request to withdraw.',
+        );
+      }
       return apiError(
         'conflict',
         'Your request could not be withdrawn. Contact support.',
