@@ -177,7 +177,7 @@ refusal; anything less tests the fail-open branch and calls it success.
 npm ci
 npm run typecheck && npm run lint && npm run format:check
 npm run schedules:check          # deploy cron config must match the job registry
-npm test                         # 413 tests
+npm test                         # 421 tests
 npm run build
 npx playwright test --project=desktop-chrome   # 12 skip without a seeded DB — correct
 ./scripts/verify-schema.sh       # 34 migrations from empty + 17 schema/RLS assertions
@@ -211,6 +211,14 @@ nine and the three that state our own practice is pinned in
 
 ## Current state
 
+- Password sign-in permits a closed account during its deletion grace period
+  and sends it to `/account` to withdraw the request (2026-10-12). Previously
+  the login handler signed out every closed account, contradicting the
+  promised 30-day recovery path. Signing in only records the login time; the
+  account stays closed and paid capabilities remain unavailable until the
+  owner selects "Keep my account". Closed accounts without a valid current
+  request are still refused. Eight unit cases and two browser navigation
+  cases cover the change; no real account was closed or reopened.
 - Login and password-reset requests now enforce independent IP and email
   limits (2026-10-12). The former combined key allowed either the address or
   IP to change and receive a fresh allowance. Nine route tests with a counter

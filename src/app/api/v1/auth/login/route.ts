@@ -1,6 +1,7 @@
 import type { NextResponse } from 'next/server';
 import { z } from 'zod';
 
+import { canCancelDeletion } from '@/lib/account/deletion';
 import { createServerSupabaseClient } from '@/lib/db/server';
 import { publicEnv } from '@/lib/env';
 import { checkAuthRateLimit } from '@/lib/http/auth-rate-limit';
@@ -65,11 +66,22 @@ export const POST = withErrorHandling(
 
     const { data: profile } = await supabase
       .from('profiles')
-      .select('account_status')
+      .select('account_status, deletion_requested_at')
       .eq('id', data.user.id)
       .maybeSingle();
 
-    if (profile?.account_status === 'closed') {
+    const deletionPending =
+      profile?.account_status === 'closed' &&
+      canCancelDeletion({
+        accountStatus: 'closed',
+        requestedAt: profile.deletion_requested_at
+          ? new Date(profile.deletion_requested_at)
+          : null,
+      });
+
+    // The grace period promises a way to sign back in and withdraw deletion.
+    // Authentication does not reopen the profile or restore entitlements.
+    if (profile?.account_status === 'closed' && !deletionPending) {
       await supabase.auth.signOut();
       return apiError('forbidden', 'This account has been closed.');
     }
@@ -84,6 +96,7 @@ export const POST = withErrorHandling(
     return ok({
       userId: data.user.id,
       suspended: profile?.account_status === 'suspended',
+      deletionPending,
     });
   },
 );

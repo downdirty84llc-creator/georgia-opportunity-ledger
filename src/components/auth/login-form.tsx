@@ -94,8 +94,13 @@ export function LoginForm() {
         return;
       }
 
-      // The `next` parameter only ever navigates within this site.
-      router.push(safeNextPath(searchParams.get('next')));
+      // A pending deletion needs the withdrawal control, not member content.
+      // Otherwise `next` only ever navigates within this site.
+      router.push(
+        payload?.data?.deletionPending === true
+          ? '/account'
+          : safeNextPath(searchParams.get('next')),
+      );
       router.refresh();
     } catch {
       setIsError(true);
