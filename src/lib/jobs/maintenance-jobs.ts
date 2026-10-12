@@ -251,19 +251,33 @@ export const pruneJob: JobDefinition = {
     let purged = 0;
     let purgeFailures = 0;
 
-    for (const row of (due ?? []) as Array<{ id: string }>) {
-      const { error } = await supabase.auth.admin.deleteUser(row.id);
-      if (error) {
+    for (const row of (due ?? []) as Array<{
+      id: string;
+      deletion_requested_at: string;
+    }>) {
+      try {
+        // The candidate list can be stale. Claim this exact request under the
+        // profile lock before calling Auth; a successful cancellation wins if
+        // it got there first. Claims survive provider errors for safe retries.
+        const { data: claimed, error: claimError } = await supabase.rpc(
+          'claim_account_for_purge',
+          { p_user_id: row.id, p_requested_at: row.deletion_requested_at },
+        );
+        if (claimError) throw new Error(claimError.message);
+        if (claimed !== true) continue;
+
+        const { error } = await supabase.auth.admin.deleteUser(row.id);
+        if (error) throw new Error(error.message);
+        purged += 1;
+      } catch (error) {
         // One stuck account must not stop the rest, and it is retried
         // tomorrow. The count surfaces on the admin dashboard.
         console.error('[prune] account purge failed', {
           userId: row.id,
-          error: error.message,
+          error: error instanceof Error ? error.message : String(error),
         });
         purgeFailures += 1;
-        continue;
       }
-      purged += 1;
     }
 
     note('accountsPurged', purged);

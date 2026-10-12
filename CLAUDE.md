@@ -177,16 +177,16 @@ refusal; anything less tests the fail-open branch and calls it success.
 npm ci
 npm run typecheck && npm run lint && npm run format:check
 npm run schedules:check          # deploy cron config must match the job registry
-npm test                         # 436 tests
+npm test                         # 442 tests
 npm run build
-npx playwright test --project=desktop-chrome   # 12 skip without a seeded DB — correct
-./scripts/verify-schema.sh       # 35 migrations + 17 schema/RLS and 17 deletion checks
+npx playwright test --project=desktop-chrome   # 16 skip without a seeded DB — correct
+./scripts/verify-schema.sh       # 36 migrations; 17 RLS, 17 deletion, 16 purge, 3 concurrency checks
 npm run preflight                # production readiness; `??` means COULD NOT CHECK
 ```
 
 ## Migrations
 
-35, and five of them were recovered from the production database after being
+36, and five of them were recovered from the production database after being
 applied there and never committed (`b811d3a`). Their filenames keep the live
 version numbers so the two histories reconcile. Do not renumber them.
 
@@ -211,6 +211,16 @@ nine and the three that state our own practice is pinned in
 
 ## Current state
 
+- Account cleanup claims the exact expired request under a profile row lock
+  before calling `auth.admin.deleteUser` (2026-10-12). A stale candidate cannot
+  defeat a successful cancellation. Once claimed, even staff cannot reopen or
+  reschedule the account while a provider request may be in flight. Claims stay
+  closed and retryable on errors/timeouts and cascade away on successful
+  deletion; do not release them just because the provider call timed out.
+  Six job regressions failed against the old code. Sixteen rollback-only SQL
+  checks cover claims and grants; three multi-session checks reproduce the
+  stale selection, a waiting staff reversal and an old repeatable-read snapshot.
+  These run in CI using disposable accounts in the throwaway local database.
 - Account-deletion cancellation is enforced in the database as well as the
   application (2026-10-12). The RPC locks the profile, checks its status and
   the 30 * 24-hour deadline, and then reopens it. Direct member profile writes

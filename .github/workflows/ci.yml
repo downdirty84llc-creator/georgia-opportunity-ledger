@@ -53,6 +53,9 @@ jobs:
     # keeps the local and CI paths identical instead of merely similar.
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
       - name: Apply migrations, load reference data, check RLS
         env:
           PGPASSWORD: postgres

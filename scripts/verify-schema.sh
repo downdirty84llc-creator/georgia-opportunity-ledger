@@ -18,7 +18,7 @@
 # runs. Having it in one script is what stops the two drifting: CI calls this
 # rather than repeating the steps in YAML.
 #
-# It needs `initdb` and `psql` on PATH (Debian: postgresql-16, which installs
+# It needs Node.js, `initdb` and `psql` on PATH (Debian: postgresql-16 installs
 # them under /usr/lib/postgresql/16/bin). No Docker and no Supabase CLI: the
 # point is that anyone can check the schema without either.
 set -euo pipefail
@@ -29,6 +29,7 @@ BOOTSTRAP=supabase/ci-bootstrap.sql
 SEED=supabase/seed.sql
 VERIFY=supabase/verify-rls.sql
 VERIFY_DELETION=supabase/verify-account-deletion.sql
+VERIFY_PURGE=supabase/verify-purge-claims.sql
 
 # --- Mode 2: an existing database -------------------------------------------
 #
@@ -38,10 +39,12 @@ VERIFY_DELETION=supabase/verify-account-deletion.sql
 
 if [[ $# -gt 0 && "$1" != "--help" && "$1" != "-h" ]]; then
   echo "Checking the database you pointed at."
-  echo "It writes fixtures and rolls them back, so do not aim this at production."
+  echo "Use a disposable test database only: SQL fixtures roll back; concurrency fixtures commit and are cleaned up."
   echo
   psql "$1" -v ON_ERROR_STOP=1 -f "${VERIFY}"
-  exec psql "$1" -v ON_ERROR_STOP=1 -f "${VERIFY_DELETION}"
+  psql "$1" -v ON_ERROR_STOP=1 -f "${VERIFY_DELETION}"
+  psql "$1" -v ON_ERROR_STOP=1 -f "${VERIFY_PURGE}"
+  exec node scripts/verify-purge-concurrency.mjs "$1"
 fi
 
 if [[ "${1:-}" == "--help" || "${1:-}" == "-h" ]]; then
@@ -51,10 +54,10 @@ fi
 
 # --- Mode 1: an ephemeral cluster -------------------------------------------
 
-for binary in initdb pg_ctl psql; do
+for binary in initdb pg_ctl psql node; do
   if ! command -v "${binary}" >/dev/null 2>&1; then
-    echo "Missing ${binary}. On Debian: apt-get install postgresql-16," >&2
-    echo "then add /usr/lib/postgresql/16/bin to PATH." >&2
+    echo "Missing ${binary}. Install Node.js and PostgreSQL," >&2
+    echo "then add their bin directories to PATH." >&2
     exit 127
   fi
 done
@@ -143,5 +146,7 @@ grep -oE 'ok  .*' "${WORKDIR}/verify" | sed 's/^/  /'
 
 checks=$(grep -c 'ok  ' "${WORKDIR}/verify" || true)
 run "Account deletion window and direct-write guards" "${VERIFY_DELETION}"
+run "Account purge claims and provider retries" "${VERIFY_PURGE}"
+node scripts/verify-purge-concurrency.mjs
 echo
-echo "${count} migrations applied, reference data idempotent, ${checks} schema/RLS checks and 17 deletion checks passed."
+echo "${count} migrations applied, reference data idempotent, ${checks} schema/RLS checks, 17 deletion checks, 16 purge checks and 3 concurrency checks passed."
