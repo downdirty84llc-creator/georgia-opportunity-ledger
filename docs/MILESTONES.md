@@ -180,9 +180,10 @@ See `RUNBOOK.md` for the checklist.
    can now record a failed attempt instead of a delivery that never happened.
    Preview/development may still use the console deliberately.
 
-   `scripts/preflight.ts` already checks the provider and key under "Email
-   actually sends", separately from SPF and DMARC. That configuration check
-   does not prove delivery to an inbox.
+   `scripts/preflight.ts` checks the provider and key under "Email delivery
+   configured", separately from SPF and DMARC. Since 2026-10-12 it rejects
+   unsupported providers and blank keys, matching the sender's configuration
+   requirements. A pass does not prove the key is valid or mail reaches an inbox.
 
    Two smaller things in the same area. Vercel applies environment changes to
    new deployments only, so setting the key does nothing until a redeploy.

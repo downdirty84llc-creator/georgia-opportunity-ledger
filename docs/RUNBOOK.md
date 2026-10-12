@@ -372,7 +372,7 @@ sitemap. What it marks `you` is what no machine can close.
       alone changes nothing. Since 2026-10-09, `sendEmail()` returns failure
       when a provider key is missing or production uses the console provider,
       so jobs no longer record those attempts as deliveries. `npm run preflight`
-      checks this configuration ("Email actually sends"); verify actual inbox
+      checks this configuration ("Email delivery configured"); verify actual inbox
       delivery separately.
 - [ ] **Custom SMTP on Supabase Auth** (Authentication → Emails → SMTP
       Settings). Until it is configured, Supabase refuses to deliver auth mail

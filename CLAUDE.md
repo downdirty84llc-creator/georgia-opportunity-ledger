@@ -177,7 +177,7 @@ refusal; anything less tests the fail-open branch and calls it success.
 npm ci
 npm run typecheck && npm run lint && npm run format:check
 npm run schedules:check          # deploy cron config must match the job registry
-npm test                         # 375 tests
+npm test                         # 384 tests
 npm run build
 npx playwright test --project=desktop-chrome   # 12 skip without a seeded DB — correct
 ./scripts/verify-schema.sh       # 34 migrations from empty + 17 schema/RLS assertions
@@ -225,6 +225,10 @@ nine and the three that state our own practice is pinned in
   the console provider. Report and alert jobs therefore no longer record a
   console-only attempt as a successful production delivery. Console remains
   available in preview/development. Provider setup is still required.
+- The readiness report's "Email delivery configured" check rejects unsupported
+  providers and whitespace-only keys (2026-10-12). A pass confirms configuration
+  presence only, explicitly leaving credential validity and inbox delivery
+  unverified. Nine regression cases cover this distinction.
 - Production Supabase project `bbgikfblcahhvrpxiqnd` is **healthy and fully
   migrated**. Verified 2026-09-16 against the live database: all migrations of
   the day applied, reference data present (4 plans, 159 counties, 12 industries), zero
