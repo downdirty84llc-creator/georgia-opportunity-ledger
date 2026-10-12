@@ -29,12 +29,11 @@
  * remaining work is a list rather than a feeling.
  */
 
-import { resolveTxt } from 'node:dns/promises';
-
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
 import { LEGAL_DOCUMENTS } from '../src/lib/legal/documents';
 import { emailConfigurationCheck } from './email-configuration';
+import { emailDnsCheck } from './email-dns';
 import {
   probeUrl,
   redirectCheckRow,
@@ -438,74 +437,16 @@ async function checkScanner(): Promise<void> {
 }
 
 async function checkEmailDns(): Promise<void> {
-  // EMAIL_FROM is "Name <address@domain>" or a bare address.
-  const from = env('EMAIL_FROM');
-  const domain = from.match(/@([^>\s]+)/)?.[1];
-
-  if (!domain) {
-    record(
-      'blocking',
-      'Email domain authentication (SPF, DKIM, DMARC)',
-      'unknown',
-      'no sending domain in EMAIL_FROM',
-    );
-    return;
-  }
-
-  // "The lookup failed" and "the record is not published" are different
-  // answers, and collapsing them reports a domain as misconfigured when the
-  // resolver simply could not be reached. ENOTFOUND and ENODATA are real
-  // negatives — the server answered, and there is nothing there. Anything
-  // else (timeout, SERVFAIL, refused) means this run does not know.
-  type Lookup =
-    { known: true; values: string[] } | { known: false; reason: string };
-
-  const lookup = async (name: string): Promise<Lookup> => {
-    try {
-      const records = await resolveTxt(name);
-      return { known: true, values: records.map((parts) => parts.join('')) };
-    } catch (error) {
-      const code = (error as NodeJS.ErrnoException).code ?? 'UNKNOWN';
-      if (code === 'ENOTFOUND' || code === 'ENODATA') {
-        return { known: true, values: [] };
-      }
-      return { known: false, reason: code };
-    }
-  };
-
-  const [root, dmarc] = await Promise.all([
-    lookup(domain),
-    lookup(`_dmarc.${domain}`),
-  ]);
-
-  if (!root.known || !dmarc.known) {
-    const reasons = [
-      !root.known && `${domain} (${root.reason})`,
-      !dmarc.known && `_dmarc.${domain} (${dmarc.reason})`,
-    ].filter(Boolean);
-    record(
-      'blocking',
-      'Email domain authentication (SPF, DKIM, DMARC)',
-      'unknown',
-      `DNS did not answer for ${reasons.join(', ')} — not a verdict on the records`,
-    );
-    return;
-  }
-
-  const hasSpf = root.values.some((value) => value.startsWith('v=spf1'));
-  const hasDmarc = dmarc.values.some((value) => value.startsWith('v=DMARC1'));
-
-  const missing = [!hasSpf && 'SPF', !hasDmarc && 'DMARC'].filter(
-    Boolean,
-  ) as string[];
-
+  const result = await emailDnsCheck({
+    from: env('EMAIL_FROM'),
+    provider: env('EMAIL_PROVIDER'),
+    returnPathDomain: env('EMAIL_RETURN_PATH_DOMAIN'),
+  });
   record(
     'blocking',
-    'Email domain authentication (SPF, DKIM, DMARC)',
-    missing.length === 0 ? 'pass' : 'fail',
-    missing.length === 0
-      ? `SPF and DMARC present on ${domain} (DKIM is selector-specific — verify with your provider)`
-      : `${domain} missing: ${missing.join(', ')}`,
+    'Email DNS records (SPF and DMARC)',
+    result.status,
+    result.detail,
   );
 }
 

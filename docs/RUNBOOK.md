@@ -370,9 +370,12 @@ sitemap. What it marks `you` is what no machine can close.
       `georgiaopportunityledger.com`; the DKIM TXT, required `rsend` and `send`
       CNAMEs, and initial DMARC `p=none` record are visible in public DNS.
       Both sending CNAMEs resolve to provider-managed SPF TXT records.
-      The current DNS preflight still looks for SPF on the root domain and
-      can therefore report a false missing-SPF result for this setup; use
-      the provider's domain verification and the sending-subdomain records.
+      DNS preflight checks Resend's default `send.<From domain>` return path,
+      following CNAMEs. Set `EMAIL_RETURN_PATH_DOMAIN` to the actual full
+      return-path hostname for custom paths or another provider. This variable
+      only guides preflight; it does not configure the provider. Missing DNS
+      records fail, unavailable DNS stays unknown, and DKIM verification remains
+      with the provider. See [Resend's return-path documentation](https://resend.com/docs/dashboard/domains/custom-return-path).
 - [x] `EMAIL_API_KEY` set as a production Secret on 2026-10-12, followed by
       successful Vercel deployment `BZTSPodiKFm85CYwE6ZDcce5sWuR`. The Resend
       key has sending-only access restricted to the Ledger domain. Vercel
@@ -389,14 +392,18 @@ sitemap. What it marks `you` is what no machine can close.
       The approved domain-restricted key is stored as the SMTP password;
       the minimum per-user interval remains 60 seconds. The live project
       rate limit is 30 auth emails per hour, verified in the dashboard.
-- [ ] Verify live signup confirmation and password recovery delivery in the
+- [x] Live password-reset email delivery: the owner-approved request through
+      the Ledger form reached Resend's Delivered state on 2026-10-12
+      (email `01a13016-d44e-7562-91d1-0bd4c657e51a`). No password was changed.
+- [ ] Verify inbox placement, signup confirmation and the full password update in the
       browser that requested the link. Recovery's HttpOnly session handling is
       repaired and covered at the browser/API boundary, but those tests do not
-      establish live email delivery.
+      establish inbox placement or a completed password update.
 - [ ] A real mailbox behind `EMAIL_REPLY_TO`, or a reply-to that has one. The
       address is currently `support@georgiaopportunityledger.com` and no mailbox
       exists there; a provider that sends does not necessarily receive, so a
-      member replying to an alert bounces.
+      member replying to an alert bounces. The owner chose on 2026-10-12 to
+      keep this address and arrange its mailbox separately.
 - [ ] Database backups enabled with point-in-time recovery.
 - [ ] Administrator multi-factor enrolment for every staff account. The gate is
       enforced in code; each person still has to enrol at `/admin/security`.

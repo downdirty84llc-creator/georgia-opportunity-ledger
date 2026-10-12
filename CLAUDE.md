@@ -232,12 +232,22 @@ nine and the three that state our own practice is pinned in
   SMTP uses `smtp.resend.com:465`, username `resend`, and sender
   `Georgia Opportunity Ledger <alerts@georgiaopportunityledger.com>`.
   Vercel deployment `BZTSPodiKFm85CYwE6ZDcce5sWuR` reached Ready with the key.
-  No live email was sent during configuration. Verify delivery separately;
-  the reply-to mailbox remains a separate open item.
+  An owner-approved reset request through the live Ledger form subsequently
+  reached Resend's Delivered state (2026-10-12, email id
+  `01a13016-d44e-7562-91d1-0bd4c657e51a`). Inbox placement and the full password
+  update remain untested; no password was changed. The owner chose to retain
+  `support@georgiaopportunityledger.com` and set up its mailbox separately.
 - The readiness report's "Email delivery configured" check rejects unsupported
   providers and whitespace-only keys (2026-10-12). A pass confirms configuration
   presence only, explicitly leaving credential validity and inbox delivery
   unverified. Nine regression cases cover this distinction.
+- DNS readiness checks SPF on the SMTP return-path domain, defaulting to
+  `send.<From domain>` for Resend (2026-10-12). `EMAIL_RETURN_PATH_DOMAIN`
+  overrides that for a custom return path and is required for other providers.
+  DMARC is checked on the From domain; a pass only establishes TXT record
+  presence, not DKIM or delivery. Sixteen tests cover the root-SPF regression,
+  overrides, missing records and unavailable DNS. Public DNS passes for the
+  Ledger; this computer's refused DNS queries correctly produce `unknown`.
 - Production Supabase project `bbgikfblcahhvrpxiqnd` is **healthy and fully
   migrated**. Verified 2026-09-16 against the live database: all migrations of
   the day applied, reference data present (4 plans, 159 counties, 12 industries), zero

@@ -147,8 +147,11 @@ See `RUNBOOK.md` for the checklist.
    settings survived a reload: `smtp.resend.com:465`, username `resend`,
    sender `Georgia Opportunity Ledger <alerts@georgiaopportunityledger.com>`,
    and a sending-only Resend key restricted to the Ledger domain.
-   No real email was sent during configuration, so inbox delivery is not
-   established by the saved settings.
+   An owner-approved password-reset request through the live Ledger form
+   subsequently reached Resend's Delivered state on 2026-10-12 (email
+   `01a13016-d44e-7562-91d1-0bd4c657e51a`). This verifies provider delivery;
+   inbox placement and the full password update remain untested. No password
+   was changed.
 
    Password recovery's separate HttpOnly-session defect is repaired: the
    server exchanges the email code and updates the authenticated user's
@@ -180,10 +183,15 @@ See `RUNBOOK.md` for the checklist.
    configured", separately from SPF and DMARC. Since 2026-10-12 it rejects
    unsupported providers and blank keys, matching the sender's configuration
    requirements. A pass does not prove the key is valid or mail reaches an inbox.
+   DNS preflight now checks SPF at the return-path domain: Resend defaults to
+   `send.<From domain>`, with `EMAIL_RETURN_PATH_DOMAIN` available for a custom
+   hostname or another provider. The former root-SPF assumption falsely
+   rejected the Ledger's verified sending configuration.
 
    `EMAIL_REPLY_TO` remains `support@georgiaopportunityledger.com`. The
    sending setup does not provision a mailbox or inbound routing for that
-   address; receiving replies remains an open launch requirement.
+   address; receiving replies remains an open launch requirement. The owner
+   chose on 2026-10-12 to retain this address and handle mailbox setup separately.
 
 4. **A virus scanner endpoint in production.** The pipeline is built and
    tested; `FILE_SCANNER_URL` needs to point at something.
