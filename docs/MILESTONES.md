@@ -141,38 +141,34 @@ See `RUNBOOK.md` for the checklist.
    closed on 2026-09-25 by publishing the figures rather than by rewording the
    policy. The packet is ready to send.
 
-2. **Custom SMTP on Supabase Auth.** Nobody outside the project team can
-   create an account. Supabase's own documentation is explicit: _"Unless you
-   configure a custom SMTP server for your project, Supabase Auth will refuse
-   to deliver messages to addresses that are not part of the project's
-   team,"_ and the default service is "best-effort only" and intended for
-   demos and toy projects. So sign-up confirmation, magic links and password
-   resets reach us and nobody else, and a member who forgets their password
-   has no route back in.
+2. **Verify live auth-email delivery after SMTP setup.** Custom SMTP on
+   `bbgikfblcahhvrpxiqnd` was enabled on 2026-10-12, replacing the default
+   service's project-team-only delivery restriction. The saved dashboard
+   settings survived a reload: `smtp.resend.com:465`, username `resend`,
+   sender `Georgia Opportunity Ledger <alerts@georgiaopportunityledger.com>`,
+   and a sending-only Resend key restricted to the Ledger domain.
+   No real email was sent during configuration, so inbox delivery is not
+   established by the saved settings.
 
-   This is worse than the delivery gap below, because that one fails after
-   somebody has become a member while this one stops them becoming one.
-
-   **Verified 2026-10-09:** Authentication → Emails → SMTP Settings on
-   `bbgikfblcahhvrpxiqnd` shows **Enable custom SMTP OFF**, and Auth Hooks
-   lists no configured hooks. This is a live configuration blocker, not an
-   inference from a delivered team email.
    Password recovery's separate HttpOnly-session defect is repaired: the
    server exchanges the email code and updates the authenticated user's
    password. Regression tests cover that flow with mocked auth/API responses;
-   a real signup and recovery email round trip still needs verification after
-   SMTP setup.
+   a real signup and recovery email round trip still needs verification.
 
-   Supabase currently documents an initial custom-SMTP limit of 30 messages
-   per hour, not 30 new users. Review the project's actual rate limit before
+   The live Supabase dashboard shows an email limit of 30 messages per hour
+   as of 2026-10-12, not 30 new users. Review this capacity before
    a campaign ([SMTP documentation](https://supabase.com/docs/guides/auth/auth-smtp)).
 
-3. **An email API key, and a redeploy to pick it up.** `EMAIL_PROVIDER` is
-   `resend` in production and deliberately stays `console` in preview and
+3. **Verify application-email delivery and provision a reply-to mailbox.**
+   The production `EMAIL_API_KEY` was saved as a Vercel Secret on 2026-10-12,
+   and redeployment `BZTSPodiKFm85CYwE6ZDcce5sWuR` reached Ready. Resend verified
+   `georgiaopportunityledger.com`; its DKIM TXT, required sending CNAMEs and
+   initial DMARC `p=none` record are visible in public DNS. The key has
+   sending-only access restricted to that domain.
+
+   `EMAIL_PROVIDER` is `resend` in production and deliberately stays `console` in preview and
    development — a preview deployment shares the production database, so a
-   real provider on a branch build would email real members. `EMAIL_API_KEY`
-   was recorded as unset in the previous environment audit; that credential
-   state was not re-read during the 2026-10-09 repair.
+   real provider on a branch build would email real members.
 
    **Code repaired 2026-10-09:** `sendEmail()` returns `ok: false` with no
    message identifier when a delivery provider's key is missing, or when
@@ -185,11 +181,9 @@ See `RUNBOOK.md` for the checklist.
    unsupported providers and blank keys, matching the sender's configuration
    requirements. A pass does not prove the key is valid or mail reaches an inbox.
 
-   Two smaller things in the same area. Vercel applies environment changes to
-   new deployments only, so setting the key does nothing until a redeploy.
-   And `EMAIL_REPLY_TO` is `support@georgiaopportunityledger.com`, where no
-   mailbox exists — Resend sends but does not receive, so a member replying to
-   an alert bounces.
+   `EMAIL_REPLY_TO` remains `support@georgiaopportunityledger.com`. The
+   sending setup does not provision a mailbox or inbound routing for that
+   address; receiving replies remains an open launch requirement.
 
 4. **A virus scanner endpoint in production.** The pipeline is built and
    tested; `FILE_SCANNER_URL` needs to point at something.

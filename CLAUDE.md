@@ -219,12 +219,21 @@ nine and the three that state our own practice is pinned in
   admin client or a browser client that cannot read the session cookie.
   Eighteen added unit tests and four browser/API-boundary tests cover recovery
   and email configuration; no real customer's password or email was used.
-  The live email round trip remains unverified: custom SMTP was visibly OFF
-  in the production Supabase dashboard on 2026-10-09.
+  The live email round trip remains unverified. Custom SMTP is enabled in
+  production as of 2026-10-12; its saved settings survived a dashboard reload.
 - Production `sendEmail()` now returns failure for an absent provider key or
   the console provider. Report and alert jobs therefore no longer record a
   console-only attempt as a successful production delivery. Console remains
-  available in preview/development. Provider setup is still required.
+  available in preview/development.
+- Production email configuration is saved (2026-10-12): Resend verified
+  `georgiaopportunityledger.com`, with DKIM, both required sending CNAMEs and
+  initial DMARC (`p=none`) published. A sending-only key restricted to that
+  domain is stored in Supabase SMTP and Vercel's production `EMAIL_API_KEY`.
+  SMTP uses `smtp.resend.com:465`, username `resend`, and sender
+  `Georgia Opportunity Ledger <alerts@georgiaopportunityledger.com>`.
+  Vercel deployment `BZTSPodiKFm85CYwE6ZDcce5sWuR` reached Ready with the key.
+  No live email was sent during configuration. Verify delivery separately;
+  the reply-to mailbox remains a separate open item.
 - The readiness report's "Email delivery configured" check rejects unsupported
   providers and whitespace-only keys (2026-10-12). A pass confirms configuration
   presence only, explicitly leaving credential validity and inbox delivery

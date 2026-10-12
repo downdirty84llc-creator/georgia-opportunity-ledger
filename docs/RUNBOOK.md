@@ -366,21 +366,30 @@ sitemap. What it marks `you` is what no machine can close.
       webhook endpoint. Confirm `subscription_plans` carries all six price ids.
 - [ ] Tier-by-tier test payment verifying each plan grants the correct access
       (spec 28, milestone 3 acceptance).
-- [ ] Email domain authentication: SPF, DKIM and DMARC on the sending domain.
-- [ ] `EMAIL_API_KEY` set, and the deployment redeployed afterwards. Vercel
+- [x] Email domain authentication configured on 2026-10-12. Resend verified
+      `georgiaopportunityledger.com`; the DKIM TXT, required `rsend` and `send`
+      CNAMEs, and initial DMARC `p=none` record are visible in public DNS.
+      Both sending CNAMEs resolve to provider-managed SPF TXT records.
+      The current DNS preflight still looks for SPF on the root domain and
+      can therefore report a false missing-SPF result for this setup; use
+      the provider's domain verification and the sending-subdomain records.
+- [x] `EMAIL_API_KEY` set as a production Secret on 2026-10-12, followed by
+      successful Vercel deployment `BZTSPodiKFm85CYwE6ZDcce5sWuR`. The Resend
+      key has sending-only access restricted to the Ledger domain. Vercel
       applies environment changes to new deployments only, so setting the key
       alone changes nothing. Since 2026-10-09, `sendEmail()` returns failure
       when a provider key is missing or production uses the console provider,
       so jobs no longer record those attempts as deliveries. `npm run preflight`
       checks this configuration ("Email delivery configured"); verify actual inbox
       delivery separately.
-- [ ] **Custom SMTP on Supabase Auth** (Authentication → Emails → SMTP
-      Settings). Until it is configured, Supabase refuses to deliver auth mail
-      to any address outside the project team, so nobody else can confirm a
-      sign-up, use a magic link or reset a password. Point it at the same
-      provider as `EMAIL_API_KEY` so both halves share one sending domain and
-      reputation. **Verified OFF in the production dashboard on 2026-10-09.**
-      After setup, verify signup confirmation and password recovery in the
+- [x] **Custom SMTP on Supabase Auth** enabled on 2026-10-12 (Authentication →
+      Emails → SMTP Settings). Saved settings survived a fresh dashboard load:
+      `smtp.resend.com:465`, username `resend`, sender
+      `Georgia Opportunity Ledger <alerts@georgiaopportunityledger.com>`.
+      The approved domain-restricted key is stored as the SMTP password;
+      the minimum per-user interval remains 60 seconds. The live project
+      rate limit is 30 auth emails per hour, verified in the dashboard.
+- [ ] Verify live signup confirmation and password recovery delivery in the
       browser that requested the link. Recovery's HttpOnly session handling is
       repaired and covered at the browser/API boundary, but those tests do not
       establish live email delivery.
