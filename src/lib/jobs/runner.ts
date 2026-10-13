@@ -12,8 +12,8 @@ import { reportError } from '@/lib/observability/report-error';
  *     the same window is skipped rather than sending a second round of emails.
  *   - Logging and observability: every attempt writes a `job_runs` row that the
  *     admin dashboard reads, including the failure message.
- *   - Retryability: a failure is recorded and rethrown, so the scheduler's own
- *     retry sees a non-2xx.
+ *   - Retryability: a failure is recorded, releases its window and is rethrown.
+ *     The next invocation can retry; handlers must deduplicate individual work.
  */
 
 export interface JobContext {
@@ -94,6 +94,7 @@ export async function runJob(
     }
     throw new Error(`Could not claim job run: ${claimError.message}`);
   }
+  if (!run) throw new Error('Could not claim job run: no row returned');
 
   const notes: Record<string, unknown> = {};
   const context: JobContext = {
@@ -103,9 +104,15 @@ export async function runJob(
     },
   };
 
+  let result: JobResult | undefined;
   try {
-    const result = await definition.handler(context);
-    await supabase
+    result = await definition.handler(context);
+    if (result.failed > 0) {
+      throw new Error(
+        `${result.failed} record(s) failed in ${definition.name}`,
+      );
+    }
+    const { error: finishError } = await supabase
       .from('job_runs')
       .update({
         status: result.skipped ? 'skipped' : 'succeeded',
@@ -115,19 +122,34 @@ export async function runJob(
         detail: { ...notes, ...result.detail },
       })
       .eq('id', run.id);
+    if (finishError)
+      throw new Error(`Could not finish job run: ${finishError.message}`);
 
     return { ...result, runId: run.id, skipped: Boolean(result.skipped) };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    await supabase
+    const { error: failureLogError } = await supabase
       .from('job_runs')
       .update({
         status: 'failed',
+        idempotency_key: null,
         finished_at: new Date().toISOString(),
+        records_processed: result?.processed ?? 0,
+        records_failed: result?.failed || 1,
         error_message: message,
-        detail: notes,
+        detail: { ...notes, ...result?.detail, retryWindow: idempotencyKey },
       })
       .eq('id', run.id);
+
+    if (failureLogError) {
+      await reportError(
+        new Error(`Could not record job failure: ${failureLogError.message}`),
+        {
+          scope: 'job',
+          tags: { job: definition.name },
+        },
+      );
+    }
 
     await reportError(error, {
       scope: 'job',

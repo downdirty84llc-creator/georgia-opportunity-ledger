@@ -186,7 +186,12 @@ export default function HowItWorksPage() {
 
       <section className="mt-14">
         <SectionHeading eyebrow="Classification" title="What the bands mean" />
-        <div className="surface overflow-x-auto">
+        <div
+          className="surface overflow-x-auto"
+          role="region"
+          aria-label="Opportunity score classifications"
+          tabIndex={0}
+        >
           <table className="min-w-[520px] text-sm">
             <thead>
               <tr className="border-b border-ink-200 bg-ink-50">

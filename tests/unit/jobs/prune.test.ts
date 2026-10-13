@@ -1,5 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+vi.mock('@/lib/exports/cleanup', () => ({
+  cleanupExpiredExports: async () => ({ expired: 0, failed: 0 }),
+}));
+
 const { rpc, deleteUser } = vi.hoisted(() => ({
   rpc: vi.fn(),
   deleteUser: vi.fn(),

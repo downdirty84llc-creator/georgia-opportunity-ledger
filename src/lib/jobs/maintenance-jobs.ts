@@ -2,6 +2,7 @@ import { DELETION_GRACE_DAYS } from '@/lib/account/deletion';
 import { excludeSampleUsersFilter } from '@/lib/analytics/sample-data';
 import { createAdminClient } from '@/lib/db/admin';
 import { runExportJob, type ExportJobRow } from '@/lib/exports/service';
+import { cleanupExpiredExports } from '@/lib/exports/cleanup';
 import { planForPriceId } from '@/lib/billing/plans';
 import { fromStripeStatus } from '@/lib/billing/subscription';
 import { stripe, toDate } from '@/lib/billing/stripe';
@@ -44,9 +45,13 @@ export const processExportsJob: JobDefinition = {
         // the query for it. It resolves the member's rank through the same
         // database function the API uses and passes it as an explicit cap.
         const client = createAdminClient();
-        const { data: rank } = await client.rpc('effective_access_rank', {
-          target_user: job.user_id,
-        });
+        const { data: rank, error: rankError } = await client.rpc(
+          'effective_access_rank',
+          {
+            target_user: job.user_id,
+          },
+        );
+        if (rankError) throw new Error(rankError.message);
 
         await runExportJob(job, client, Number(rank ?? 0));
         processed += 1;
@@ -80,7 +85,7 @@ export const syncSubscriptionsJob: JobDefinition = {
       // the row type from this literal, and splitting it across an expression
       // collapses the result to an untyped error shape.
       .select(
-        'id, user_id, stripe_subscription_id, status, current_period_end, plan_id, billing_interval',
+        'id, user_id, stripe_subscription_id, status, current_period_end, plan_id, billing_interval, cancel_at_period_end',
       )
       .not('stripe_subscription_id', 'is', null)
       .limit(500);
@@ -126,9 +131,10 @@ export const syncSubscriptionsJob: JobDefinition = {
         if (
           status !== record.status ||
           remotePeriodEnd !== record.current_period_end ||
+          remote.cancel_at_period_end !== record.cancel_at_period_end ||
           planChanged
         ) {
-          await supabase
+          const { error: updateError } = await supabase
             .from('subscriptions')
             .update({
               status,
@@ -143,6 +149,7 @@ export const syncSubscriptionsJob: JobDefinition = {
                 : {}),
             })
             .eq('id', record.id);
+          if (updateError) throw new Error(updateError.message);
           corrected += 1;
         }
       } catch (error) {
@@ -154,10 +161,11 @@ export const syncSubscriptionsJob: JobDefinition = {
       }
     }
 
-    const { count: unprocessed } = await supabase
+    const { count: unprocessed, error: eventsError } = await supabase
       .from('billing_events')
       .select('id', { count: 'exact', head: true })
       .eq('processed', false);
+    if (eventsError) throw new Error(eventsError.message);
 
     note('unprocessedWebhookEvents', unprocessed ?? 0);
 
@@ -221,14 +229,11 @@ export const pruneJob: JobDefinition = {
   handler: async ({ now, note }) => {
     const supabase = createAdminClient();
 
-    const { data: pruned } = await supabase.rpc('prune_rate_limit_counters');
-
-    const { data: expired } = await supabase
-      .from('export_jobs')
-      .update({ status: 'expired', file_path: null })
-      .eq('status', 'ready')
-      .lt('expires_at', now.toISOString())
-      .select('id, file_path');
+    const { data: pruned, error: pruneError } = await supabase.rpc(
+      'prune_rate_limit_counters',
+    );
+    if (pruneError) throw new Error(pruneError.message);
+    const exports = await cleanupExpiredExports(supabase, now);
 
     // Account deletion happens here rather than at the moment of the request:
     // it is irreversible, so a member has the whole grace window to change
@@ -283,11 +288,12 @@ export const pruneJob: JobDefinition = {
     note('accountsPurged', purged);
 
     return {
-      processed: (Number(pruned ?? 0) || 0) + (expired?.length ?? 0) + purged,
-      failed: purgeFailures,
+      processed: (Number(pruned ?? 0) || 0) + exports.expired + purged,
+      failed: purgeFailures + exports.failed,
       detail: {
         rateLimitWindowsPruned: Number(pruned ?? 0) || 0,
-        exportsExpired: expired?.length ?? 0,
+        exportsExpired: exports.expired,
+        exportCleanupFailures: exports.failed,
         accountsPurged: purged,
         accountPurgeFailures: purgeFailures,
       },

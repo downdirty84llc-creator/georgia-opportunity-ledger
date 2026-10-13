@@ -1,4 +1,4 @@
-import { test, type APIRequestContext } from '@playwright/test';
+import { expect, test, type APIRequestContext } from '@playwright/test';
 
 /**
  * Telling "refused" apart from "broken".
@@ -19,6 +19,13 @@ import { test, type APIRequestContext } from '@playwright/test';
  */
 
 export function skipIfEnvironmentIsDown(status: number, path: string): void {
+  if (process.env.E2E_BASE_URL) {
+    expect(
+      status,
+      `${path} must not fail on the deployed environment`,
+    ).toBeLessThan(500);
+    return;
+  }
   test.skip(
     status === 500,
     `${path} returned 500: the app cannot reach its database, so this check ` +
@@ -34,6 +41,8 @@ export async function databaseIsReachable(
   const response = await request.get('/api/v1/opportunities', {
     failOnStatusCode: false,
   });
+  if (process.env.E2E_BASE_URL)
+    skipIfEnvironmentIsDown(response.status(), '/api/v1/opportunities');
   return response.status() !== 500;
 }
 

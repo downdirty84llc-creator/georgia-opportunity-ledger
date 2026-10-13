@@ -24,7 +24,6 @@ const MEMBER_ENDPOINTS = [
   `${API}/saved-searches`,
   `${API}/preferences`,
   `${API}/alert-preferences`,
-  `${API}/reports`,
 ];
 
 /**
@@ -67,6 +66,33 @@ async function statusOf(
 }
 
 test.describe('unauthorised API access', () => {
+  test('public report previews expose only archive metadata', async ({
+    request,
+  }) => {
+    const response = await request.get(`${API}/reports`);
+    skipIfEnvironmentIsDown(response.status(), `${API}/reports`);
+    expect(response.status()).toBe(200);
+    const { data } = await response.json();
+    expect(Array.isArray(data)).toBe(true);
+    const previewFields = new Set([
+      'id',
+      'title',
+      'slug',
+      'reportType',
+      'periodStart',
+      'periodEnd',
+      'publishedAt',
+      'isSample',
+      'minimumAccessRank',
+      'isLocked',
+    ]);
+    for (const report of data) {
+      for (const field of Object.keys(report))
+        expect(previewFields.has(field)).toBe(true);
+      if (!report.isSample && report.minimumAccessRank > 0)
+        expect(report.isLocked).toBe(true);
+    }
+  });
   for (const path of MEMBER_ENDPOINTS) {
     test(`${path} refuses an anonymous caller`, async ({ request }) => {
       const response = await request.get(path, { failOnStatusCode: false });
@@ -131,6 +157,7 @@ test.describe('direct URL access', () => {
     }) => {
       const response = await page.goto(path);
       const status = response?.status() ?? 0;
+      if (process.env.E2E_BASE_URL) expect(status).toBeLessThan(500);
 
       if (status >= 400) return; // A refusal is a valid outcome.
 

@@ -177,7 +177,7 @@ refusal; anything less tests the fail-open branch and calls it success.
 npm ci
 npm run typecheck && npm run lint && npm run format:check
 npm run schedules:check          # deploy cron config must match the job registry
-npm test                         # 442 tests
+npm test                         # 457 tests
 npm run build
 npx playwright test --project=desktop-chrome   # 16 skip without a seeded DB — correct
 ./scripts/verify-schema.sh       # 36 migrations; 17 RLS, 17 deletion, 16 purge, 3 concurrency checks
@@ -763,7 +763,11 @@ for Netlify in `docs/RUNBOOK.md`) and the long jobs fit inside 60 seconds.
 Linking the repository also requires the Vercel GitHub App to be installed on
 it — https://github.com/apps/vercel.
 
-## Remaining launch blockers — none of them code
+## Remaining launch blockers
+
+The 2026-10-13 audit found additional code defects in billing lifecycle and
+email delivery recovery. See `docs/AUDIT-2026-10-13.md` for the findings,
+repairs, evidence and verification limits. Passing tests is not launch approval.
 
 Legal review of the nine documents, a card through each tier, point-in-time
 recovery, a human accessibility audit, and a scanner endpoint for

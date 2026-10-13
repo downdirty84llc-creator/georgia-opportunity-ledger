@@ -199,7 +199,12 @@ export default async function PricingPage() {
           title="Feature comparison"
           description="Every capability, per tier. These are the same limits the application enforces on the server."
         />
-        <div className="surface overflow-x-auto">
+        <div
+          className="surface overflow-x-auto"
+          role="region"
+          aria-label="Membership feature comparison"
+          tabIndex={0}
+        >
           <table className="min-w-[720px] text-sm">
             <caption className="sr-only">
               Comparison of features across the four membership tiers

@@ -32,11 +32,19 @@ export const GET = withErrorHandling(
     if (!record) {
       // Row-level security may have filtered a real record. Fall back to the
       // teaser projection so a locked record still renders its upgrade prompt.
-      const { data: preview } = await supabase
+      const isUuid =
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+          idOrSlug,
+        );
+      const { data: preview, error: previewError } = await supabase
         .from('opportunity_previews')
         .select('*')
-        .or(`slug.eq.${idOrSlug},id.eq.${idOrSlug}`)
+        .eq(isUuid ? 'id' : 'slug', idOrSlug)
         .maybeSingle();
+      if (previewError)
+        throw new Error(
+          `Opportunity preview load failed: ${previewError.message}`,
+        );
 
       if (!preview) return apiError('not_found', 'Record not found.');
 

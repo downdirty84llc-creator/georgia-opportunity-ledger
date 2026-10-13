@@ -13,6 +13,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 let localRow: Record<string, unknown>;
 /** The price id Stripe reports for the subscription. */
 let remotePriceId: string;
+let updateError: { message: string } | null = null;
 
 const updates: Array<Record<string, unknown>> = [];
 
@@ -26,7 +27,7 @@ vi.mock('@/lib/db/admin', () => ({
           limit: () => Promise.resolve({ data: [localRow], error: null }),
           update: (values: Record<string, unknown>) => {
             updates.push(values);
-            return { eq: () => Promise.resolve({ error: null }) };
+            return { eq: () => Promise.resolve({ error: updateError }) };
           },
         };
         return chain;
@@ -106,7 +107,9 @@ describe('sync-subscriptions', () => {
       current_period_end: new Date(1790000000 * 1000).toISOString(),
       plan_id: 'plan-weekly',
       billing_interval: 'monthly',
+      cancel_at_period_end: false,
     };
+    updateError = null;
     remotePriceId = 'price_weekly_m';
     vi.clearAllMocks();
   });
@@ -142,5 +145,19 @@ describe('sync-subscriptions', () => {
     for (const update of updates) {
       expect(update).not.toHaveProperty('plan_id');
     }
+  });
+
+  it('corrects cancellation drift even when the plan and period match', async () => {
+    localRow.cancel_at_period_end = true;
+    expect((await run()).processed).toBe(1);
+    expect(updates[0]?.cancel_at_period_end).toBe(false);
+  });
+
+  it('reports a failed database write instead of a correction', async () => {
+    remotePriceId = 'price_premium_m';
+    updateError = { message: 'write unavailable' };
+    const result = await run();
+    expect(result.processed).toBe(0);
+    expect(result.failed).toBe(1);
   });
 });

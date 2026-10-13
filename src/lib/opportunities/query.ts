@@ -192,7 +192,7 @@ export async function loadOpportunityDetail(
       counties ( id, name, slug ),
       cities ( id, name, slug ),
       states ( id, name, abbreviation ),
-      industries ( id, name, slug ),
+      industries!opportunities_industry_id_fkey ( id, name, slug ),
       property_details ( * ),
       funding_details ( * ),
       opportunity_score_components ( * ),
