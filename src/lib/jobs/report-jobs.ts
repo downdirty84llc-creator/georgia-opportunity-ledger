@@ -1,265 +1,200 @@
-import { parsePlanFeatures, type PlanCode } from '@/lib/access/ranks';
-import {
-  effectiveAccessRank,
-  type AccountStatus,
-  type SubscriptionStatus,
-  type UserRole,
-} from '@/lib/billing/subscription';
 import { createAdminClient } from '@/lib/db/admin';
-import { sendEmail } from '@/lib/email/client';
+import { enqueueEmail } from '@/lib/email/outbox';
+import { loadRecipientPage } from '@/lib/email/recipients';
 import { weeklyReportEmail } from '@/lib/email/templates';
 import { mintUnsubscribeToken } from '@/lib/email/unsubscribe';
-import { weeklyKey, type JobDefinition } from '@/lib/jobs/runner';
+import type { JobDefinition } from '@/lib/jobs/runner';
 
-/**
- * Weekly report distribution (spec 16, 17).
- *
- * Personalised three ways: the member's counties are named, the highlight list
- * is filtered to records their plan can actually open, and the count of records
- * above their tier is stated plainly rather than hidden. Telling someone there
- * are four more records they cannot see is a better upgrade argument than
- * quietly omitting them.
- */
+interface DistributionProgress extends Record<string, unknown> {
+  reportId?: string;
+  audienceBefore?: string;
+  recipientAfter?: string;
+}
 export const distributeWeeklyReportJob: JobDefinition = {
   name: 'distribute-weekly-report',
-  description: 'Emails the most recent published weekly report to members.',
-  idempotencyKey: weeklyKey,
-  handler: async ({ now, note }) => {
-    const supabase = createAdminClient();
-
-    const { data: report, error } = await supabase
+  description:
+    'Queues published weekly reports with resumable recipient progress.',
+  handler: async (context) => {
+    if (!context.checkpoint)
+      throw new Error('Report distribution requires durable checkpoints.');
+    const checkpoint = context.checkpoint,
+      client = createAdminClient();
+    let progress: DistributionProgress = { ...context.state };
+    let query = client
       .from('reports')
       .select(
-        `
-        id, title, slug, reporting_period_start, reporting_period_end,
-        executive_summary, minimum_access_rank, published_at, distributed_at,
-        report_opportunities (
-          display_order, minimum_access_rank,
-          opportunities ( id, slug, title, score, counties ( name ) )
-        )
-      `,
+        `id,title,slug,reporting_period_start,reporting_period_end,
+    executive_summary,minimum_access_rank,published_at,email_queued_at,
+    report_opportunities(display_order,minimum_access_rank,
+      opportunities(id,slug,title,score,minimum_access_rank,workflow_status,is_restricted,published_at,counties(name)))`,
       )
       .eq('report_type', 'weekly')
       .eq('status', 'published')
+      .lte('published_at', context.now.toISOString())
+      .is('email_queued_at', null)
       .is('distributed_at', null)
-      .order('published_at', { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
+      .order('published_at', { ascending: true })
+      .order('id')
+      .limit(1);
+    if (progress.reportId) query = query.eq('id', progress.reportId);
+    const { data: report, error } = await query.maybeSingle();
     if (error) throw new Error(error.message);
     if (!report) {
+      if (progress.reportId) await checkpoint({});
       return {
         processed: 0,
         failed: 0,
         skipped: true,
-        detail: { reason: 'no_undistributed_weekly_report' },
+        detail: { reason: 'no_unqueued_report' },
       };
     }
-
-    const { data: members, error: memberError } = await supabase
-      .from('profiles')
-      .select(
-        `
-        id, role, account_status, first_name,
-        access_rank_override, access_rank_override_expires_at,
-        user_preferences ( email_alerts_enabled, preferred_county_ids ),
-        subscriptions ( status, stripe_subscription_id, paid_through_at, current_period_end, cancel_at_period_end,
-          subscription_plans ( code, access_rank, feature_configuration ) )
-      `,
-      )
-      .eq('account_status', 'active')
-      .limit(5000);
-
-    if (memberError) throw new Error(memberError.message);
-
-    const { data: authUsers } = await supabase.auth.admin.listUsers({
-      page: 1,
-      perPage: 1000,
-    });
-    const emails = new Map(
-      (authUsers?.users ?? [])
-        .filter((user) => user.email)
-        .map((user) => [user.id, user.email as string]),
-    );
-
-    const countyNames = new Map<string, string>();
-    const { data: counties } = await supabase
+    if (!progress.reportId) {
+      progress = {
+        reportId: report.id,
+        audienceBefore: context.now.toISOString(),
+      };
+      await checkpoint(progress);
+    }
+    const { data: counties, error: countyError } = await client
       .from('counties')
-      .select('id, name');
-    for (const county of counties ?? [])
-      countyNames.set(county.id, county.name);
-
+      .select('id,name');
+    if (countyError) throw new Error(countyError.message);
+    const countyNames = new Map(
+      (counties ?? []).map((county) => [county.id, county.name]),
+    );
+    // The editor caps a report at 60 entries. Never include a restricted or
+    // unpublished source, or trust an entry rank that is lower than its source.
     const entries = (report.report_opportunities ?? [])
       .slice()
       .sort((a, b) => a.display_order - b.display_order)
-      .map((entry) => {
-        const opportunity = Array.isArray(entry.opportunities)
+      .flatMap((entry) => {
+        const source = Array.isArray(entry.opportunities)
           ? entry.opportunities[0]
           : entry.opportunities;
-        const county = opportunity?.counties as { name?: string } | null;
+        if (
+          !source ||
+          source.is_restricted ||
+          source.workflow_status !== 'published' ||
+          new Date(source.published_at).getTime() > context.now.getTime()
+        )
+          return [];
+        return [
+          {
+            id: source.id,
+            minimumAccessRank: Math.max(
+              entry.minimum_access_rank,
+              source.minimum_access_rank,
+            ),
+            title: source.title,
+            slug: source.slug,
+            score: source.score,
+            county: (source.counties as { name?: string } | null)?.name ?? null,
+          },
+        ];
+      });
+    const deadline = context.deadlineAt ?? Date.now() + 25_000;
+    let queued = 0;
+    while (Date.now() < deadline - 5000) {
+      const page = await loadRecipientPage(context.now, {
+        after: progress.recipientAfter,
+        before: progress.audienceBefore,
+      });
+      for (const member of page.recipients) {
+        if (Date.now() >= deadline - 5000)
+          return {
+            processed: queued,
+            failed: 0,
+            detail: { more: true, report: report.slug },
+          };
+        if (
+          member.emailAlertsEnabled &&
+          !member.disabledAlertTypes.has('weekly_report')
+        ) {
+          const fullReport =
+            member.features.weeklyReports &&
+            member.accessRank >= report.minimum_access_rank;
+          const visible = entries.filter(
+            (entry) => member.accessRank >= entry.minimumAccessRank,
+          );
+          const highlights = visible.slice(0, fullReport ? 8 : 2);
+          const lockedCount = entries.length - visible.length;
+          const periodLabel =
+            report.reporting_period_start && report.reporting_period_end
+              ? `${report.reporting_period_start} to ${report.reporting_period_end}`
+              : report.published_at.slice(0, 10);
+          const unsubscribeToken = mintUnsubscribeToken(
+            member.userId,
+            'alerts',
+          );
+          const rendered = weeklyReportEmail({
+            firstName: member.firstName,
+            unsubscribeToken,
+            reportTitle: report.title,
+            reportSlug: report.slug,
+            periodLabel,
+            headline:
+              fullReport && typeof report.executive_summary === 'string'
+                ? report.executive_summary.slice(0, 400)
+                : 'A new weekly report is available. Sign in to see what your plan includes.',
+            counties: member.preferredCountyIds
+              .map((id) => countyNames.get(id))
+              .filter((name): name is string => typeof name === 'string'),
+            highlights,
+            lockedCount,
+          });
+          await enqueueEmail({
+            userId: member.userId,
+            notifications: [
+              {
+                dedupe_key: `weekly_report:${report.id}`,
+                notification_type: 'report_published',
+                title: report.title,
+                message: periodLabel,
+                action_url: `/reports/${report.slug}`,
+              },
+            ],
+            message: {
+              to: member.email,
+              ...rendered,
+              tag: 'weekly-report',
+              unsubscribeToken,
+            },
+            minimumAccessRank: Math.max(
+              fullReport ? Math.max(10, report.minimum_access_rank) : 0,
+              ...highlights.map((entry) => entry.minimumAccessRank),
+            ),
+            alertType: 'weekly_report',
+            opportunityIds: highlights.map((entry) => entry.id),
+            reportId: report.id,
+          });
+          queued++;
+        }
+        progress = { ...progress, recipientAfter: member.userId };
+        await checkpoint(progress);
+      }
+      if (!page.hasMore) {
+        const { error: finishError } = await client
+          .from('reports')
+          .update({ email_queued_at: new Date().toISOString() })
+          .eq('id', report.id)
+          .is('email_queued_at', null);
+        if (finishError) throw new Error(finishError.message);
+        // distributed_at belongs to the delivery worker, after every outbox
+        // record is sent or deliberately suppressed, never merely after enqueue.
+        await checkpoint({});
         return {
-          minimumAccessRank: entry.minimum_access_rank,
-          title: opportunity?.title ?? 'Untitled record',
-          slug: opportunity?.slug ?? '',
-          score: opportunity?.score ?? 0,
-          county: county?.name ?? null,
+          processed: queued,
+          failed: 0,
+          detail: { queuedAllRecipients: true, report: report.slug },
         };
-      });
-
-    let sent = 0;
-    let failed = 0;
-    let skipped = 0;
-
-    for (const member of members ?? []) {
-      const email = emails.get(member.id);
-      if (!email) continue;
-
-      const preferences = Array.isArray(member.user_preferences)
-        ? member.user_preferences[0]
-        : member.user_preferences;
-      if (preferences?.email_alerts_enabled === false) {
-        skipped += 1;
-        continue;
       }
-
-      const subscription = Array.isArray(member.subscriptions)
-        ? member.subscriptions[0]
-        : member.subscriptions;
-      const plan = subscription
-        ? Array.isArray(subscription.subscription_plans)
-          ? subscription.subscription_plans[0]
-          : subscription.subscription_plans
-        : null;
-
-      const accessRank = effectiveAccessRank(
-        {
-          role: member.role as UserRole,
-          accountStatus: member.account_status as AccountStatus,
-          accessRankOverride: member.access_rank_override,
-          accessRankOverrideExpiresAt: member.access_rank_override_expires_at
-            ? new Date(member.access_rank_override_expires_at)
-            : null,
-        },
-        subscription
-          ? {
-              status: subscription.status as SubscriptionStatus,
-              paidThrough: subscription.stripe_subscription_id
-                ? subscription.paid_through_at
-                  ? new Date(subscription.paid_through_at)
-                  : null
-                : undefined,
-              currentPeriodEnd: subscription.current_period_end
-                ? new Date(subscription.current_period_end)
-                : null,
-              cancelAtPeriodEnd: Boolean(subscription.cancel_at_period_end),
-              planAccessRank: plan?.access_rank ?? 0,
-            }
-          : null,
-        now,
-      );
-
-      const features = parsePlanFeatures(
-        plan?.feature_configuration,
-        (plan?.code ?? 'free') as PlanCode,
-      );
-
-      // Free members are on the list, but they get the preview version of the
-      // weekly rather than nothing at all (spec 5, "Free Member").
-      const visible = entries.filter(
-        (entry) => accessRank >= entry.minimumAccessRank,
-      );
-      const lockedCount = entries.length - visible.length;
-      const highlights = features.weeklyReports
-        ? visible.slice(0, 8)
-        : visible.slice(0, 2);
-
-      if (highlights.length === 0 && lockedCount === 0) {
-        skipped += 1;
-        continue;
-      }
-
-      const preferredCounties = (preferences?.preferred_county_ids ?? [])
-        .map((id: string) => countyNames.get(id))
-        .filter((name: string | undefined): name is string => Boolean(name));
-
-      const periodLabel =
-        report.reporting_period_start && report.reporting_period_end
-          ? `${report.reporting_period_start} to ${report.reporting_period_end}`
-          : new Date(report.published_at ?? now).toISOString().slice(0, 10);
-
-      const unsubscribeToken = mintUnsubscribeToken(member.id, 'alerts');
-      const rendered = weeklyReportEmail({
-        firstName: member.first_name,
-        unsubscribeToken,
-        reportTitle: report.title,
-        reportSlug: report.slug,
-        periodLabel,
-        headline:
-          typeof report.executive_summary === 'string'
-            ? report.executive_summary.slice(0, 400)
-            : `${entries.length} records in this week's ledger.`,
-        counties: preferredCounties,
-        highlights,
-        lockedCount,
-      });
-
-      const { data: notification } = await supabase
-        .from('notifications')
-        .insert({
-          user_id: member.id,
-          notification_type: 'report_published',
-          title: report.title,
-          message: periodLabel,
-          report_id: report.id,
-          action_url: `/reports/${report.slug}`,
-          dedupe_key: `weekly_report:${report.id}`,
-        })
-        .select('id')
-        .single();
-
-      // A conflict means this member already received this report.
-      if (!notification) {
-        skipped += 1;
-        continue;
-      }
-
-      const result = await sendEmail({
-        to: email,
-        subject: rendered.subject,
-        html: rendered.html,
-        text: rendered.text,
-        tag: 'weekly-report',
-        unsubscribeToken,
-      });
-
-      await supabase.from('notification_deliveries').insert({
-        notification_id: notification.id,
-        delivery_method: 'email',
-        provider_message_id: result.providerMessageId,
-        delivery_status: result.ok ? 'sent' : 'failed',
-        delivered_at: result.ok ? new Date().toISOString() : null,
-        error_message: result.error ?? null,
-      });
-
-      if (result.ok) sent += 1;
-      else failed += 1;
+      progress = { ...progress, recipientAfter: page.nextAfter! };
+      await checkpoint(progress);
     }
-
-    await supabase
-      .from('reports')
-      .update({ distributed_at: now.toISOString() })
-      .eq('id', report.id);
-
-    note('report', report.slug);
-
     return {
-      processed: sent,
-      failed,
-      detail: {
-        report: report.slug,
-        skipped,
-        recipients: members?.length ?? 0,
-      },
+      processed: queued,
+      failed: 0,
+      detail: { more: true, report: report.slug },
     };
   },
 };

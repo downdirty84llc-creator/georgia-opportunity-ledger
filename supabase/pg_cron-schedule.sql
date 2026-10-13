@@ -42,7 +42,12 @@ select public.schedule_ledger_job(
 
 select public.schedule_ledger_job(
   'deadline-reminders',
-  '0 13 * * *'
+  '*/5 * * * *'
+);
+
+select public.schedule_ledger_job(
+  'deliver-queued-emails',
+  '*/5 * * * *'
 );
 
 select public.schedule_ledger_job(
@@ -82,7 +87,7 @@ select public.schedule_ledger_job(
 
 select public.schedule_ledger_job(
   'distribute-weekly-report',
-  '0 12 * * 4'
+  '*/15 * * * *'
 );
 
 -- Verify:

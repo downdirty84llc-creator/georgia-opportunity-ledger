@@ -7,12 +7,8 @@ const { claim, finish, report } = vi.hoisted(() => ({
 }));
 vi.mock('@/lib/db/admin', () => ({
   createAdminClient: () => ({
-    from: () => ({
-      insert: (values: unknown) => ({
-        select: () => ({ single: () => claim(values) }),
-      }),
-      update: (values: unknown) => ({ eq: () => finish(values) }),
-    }),
+    rpc: (name: string, input: { p_result?: unknown }) =>
+      name === 'claim_job_run' ? claim(input) : finish(input.p_result),
   }),
 }));
 vi.mock('@/lib/observability/report-error', () => ({ reportError: report }));
@@ -22,8 +18,8 @@ const now = new Date('2026-10-13T12:00:00Z');
 describe('job outcomes and retry ownership', () => {
   beforeEach(() => {
     vi.resetAllMocks();
-    claim.mockResolvedValue({ data: { id: 'run-1' }, error: null });
-    finish.mockResolvedValue({ error: null });
+    claim.mockResolvedValue({ data: { id: 'run-1', state: {} }, error: null });
+    finish.mockResolvedValue({ data: true, error: null });
   });
 
   it('records partial failure, releases the window and rejects the run', async () => {
@@ -41,7 +37,6 @@ describe('job outcomes and retry ownership', () => {
     expect(finish).toHaveBeenCalledWith(
       expect.objectContaining({
         status: 'failed',
-        idempotency_key: null,
         records_processed: 2,
         records_failed: 1,
         detail: { source: 'storage', retryWindow: '2026-10-13' },
@@ -53,13 +48,13 @@ describe('job outcomes and retry ownership', () => {
   it('allows a failed keyed job to execute again in the same window', async () => {
     let owned = false;
     claim.mockImplementation(async () => {
-      if (owned) return { data: null, error: { code: '23505' } };
+      if (owned) return { data: null, error: null };
       owned = true;
-      return { data: { id: 'run-1' }, error: null };
+      return { data: { id: 'run-1', state: {} }, error: null };
     });
     finish.mockImplementation(async (values) => {
-      if (values.idempotency_key === null) owned = false;
-      return { error: null };
+      if (values.status === 'failed') owned = false;
+      return { data: true, error: null };
     });
     const handler = vi
       .fn()
@@ -78,7 +73,7 @@ describe('job outcomes and retry ownership', () => {
   });
 
   it('does not run a handler when another invocation owns the window', async () => {
-    claim.mockResolvedValue({ data: null, error: { code: '23505' } });
+    claim.mockResolvedValue({ data: null, error: null });
     const handler = vi.fn();
     expect(
       (await runJob({ name: 'job', description: '', handler }, now)).skipped,
@@ -101,7 +96,7 @@ describe('job outcomes and retry ownership', () => {
       ),
     ).rejects.toThrow('Could not finish job run');
     expect(finish).toHaveBeenLastCalledWith(
-      expect.objectContaining({ status: 'failed', idempotency_key: null }),
+      expect.objectContaining({ status: 'failed' }),
     );
   });
 });

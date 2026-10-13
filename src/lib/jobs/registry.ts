@@ -1,8 +1,9 @@
+import { savedSearchMatchingJob } from '@/lib/jobs/alert-jobs';
 import {
-  deadlineRemindersJob,
-  premiumAlertsJob,
-  savedSearchMatchingJob,
-} from '@/lib/jobs/alert-jobs';
+  durablePremiumAlertsJob as premiumAlertsJob,
+  durableDeadlineRemindersJob as deadlineRemindersJob,
+} from '@/lib/jobs/email-alert-jobs';
+import { deliverQueuedEmailsJob } from '@/lib/email/outbox';
 import {
   evaluateDeadlinesJob,
   publishScheduledJob,
@@ -40,7 +41,8 @@ export const JOBS: readonly ScheduledJob[] = [
   { definition: processExportsJob, schedule: '*/5 * * * *' },
   { definition: closeAccountBillingJob, schedule: '*/5 * * * *' },
   { definition: evaluateDeadlinesJob, schedule: '10 5 * * *' },
-  { definition: deadlineRemindersJob, schedule: '0 13 * * *' },
+  { definition: deadlineRemindersJob, schedule: '*/5 * * * *' },
+  { definition: deliverQueuedEmailsJob, schedule: '*/5 * * * *' },
   { definition: reverificationRemindersJob, schedule: '30 5 * * *' },
   { definition: staleSourceRemindersJob, schedule: '40 5 * * *' },
   { definition: expireLapsedAccessJob, schedule: '20 5 * * *' },
@@ -48,8 +50,8 @@ export const JOBS: readonly ScheduledJob[] = [
   { definition: aggregateAnalyticsJob, schedule: '15 6 * * *' },
   { definition: pruneJob, schedule: '45 6 * * *' },
   { definition: scanAttachmentsJob, schedule: '*/20 * * * *' },
-  // Thursdays at 12:00 UTC — mid-morning Eastern, when the weekly lands.
-  { definition: distributeWeeklyReportJob, schedule: '0 12 * * 4' },
+  // Publishing is editorially scheduled; delivery resumes until every recipient is queued.
+  { definition: distributeWeeklyReportJob, schedule: '*/15 * * * *' },
 ];
 
 export function findJob(name: string): JobDefinition | null {

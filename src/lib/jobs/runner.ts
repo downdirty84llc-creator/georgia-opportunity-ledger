@@ -18,6 +18,10 @@ import { reportError } from '@/lib/observability/report-error';
 
 export interface JobContext {
   now: Date;
+  /** Durable pagination state; writes fail if this worker lost its lease. */
+  state?: Record<string, unknown>;
+  checkpoint?: (state: Record<string, unknown>) => Promise<void>;
+  deadlineAt?: number;
   /** Records progress for the admin dashboard. */
   note: (key: string, value: unknown) => void;
 }
@@ -70,35 +74,38 @@ export async function runJob(
   const supabase = createAdminClient();
   const idempotencyKey = definition.idempotencyKey?.(now) ?? null;
 
-  const { data: run, error: claimError } = await supabase
-    .from('job_runs')
-    .insert({
-      job_name: definition.name,
-      idempotency_key: idempotencyKey,
-      status: 'running',
-      started_at: now.toISOString(),
-    })
-    .select('id')
-    .single();
-
-  if (claimError) {
-    if (claimError.code === '23505') {
-      // Another invocation already owns this window.
-      return {
-        runId: null,
-        skipped: true,
-        processed: 0,
-        failed: 0,
-        detail: { reason: 'already_ran_for_window', idempotencyKey },
-      };
-    }
+  const { data: run, error: claimError } = await supabase.rpc('claim_job_run', {
+    p_name: definition.name,
+    p_key: idempotencyKey,
+    p_now: now.toISOString(),
+  });
+  if (claimError)
     throw new Error(`Could not claim job run: ${claimError.message}`);
-  }
-  if (!run) throw new Error('Could not claim job run: no row returned');
+  if (!run?.id)
+    return {
+      runId: null,
+      skipped: true,
+      processed: 0,
+      failed: 0,
+      detail: { reason: 'already_running_or_completed', idempotencyKey },
+    };
 
   const notes: Record<string, unknown> = {};
   const context: JobContext = {
     now,
+    state: run.state ?? {},
+    deadlineAt: Date.now() + 28_000,
+    checkpoint: async (state) => {
+      const { data, error } = await supabase.rpc('checkpoint_job_run', {
+        p_id: run.id,
+        p_state: state,
+      });
+      if (error || !data)
+        throw new Error(
+          `Could not checkpoint job: ${error?.message ?? 'worker lease lost'}`,
+        );
+      context.state = state;
+    },
     note: (key, value) => {
       notes[key] = value;
     },
@@ -112,38 +119,45 @@ export async function runJob(
         `${result.failed} record(s) failed in ${definition.name}`,
       );
     }
-    const { error: finishError } = await supabase
-      .from('job_runs')
-      .update({
-        status: result.skipped ? 'skipped' : 'succeeded',
-        finished_at: new Date().toISOString(),
-        records_processed: result.processed,
-        records_failed: result.failed,
-        detail: { ...notes, ...result.detail },
-      })
-      .eq('id', run.id);
-    if (finishError)
-      throw new Error(`Could not finish job run: ${finishError.message}`);
+    const { data: finished, error: finishError } = await supabase.rpc(
+      'finish_job_run',
+      {
+        p_id: run.id,
+        p_result: {
+          status: result.skipped ? 'skipped' : 'succeeded',
+          records_processed: result.processed,
+          records_failed: result.failed,
+          detail: { ...notes, ...result.detail },
+        },
+      },
+    );
+    if (finishError || !finished)
+      throw new Error(
+        `Could not finish job run: ${finishError?.message ?? 'worker lease lost'}`,
+      );
 
     return { ...result, runId: run.id, skipped: Boolean(result.skipped) };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    const { error: failureLogError } = await supabase
-      .from('job_runs')
-      .update({
-        status: 'failed',
-        idempotency_key: null,
-        finished_at: new Date().toISOString(),
-        records_processed: result?.processed ?? 0,
-        records_failed: result?.failed || 1,
-        error_message: message,
-        detail: { ...notes, ...result?.detail, retryWindow: idempotencyKey },
-      })
-      .eq('id', run.id);
+    const { data: recorded, error: failureLogError } = await supabase.rpc(
+      'finish_job_run',
+      {
+        p_id: run.id,
+        p_result: {
+          status: 'failed',
+          records_processed: result?.processed ?? 0,
+          records_failed: result?.failed || 1,
+          error_message: message,
+          detail: { ...notes, ...result?.detail, retryWindow: idempotencyKey },
+        },
+      },
+    );
 
-    if (failureLogError) {
+    if (failureLogError || !recorded) {
       await reportError(
-        new Error(`Could not record job failure: ${failureLogError.message}`),
+        new Error(
+          `Could not record job failure: ${failureLogError?.message ?? 'worker lease lost'}`,
+        ),
         {
           scope: 'job',
           tags: { job: definition.name },

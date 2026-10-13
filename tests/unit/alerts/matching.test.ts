@@ -263,3 +263,48 @@ describe('matchesFilters edge cases', () => {
     ).toBe(true);
   });
 });
+
+describe('saved-search structured filter parity', () => {
+  it.each([
+    [{ stateId: 'different-state' }, {}],
+    [{ subtype: 'lease' }, { subtype: 'sale' }],
+    [{ countySlug: 'fulton' }, { countySlug: 'clarke' }],
+    [{ featured: true }, { isFeatured: false }],
+    [{ closingSoon: true }, { isClosingSoon: false }],
+    [{ deadlineFrom: NOW }, { closingDate: null }],
+    [{ addedSince: NOW }, { publishedAt: null }],
+    [
+      { recentlyUpdated: true },
+      { updatedAt: new Date('2026-06-01T00:00:00Z') },
+    ],
+  ])('refuses a record outside filter %j', (filter, record) => {
+    expect(
+      matchesFilters(
+        candidate(record),
+        { sort: 'score_desc', limit: 20, ...filter },
+        NOW,
+      ),
+    ).toBe(false);
+  });
+  it('accepts matching flags, county slug and recent update at the seven-day boundary', () => {
+    expect(
+      matchesFilters(
+        candidate({
+          countySlug: 'fulton',
+          isFeatured: true,
+          isClosingSoon: true,
+          updatedAt: new Date(NOW.getTime() - 7 * 86400000),
+        }),
+        {
+          sort: 'score_desc',
+          limit: 20,
+          countySlug: 'fulton',
+          featured: true,
+          closingSoon: true,
+          recentlyUpdated: true,
+        },
+        NOW,
+      ),
+    ).toBe(true);
+  });
+});

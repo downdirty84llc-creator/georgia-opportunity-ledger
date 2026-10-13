@@ -8,8 +8,8 @@
  * Suppression is expressed as a dedupe key rather than as a timestamp
  * comparison. Keys are stable and content-addressed: the same event for the
  * same member always produces the same key, so the unique index on
- * `notifications (user_id, dedupe_key)` makes duplicate sends impossible even
- * if a job is retried mid-run.
+ * `notifications (user_id, dedupe_key)` deduplicates notification creation; the durable email
+ * outbox and provider idempotency key make delivery retries safe.
  */
 
 import type { OpportunityFilters } from '@/lib/search/filters';
@@ -24,6 +24,11 @@ export interface AlertCandidate {
   score: number;
   category: string;
   status: string;
+  subtype?: string | null;
+  countySlug?: string | null;
+  isFeatured?: boolean;
+  isClosingSoon?: boolean;
+  updatedAt?: Date | null;
   countyId: string | null;
   cityId: string | null;
   stateId: string | null;
@@ -102,9 +107,27 @@ function inList<T>(list: readonly T[] | undefined, value: T | null): boolean {
 export function matchesFilters(
   candidate: AlertCandidate,
   filters: OpportunityFilters,
+  now: Date = new Date(),
 ): boolean {
   if (!inList(filters.category, candidate.category)) return false;
   if (!inList(filters.status, candidate.status)) return false;
+  if (filters.subtype && candidate.subtype !== filters.subtype) return false;
+  if (filters.stateId && candidate.stateId !== filters.stateId) return false;
+  if (filters.countySlug && candidate.countySlug !== filters.countySlug)
+    return false;
+  if (filters.featured && !candidate.isFeatured) return false;
+  if (filters.closingSoon && !candidate.isClosingSoon) return false;
+  if (
+    filters.addedSince &&
+    (!candidate.publishedAt || candidate.publishedAt < filters.addedSince)
+  )
+    return false;
+  if (
+    filters.recentlyUpdated &&
+    (!candidate.updatedAt ||
+      candidate.updatedAt.getTime() < now.getTime() - 7 * 86400000)
+  )
+    return false;
   if (!inList(filters.countyIds, candidate.countyId)) return false;
   if (!inList(filters.cityIds, candidate.cityId)) return false;
   if (!inList(filters.propertyTypes, candidate.propertyType)) return false;
@@ -137,16 +160,14 @@ export function matchesFilters(
     if (candidate.capitalRequiredMin < filters.capitalMin) return false;
   }
 
-  if (filters.deadlineFrom && candidate.closingDate) {
-    if (candidate.closingDate < filters.deadlineFrom) return false;
-  }
+  if (
+    filters.deadlineFrom &&
+    (!candidate.closingDate || candidate.closingDate < filters.deadlineFrom)
+  )
+    return false;
   if (filters.deadlineTo) {
     if (!candidate.closingDate) return false;
     if (candidate.closingDate > filters.deadlineTo) return false;
-  }
-
-  if (filters.closingSoon && !candidate.isExpired) {
-    if (!candidate.closingDate) return false;
   }
 
   if (!filters.includeExpired && candidate.isExpired) return false;
@@ -202,6 +223,7 @@ function commonGates(
 export function shouldSendHighScoreAlert(
   candidate: AlertCandidate,
   recipient: AlertRecipient,
+  now: Date = new Date(),
 ): AlertDecision {
   const gate = commonGates(candidate, recipient, 'high_score');
   if (gate) return gate;
@@ -212,7 +234,7 @@ export function shouldSendHighScoreAlert(
   if (candidate.score < recipient.minimumScore) {
     return decline('below_minimum_score');
   }
-  if (!matchesFilters(candidate, recipient.filters)) {
+  if (!matchesFilters(candidate, recipient.filters, now)) {
     return decline('filters_not_matched');
   }
 
