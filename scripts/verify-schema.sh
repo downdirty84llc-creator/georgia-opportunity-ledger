@@ -52,6 +52,7 @@ if [[ $# -gt 0 && "$1" != "--help" && "$1" != "-h" ]]; then
   psql "$1" -v ON_ERROR_STOP=1 -f "supabase/verify-export-jobs.sql"
   psql "$1" -v ON_ERROR_STOP=1 -f "supabase/verify-job-recovery.sql"
   psql "$1" -v ON_ERROR_STOP=1 -f "supabase/verify-email-outbox.sql"
+  psql "$1" -v ON_ERROR_STOP=1 -f "supabase/verify-background-counts.sql"
   exec node scripts/verify-purge-concurrency.mjs "$1"
 fi
 
@@ -161,6 +162,7 @@ run "Attachment scan and parent access gates" "supabase/verify-attachment-scans.
 run "Export recovery, filters and download gates" "supabase/verify-export-jobs.sql"
 run "Killed-worker checkpoints and retry ownership" "supabase/verify-job-recovery.sql"
 run "Durable email delivery and current recipient gates" "supabase/verify-email-outbox.sql"
+run "Complete analytics counts and lifecycle flags" "supabase/verify-background-counts.sql"
 node scripts/verify-purge-concurrency.mjs
 echo
 echo "${count} migrations applied, reference data idempotent, ${checks} schema/RLS checks, 17 deletion checks, 16 purge checks, 15 billing checks, 6 settlement checks and 3 concurrency checks passed."

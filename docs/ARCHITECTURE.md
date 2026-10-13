@@ -89,22 +89,19 @@ Three separate mechanisms, because three different things can double-fire.
 `stripe_event_id` means a retry conflicts and is acknowledged without
 reprocessing. Only faults a retry could plausibly fix return 500.
 
-**Background jobs** — a job may declare an idempotency key for the window it
-covers (`dailyKey`, `weeklyKey`). The unique index on
-`job_runs (job_name, idempotency_key)` makes a second invocation in the same
-window a no-op rather than a second round of emails.
+**Background jobs** — service-only claim/checkpoint/finish functions hold a
+short worker lease. Only its current owner can checkpoint or finish. Interrupted
+runs retain their cursor and release their window on recovery. Daily idempotency
+keys apply only to genuinely complete daily tasks; paginated campaigns persist
+their own completion state.
 
-**Alerts** — suppression is a content-addressed dedupe key, not a timestamp
-comparison. `high_score:{id}:v{version}` fires again when a record is materially
-updated but never twice for the same version. `deadline:{id}:{date}:{interval}`
-includes the deadline itself, so a rescheduled deadline reconciles cleanly: the
-new date produces a new key and the member is reminded again, while an unchanged
-date never re-fires.
-
-The alert jobs insert the notification row **before** sending the email, and
-skip on conflict. A crash between insert and send therefore loses an email
-rather than sending two — the right way round for a product people pay to be
-alerted by.
+**Alerts** — notifications and immutable email requests commit together in a
+service-only outbox. New-record and material-update keys are separate; updates
+use the audited material version. Deadline keys include the actual deadline and
+reminder interval. Resend receives a stable request key and unchanged payload on
+retry. Uncertain attempts outside the provider's guarantee require reconciliation.
+Before delivery the worker rechecks account, address, preference and content
+access. Report completion follows delivery outcomes, not notification insertion.
 
 ---
 

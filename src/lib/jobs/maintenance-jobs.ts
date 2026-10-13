@@ -1,5 +1,4 @@
 import { DELETION_GRACE_DAYS } from '@/lib/account/deletion';
-import { excludeSampleUsersFilter } from '@/lib/analytics/sample-data';
 import { createAdminClient } from '@/lib/db/admin';
 import { runExportJob, type ExportJobRow } from '@/lib/exports/service';
 import { cleanupExpiredExports } from '@/lib/exports/cleanup';
@@ -320,46 +319,26 @@ export const aggregateAnalyticsJob: JobDefinition = {
   description: 'Summarises yesterday’s events for the admin dashboard.',
   idempotencyKey: dailyKey,
   handler: async ({ now }) => {
-    const supabase = createAdminClient();
-    const start = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-
-    // Seeded demo accounts must not move the numbers staff make decisions on.
-    // This client is service-role, so the lookup sees every profile regardless
-    // of RLS; in production the result is empty and the filter is skipped.
-    const { data: sampleProfiles, error: sampleError } = await supabase
-      .from('profiles')
-      .select('id')
-      .eq('is_sample', true);
-    if (sampleError) throw new Error(sampleError.message);
-
-    const sampleUserIds = (sampleProfiles ?? []).map(
-      (row: { id: string }) => row.id,
+    const end = new Date(
+      Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()),
     );
-    const excludeSample = excludeSampleUsersFilter(sampleUserIds);
-
-    let query = supabase
-      .from('analytics_events')
-      .select('event_name')
-      .gte('occurred_at', start.toISOString())
-      .limit(20000);
-    // An event with no `user_id` is anonymous traffic from a real visitor and
-    // must be kept, which is why this is an `or` and not a bare `not.in` — see
-    // `lib/analytics/sample-data.ts`.
-    if (excludeSample) query = query.or(excludeSample);
-
-    const { data, error } = await query;
-
+    const start = new Date(end.getTime() - 86400000);
+    const { data, error } = await createAdminClient().rpc(
+      'aggregate_analytics_window',
+      {
+        p_start: start.toISOString(),
+        p_end: end.toISOString(),
+      },
+    );
     if (error) throw new Error(error.message);
-
-    const counts: Record<string, number> = {};
-    for (const row of data ?? []) {
-      counts[row.event_name] = (counts[row.event_name] ?? 0) + 1;
-    }
-
     return {
-      processed: data?.length ?? 0,
+      processed: Number(data?.total ?? 0),
       failed: 0,
-      detail: { windowStart: start.toISOString(), counts },
+      detail: {
+        windowStart: start.toISOString(),
+        windowEnd: end.toISOString(),
+        counts: data?.counts ?? {},
+      },
     };
   },
 };

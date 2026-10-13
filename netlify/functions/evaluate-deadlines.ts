@@ -2,7 +2,7 @@
 // Do not edit: `npm run schedules:generate` after changing the registry.
 //
 // Recomputes expiry and closing-soon flags across published records.
-// Schedule: 10 5 * * * (UTC)
+// Schedule: */15 * * * * (UTC)
 
 export default async function handler(): Promise<Response> {
   const base = process.env.URL ?? process.env.NEXT_PUBLIC_SITE_URL;
@@ -37,4 +37,4 @@ export default async function handler(): Promise<Response> {
   return new Response(body, { status: 200 });
 }
 
-export const config = { schedule: '10 5 * * *' };
+export const config = { schedule: '*/15 * * * *' };

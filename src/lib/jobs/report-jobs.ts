@@ -23,12 +23,12 @@ export const distributeWeeklyReportJob: JobDefinition = {
     let query = client
       .from('reports')
       .select(
-        `id,title,slug,reporting_period_start,reporting_period_end,
+        `id,title,slug,report_type,reporting_period_start,reporting_period_end,
     executive_summary,minimum_access_rank,published_at,email_queued_at,
     report_opportunities(display_order,minimum_access_rank,
-      opportunities(id,slug,title,score,minimum_access_rank,workflow_status,is_restricted,published_at,counties(name)))`,
+      opportunities(id,slug,title,score,county_id,minimum_access_rank,workflow_status,is_restricted,published_at,counties(name)))`,
       )
-      .eq('report_type', 'weekly')
+      .in('report_type', ['weekly', 'premium_briefing'])
       .eq('status', 'published')
       .lte('published_at', context.now.toISOString())
       .is('email_queued_at', null)
@@ -48,6 +48,8 @@ export const distributeWeeklyReportJob: JobDefinition = {
         detail: { reason: 'no_unqueued_report' },
       };
     }
+    const premiumBriefing = report.report_type === 'premium_briefing';
+    const alertType = premiumBriefing ? 'premium_briefing' : 'weekly_report';
     if (!progress.reportId) {
       progress = {
         reportId: report.id,
@@ -81,6 +83,7 @@ export const distributeWeeklyReportJob: JobDefinition = {
         return [
           {
             id: source.id,
+            countyId: source.county_id,
             minimumAccessRank: Math.max(
               entry.minimum_access_rank,
               source.minimum_access_rank,
@@ -108,14 +111,21 @@ export const distributeWeeklyReportJob: JobDefinition = {
           };
         if (
           member.emailAlertsEnabled &&
-          !member.disabledAlertTypes.has('weekly_report')
+          !member.disabledAlertTypes.has(alertType) &&
+          (!premiumBriefing ||
+            (member.features.premiumBriefing &&
+              member.accessRank >= Math.max(30, report.minimum_access_rank)))
         ) {
           const fullReport =
             member.features.weeklyReports &&
             member.accessRank >= report.minimum_access_rank;
-          const visible = entries.filter(
-            (entry) => member.accessRank >= entry.minimumAccessRank,
-          );
+          const visible = entries
+            .filter((entry) => member.accessRank >= entry.minimumAccessRank)
+            .sort(
+              (a, b) =>
+                Number(member.preferredCountyIds.includes(b.countyId)) -
+                Number(member.preferredCountyIds.includes(a.countyId)),
+            );
           const highlights = visible.slice(0, fullReport ? 8 : 2);
           const lockedCount = entries.length - visible.length;
           const periodLabel =
@@ -146,7 +156,7 @@ export const distributeWeeklyReportJob: JobDefinition = {
             userId: member.userId,
             notifications: [
               {
-                dedupe_key: `weekly_report:${report.id}`,
+                dedupe_key: `${alertType}:${report.id}`,
                 notification_type: 'report_published',
                 title: report.title,
                 message: periodLabel,
@@ -156,14 +166,18 @@ export const distributeWeeklyReportJob: JobDefinition = {
             message: {
               to: member.email,
               ...rendered,
-              tag: 'weekly-report',
+              tag: premiumBriefing ? 'premium-briefing' : 'weekly-report',
               unsubscribeToken,
             },
             minimumAccessRank: Math.max(
-              fullReport ? Math.max(10, report.minimum_access_rank) : 0,
+              premiumBriefing
+                ? Math.max(30, report.minimum_access_rank)
+                : fullReport
+                  ? Math.max(10, report.minimum_access_rank)
+                  : 0,
               ...highlights.map((entry) => entry.minimumAccessRank),
             ),
-            alertType: 'weekly_report',
+            alertType,
             opportunityIds: highlights.map((entry) => entry.id),
             reportId: report.id,
           });

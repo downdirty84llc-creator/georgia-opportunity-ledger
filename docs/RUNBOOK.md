@@ -207,7 +207,8 @@ curl -X POST -H "Authorization: Bearer $CRON_SECRET" \
 ```
 
 Available jobs: `publish-scheduled`, `premium-alerts`, `saved-search-matching`,
-`process-exports`, `evaluate-deadlines`, `deadline-reminders`,
+`process-exports`, `close-account-billing`, `evaluate-deadlines`, `deadline-reminders`,
+`deliver-queued-emails`,
 `reverification-reminders`, `stale-source-reminders`, `expire-lapsed-access`,
 `sync-subscriptions`, `aggregate-analytics`, `prune`, `scan-attachments`,
 `distribute-weekly-report`.

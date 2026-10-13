@@ -49,6 +49,7 @@ function query(data: unknown) {
   const q: Record<string, unknown> = {};
   for (const method of [
     'select',
+    'in',
     'eq',
     'lte',
     'lt',
@@ -224,7 +225,9 @@ describe('resumable email producers', () => {
 
   it('resumes a premium opportunity audience beyond its first recipient page', async () => {
     let calls = 0;
-    from.mockImplementation(() => query(calls++ < 2 ? source : null));
+    from.mockImplementation((table: string) =>
+      query(table === 'opportunities' && calls++ < 2 ? source : null),
+    );
     recipients
       .mockResolvedValueOnce({
         recipients: [member('premium-one', 30)],
@@ -246,5 +249,67 @@ describe('resumable email producers', () => {
       after: 'profile-25',
     });
     expect(checkpoint).toHaveBeenLastCalledWith({ since: now.toISOString() });
+  });
+  it('sends material-change emails with the audited version and respects the separate opt-out', async () => {
+    let candidates = 0;
+    from.mockImplementation((table: string) =>
+      query(
+        table === 'opportunities'
+          ? candidates++ === 0
+            ? { ...source, published_at: '2026-09-01T00:00:00Z' }
+            : null
+          : { version_number: 7, is_material_change: true },
+      ),
+    );
+    const optedOut = member('disabled', 30);
+    optedOut.disabledAlertTypes = new Set(['material_update']);
+    recipients.mockResolvedValue({
+      recipients: [member('premium', 30), member('free'), optedOut],
+      hasMore: false,
+      nextAfter: 'last',
+    });
+    await durablePremiumAlertsJob.handler({ now, note: vi.fn(), checkpoint });
+    expect(enqueue).toHaveBeenCalledOnce();
+    expect(enqueue.mock.calls[0]?.[0]).toMatchObject({
+      alertType: 'material_update',
+      minimumAccessRank: 30,
+      notifications: [
+        expect.objectContaining({ dedupe_key: 'material_update:opp:v7' }),
+      ],
+    });
+    expect(render.mock.calls[0]?.[0]).toMatchObject({ reason: 'updated' });
+  });
+
+  it('queues Premium briefings only for entitled members with briefing email enabled', async () => {
+    from.mockImplementation((table: string) =>
+      query(
+        table === 'reports'
+          ? {
+              ...report,
+              report_type: 'premium_briefing',
+              minimum_access_rank: 30,
+            }
+          : [],
+      ),
+    );
+    const optedOut = member('disabled', 30);
+    optedOut.disabledAlertTypes = new Set(['premium_briefing']);
+    recipients.mockResolvedValue({
+      recipients: [
+        member('free'),
+        member('weekly', 10),
+        member('premium', 30),
+        optedOut,
+      ],
+      hasMore: false,
+      nextAfter: 'last',
+    });
+    await distributeWeeklyReportJob.handler({ now, note: vi.fn(), checkpoint });
+    expect(enqueue).toHaveBeenCalledOnce();
+    expect(enqueue.mock.calls[0]?.[0]).toMatchObject({
+      userId: 'premium',
+      alertType: 'premium_briefing',
+      minimumAccessRank: 30,
+    });
   });
 });

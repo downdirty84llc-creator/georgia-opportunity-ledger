@@ -40,7 +40,7 @@ export const JOBS: readonly ScheduledJob[] = [
   { definition: savedSearchMatchingJob, schedule: '*/30 * * * *' },
   { definition: processExportsJob, schedule: '*/5 * * * *' },
   { definition: closeAccountBillingJob, schedule: '*/5 * * * *' },
-  { definition: evaluateDeadlinesJob, schedule: '10 5 * * *' },
+  { definition: evaluateDeadlinesJob, schedule: '*/15 * * * *' },
   { definition: deadlineRemindersJob, schedule: '*/5 * * * *' },
   { definition: deliverQueuedEmailsJob, schedule: '*/5 * * * *' },
   { definition: reverificationRemindersJob, schedule: '30 5 * * *' },

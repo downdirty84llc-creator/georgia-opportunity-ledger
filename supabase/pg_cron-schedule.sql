@@ -37,7 +37,7 @@ select public.schedule_ledger_job(
 
 select public.schedule_ledger_job(
   'evaluate-deadlines',
-  '10 5 * * *'
+  '*/15 * * * *'
 );
 
 select public.schedule_ledger_job(

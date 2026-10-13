@@ -1,6 +1,7 @@
 import { createAdminClient } from '@/lib/db/admin';
 import {
   shouldSendHighScoreAlert,
+  shouldSendMaterialUpdateAlert,
   shouldSendClosingSoonAlert,
 } from '@/lib/alerts/matching';
 import {
@@ -87,6 +88,21 @@ export const durablePremiumAlertsJob: JobDefinition = {
         };
       }
       const row = data as unknown as CandidateRow;
+      const { data: version, error: versionError } = await client
+        .from('opportunity_versions')
+        .select('version_number,is_material_change')
+        .eq('opportunity_id', row.id)
+        .eq('is_material_change', true)
+        .gte('changed_at', progress.since!)
+        .lt('changed_at', progress.windowEnd!)
+        .order('version_number', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (versionError) throw new Error(versionError.message);
+      const materialUpdate =
+        !!version?.is_material_change &&
+        !!row.published_at &&
+        row.published_at < progress.since!;
       progress = { ...progress, opportunityId: row.id };
       const page = await loadRecipientPage(context.now, {
         after: progress.recipientAfter,
@@ -95,11 +111,18 @@ export const durablePremiumAlertsJob: JobDefinition = {
       for (const recipient of page.recipients) {
         if (Date.now() >= deadline - 5000)
           return { processed: queued, failed: 0, detail: { more: true } };
-        const decision = shouldSendHighScoreAlert(
-          toCandidate(row, 1),
-          recipient,
-          context.now,
-        );
+        const decision = materialUpdate
+          ? shouldSendMaterialUpdateAlert(
+              toCandidate(row, version!.version_number),
+              recipient,
+              true,
+              context.now,
+            )
+          : shouldSendHighScoreAlert(
+              toCandidate(row, 1),
+              recipient,
+              context.now,
+            );
         if (decision.send && decision.dedupeKey) {
           const unsubscribeToken = mintUnsubscribeToken(
             recipient.userId,
@@ -107,7 +130,7 @@ export const durablePremiumAlertsJob: JobDefinition = {
           );
           const rendered = premiumAlertEmail({
             firstName: recipient.firstName,
-            reason: 'new',
+            reason: materialUpdate ? 'updated' : 'new',
             unsubscribeToken,
             opportunity: {
               title: row.title,
@@ -139,7 +162,7 @@ export const durablePremiumAlertsJob: JobDefinition = {
               unsubscribeToken,
             },
             minimumAccessRank: Math.max(30, row.minimum_access_rank),
-            alertType: 'high_score',
+            alertType: materialUpdate ? 'material_update' : 'high_score',
             opportunityIds: [row.id],
           });
           queued++;

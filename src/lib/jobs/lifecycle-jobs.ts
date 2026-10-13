@@ -22,69 +22,81 @@ export const evaluateDeadlinesJob: JobDefinition = {
     'Recomputes expiry and closing-soon flags across published records.',
   // No idempotency key: the job compares derived state to stored state and
   // writes only differences, so running it twice in a window is a no-op.
-  handler: async ({ now, note }) => {
-    const supabase = createAdminClient();
-
-    const { data, error } = await supabase
-      .from('opportunities')
-      .select(
-        'id, status, closing_date, opening_date, is_expired, is_closing_soon',
-      )
-      .eq('workflow_status', 'published')
-      .not('closing_date', 'is', null);
-
-    if (error) throw new Error(error.message);
-
+  handler: async (context) => {
+    if (!context.checkpoint)
+      throw new Error('Deadline processing requires durable checkpoints.');
+    const { now, note, checkpoint } = context;
+    const client = createAdminClient();
+    const deadline = context.deadlineAt ?? Date.now() + 25_000;
+    let after =
+      typeof context.state?.after === 'string'
+        ? context.state.after
+        : undefined;
     let processed = 0;
-    let failed = 0;
     const transitions: Record<string, number> = {};
-
-    for (const row of data ?? []) {
-      const next = evaluateLifecycle(
-        {
-          closingDate: row.closing_date ? new Date(row.closing_date) : null,
-          openingDate: row.opening_date ? new Date(row.opening_date) : null,
-          status: row.status as OpportunityStatus,
-        },
-        now,
-      );
-
-      const changed =
-        next.isExpired !== row.is_expired ||
-        next.isClosingSoon !== row.is_closing_soon ||
-        next.status !== row.status;
-
-      if (!changed) continue;
-
-      const { error: updateError } = await supabase
+    while (Date.now() < deadline - 5000) {
+      let query = client
         .from('opportunities')
-        .update({
-          is_expired: next.isExpired,
-          is_closing_soon: next.isClosingSoon,
-          status: next.status,
-          // A record whose deadline has passed leaves the published workflow
-          // state so it stops appearing in default searches, but stays readable
-          // at its permalink for anyone who bookmarked it.
-          workflow_status: next.isExpired ? 'expired' : undefined,
-        })
-        .eq('id', row.id);
-
-      if (updateError) {
-        failed += 1;
-        console.error('[jobs] deadline update failed', {
-          id: row.id,
-          message: updateError.message,
-        });
-        continue;
+        .select(
+          'id,status,closing_date,opening_date,is_expired,is_closing_soon,updated_at',
+        )
+        .eq('workflow_status', 'published')
+        .order('id')
+        .limit(50);
+      if (after) query = query.gt('id', after);
+      const { data: rows, error } = await query;
+      if (error) throw new Error(error.message);
+      for (const row of rows ?? []) {
+        if (Date.now() >= deadline - 5000) {
+          await checkpoint({ after });
+          return { processed, failed: 0, detail: { transitions, more: true } };
+        }
+        const next = evaluateLifecycle(
+          {
+            closingDate: row.closing_date ? new Date(row.closing_date) : null,
+            openingDate: row.opening_date ? new Date(row.opening_date) : null,
+            status: row.status as OpportunityStatus,
+          },
+          now,
+        );
+        if (
+          next.isExpired !== row.is_expired ||
+          next.isClosingSoon !== row.is_closing_soon ||
+          next.status !== row.status
+        ) {
+          const { data: changed, error: updateError } = await client
+            .from('opportunities')
+            .update({
+              is_expired: next.isExpired,
+              is_closing_soon: next.isClosingSoon,
+              status: next.status,
+              workflow_status: next.isExpired ? 'expired' : undefined,
+            })
+            .eq('id', row.id)
+            .eq('updated_at', row.updated_at)
+            .eq('workflow_status', 'published')
+            .select('id');
+          if (updateError) throw new Error(updateError.message);
+          if (changed?.length) {
+            processed++;
+            const key = `${row.status}->${next.status}`;
+            transitions[key] = (transitions[key] ?? 0) + 1;
+          }
+        }
+        after = row.id;
       }
-
-      processed += 1;
-      const key = `${row.status}->${next.status}`;
-      transitions[key] = (transitions[key] ?? 0) + 1;
+      if ((rows?.length ?? 0) < 50) {
+        await checkpoint({});
+        note('transitions', transitions);
+        return {
+          processed,
+          failed: 0,
+          detail: { transitions, cycleComplete: true },
+        };
+      }
+      await checkpoint({ after });
     }
-
-    note('transitions', transitions);
-    return { processed, failed, detail: { transitions } };
+    return { processed, failed: 0, detail: { transitions, more: true } };
   },
 };
 

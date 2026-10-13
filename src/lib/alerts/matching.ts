@@ -274,13 +274,20 @@ export function isMaterialChange(changedFields: readonly string[]): boolean {
 export function shouldSendMaterialUpdateAlert(
   candidate: AlertCandidate,
   recipient: AlertRecipient,
-  changedFields: readonly string[],
+  changedFields: readonly string[] | boolean,
+  now: Date = new Date(),
 ): AlertDecision {
   const gate = commonGates(candidate, recipient, 'material_update');
   if (gate) return gate;
 
-  if (!isMaterialChange(changedFields)) return decline('filters_not_matched');
-  if (!matchesFilters(candidate, recipient.filters)) {
+  if (!recipient.immediateAlertsEntitled) return decline('not_entitled');
+  if (
+    !(typeof changedFields === 'boolean'
+      ? changedFields
+      : isMaterialChange(changedFields))
+  )
+    return decline('filters_not_matched');
+  if (!matchesFilters(candidate, recipient.filters, now)) {
     return decline('filters_not_matched');
   }
 
