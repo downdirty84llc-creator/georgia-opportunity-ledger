@@ -71,7 +71,8 @@ export const GET = withErrorHandling(async (): Promise<NextResponse> => {
     supabase
       .from('alert_preferences')
       .select('alert_type, delivery_method, enabled, frequency, minimum_score')
-      .eq('user_id', viewer.userId),
+      .eq('user_id', viewer.userId)
+      .eq('delivery_method', 'email'),
   ]);
 
   if (preferences.error) throw new Error(preferences.error.message);

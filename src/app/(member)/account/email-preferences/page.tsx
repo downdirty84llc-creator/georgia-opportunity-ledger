@@ -31,8 +31,12 @@ export default async function EmailPreferencesPage({
     supabase
       .from('alert_preferences')
       .select('id, alert_type, enabled, frequency')
-      .eq('user_id', viewer.userId),
+      .eq('user_id', viewer.userId)
+      .eq('delivery_method', 'email'),
   ]);
+
+  if (preferences.error) throw new Error(preferences.error.message);
+  if (alertPreferences.error) throw new Error(alertPreferences.error.message);
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-10 sm:px-6">

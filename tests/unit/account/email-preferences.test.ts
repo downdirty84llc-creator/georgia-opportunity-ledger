@@ -1,16 +1,21 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { getViewer, rpc, from, reads } = vi.hoisted(() => ({
-  getViewer: vi.fn(),
-  rpc: vi.fn(),
-  from: vi.fn(),
-  reads: new Map<string, { data: unknown; error: unknown }>(),
-}));
-vi.mock('@/lib/auth/session', () => ({ getViewer }));
+const { getViewer, getSessionContext, rpc, from, reads, readFilters } =
+  vi.hoisted(() => ({
+    getViewer: vi.fn(),
+    getSessionContext: vi.fn(),
+    rpc: vi.fn(),
+    from: vi.fn(),
+    readFilters: vi.fn(),
+    reads: new Map<string, { data: unknown; error: unknown }>(),
+  }));
+vi.mock('@/lib/auth/session', () => ({ getViewer, getSessionContext }));
 vi.mock('@/lib/db/server', () => ({
   createServerSupabaseClient: async () => ({ from, rpc }),
 }));
 const { GET, PUT } = await import('@/app/api/v1/alert-preferences/route');
+const { default: EmailPreferencesPage } =
+  await import('@/app/(member)/account/email-preferences/page');
 const body = {
   emailAlertsEnabled: false,
   marketingEmailEnabled: false,
@@ -35,15 +40,24 @@ describe('customer email preference persistence', () => {
     vi.resetAllMocks();
     reads.clear();
     getViewer.mockResolvedValue({ isAuthenticated: true, userId: 'member' });
+    getSessionContext.mockResolvedValue({
+      viewer: { userId: 'member', features: {} },
+    });
     rpc.mockResolvedValue({ error: null });
     from.mockImplementation((table: string) => {
       const result = reads.get(table) ?? { data: null, error: null };
+      const eq = vi.fn();
       const query = Object.assign(Promise.resolve(result), {
         maybeSingle: async () => result,
+        eq,
+      });
+      eq.mockImplementation((key, value) => {
+        readFilters(table, key, value);
+        return query;
       });
       return {
-        select: () => ({ eq: () => query }),
-        update: () => ({ eq: () => query }),
+        select: () => ({ eq }),
+        update: () => ({ eq }),
         upsert: () => query,
       };
     });
@@ -107,5 +121,31 @@ describe('customer email preference persistence', () => {
     expect((await save()).status).toBe(401);
     expect(rpc).not.toHaveBeenCalled();
     expect(from).not.toHaveBeenCalled();
+  });
+
+  it.each(['user_preferences', 'alert_preferences'])(
+    'refuses to render guessed choices after a %s page read failure',
+    async (table) => {
+      reads.set(table, {
+        data: null,
+        error: { message: 'fixture page read failure' },
+      });
+      await expect(
+        EmailPreferencesPage({ searchParams: Promise.resolve({}) }),
+      ).rejects.toThrow('fixture page read failure');
+    },
+  );
+
+  it('keeps in-app alert settings out of both the email page and API', async () => {
+    expect((await read()).status).toBe(200);
+    await EmailPreferencesPage({ searchParams: Promise.resolve({}) });
+    expect(
+      readFilters.mock.calls.filter(
+        ([table, key, value]) =>
+          table === 'alert_preferences' &&
+          key === 'delivery_method' &&
+          value === 'email',
+      ),
+    ).toHaveLength(2);
   });
 });
