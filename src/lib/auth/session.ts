@@ -22,6 +22,7 @@ export interface SessionContext {
   subscriptionStatus: SubscriptionStatus | null;
   currentPeriodEnd: Date | null;
   cancelAtPeriodEnd: boolean;
+  billingInterval?: 'monthly' | 'annual';
   profile: {
     firstName: string | null;
     lastName: string | null;
@@ -82,7 +83,7 @@ export const getSessionContext = cache(async (): Promise<SessionContext> => {
   const { data: subscriptionRow } = await supabase
     .from('subscriptions')
     .select(
-      `status, current_period_end, cancel_at_period_end,
+      `status, stripe_subscription_id, paid_through_at, current_period_end, cancel_at_period_end, billing_interval,
        subscription_plans!inner(code, name, access_rank, feature_configuration)`,
     )
     .eq('user_id', user.id)
@@ -113,6 +114,9 @@ export const getSessionContext = cache(async (): Promise<SessionContext> => {
     ? {
         status: subscriptionRow.status as SubscriptionStatus,
         currentPeriodEnd: toDate(subscriptionRow.current_period_end),
+        paidThrough: subscriptionRow.stripe_subscription_id
+          ? toDate(subscriptionRow.paid_through_at)
+          : undefined,
         cancelAtPeriodEnd: Boolean(subscriptionRow.cancel_at_period_end),
         planAccessRank: plan?.access_rank ?? 0,
       }
@@ -140,6 +144,7 @@ export const getSessionContext = cache(async (): Promise<SessionContext> => {
     subscriptionStatus: subscription?.status ?? null,
     currentPeriodEnd: subscription?.currentPeriodEnd ?? null,
     cancelAtPeriodEnd: subscription?.cancelAtPeriodEnd ?? false,
+    billingInterval: subscriptionRow?.billing_interval ?? 'monthly',
     profile: {
       firstName: profile.first_name,
       lastName: profile.last_name,

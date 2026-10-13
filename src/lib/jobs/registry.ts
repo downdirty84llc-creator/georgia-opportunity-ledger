@@ -19,6 +19,7 @@ import {
 import { scanAttachmentsJob } from '@/lib/jobs/file-jobs';
 import { distributeWeeklyReportJob } from '@/lib/jobs/report-jobs';
 import type { JobDefinition } from '@/lib/jobs/runner';
+import { closeAccountBillingJob } from '@/lib/billing/close-account';
 
 /**
  * Every background job, and the cadence each expects (spec 17).
@@ -37,12 +38,13 @@ export const JOBS: readonly ScheduledJob[] = [
   { definition: premiumAlertsJob, schedule: '*/15 * * * *' },
   { definition: savedSearchMatchingJob, schedule: '*/30 * * * *' },
   { definition: processExportsJob, schedule: '*/5 * * * *' },
+  { definition: closeAccountBillingJob, schedule: '*/5 * * * *' },
   { definition: evaluateDeadlinesJob, schedule: '10 5 * * *' },
   { definition: deadlineRemindersJob, schedule: '0 13 * * *' },
   { definition: reverificationRemindersJob, schedule: '30 5 * * *' },
   { definition: staleSourceRemindersJob, schedule: '40 5 * * *' },
   { definition: expireLapsedAccessJob, schedule: '20 5 * * *' },
-  { definition: syncSubscriptionsJob, schedule: '0 */6 * * *' },
+  { definition: syncSubscriptionsJob, schedule: '*/5 * * * *' },
   { definition: aggregateAnalyticsJob, schedule: '15 6 * * *' },
   { definition: pruneJob, schedule: '45 6 * * *' },
   { definition: scanAttachmentsJob, schedule: '*/20 * * * *' },

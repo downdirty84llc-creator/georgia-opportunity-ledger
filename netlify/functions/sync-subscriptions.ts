@@ -2,7 +2,7 @@
 // Do not edit: `npm run schedules:generate` after changing the registry.
 //
 // Reconciles local subscription state, including the plan, against Stripe.
-// Schedule: 0 */6 * * * (UTC)
+// Schedule: */5 * * * * (UTC)
 
 export default async function handler(): Promise<Response> {
   const base = process.env.URL ?? process.env.NEXT_PUBLIC_SITE_URL;
@@ -37,4 +37,4 @@ export default async function handler(): Promise<Response> {
   return new Response(body, { status: 200 });
 }
 
-export const config = { schedule: '0 */6 * * *' };
+export const config = { schedule: '*/5 * * * *' };

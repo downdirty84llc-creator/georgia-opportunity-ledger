@@ -60,6 +60,8 @@ export const PAST_DUE_GRACE_DAYS = 3;
 export interface SubscriptionRecord {
   status: SubscriptionStatus;
   currentPeriodEnd: Date | null;
+  /** Undefined only for subscriptions managed without Stripe. */
+  paidThrough?: Date | null;
   cancelAtPeriodEnd: boolean;
   planAccessRank: number;
 }
@@ -87,8 +89,17 @@ export function subscriptionAccessRank(
 
   const { status, currentPeriodEnd, planAccessRank } = subscription;
 
+  const paidUntil =
+    subscription.paidThrough === undefined
+      ? currentPeriodEnd
+      : subscription.paidThrough;
+
   switch (status) {
     case 'active':
+      return subscription.paidThrough === undefined ||
+        (paidUntil && now <= paidUntil)
+        ? planAccessRank
+        : ACCESS_RANK.free;
     case 'trialing':
       // `cancel_at_period_end` does not reduce access: the member has paid
       // through the end of the period and keeps everything until it lapses.
@@ -97,15 +108,15 @@ export function subscriptionAccessRank(
     case 'past_due':
       // Stripe is still retrying. Keep access through the paid period plus the
       // grace window, then drop to free.
-      if (!currentPeriodEnd) return planAccessRank;
-      return now <= addDays(currentPeriodEnd, PAST_DUE_GRACE_DAYS)
+      if (!paidUntil) return ACCESS_RANK.free;
+      return now <= addDays(paidUntil, PAST_DUE_GRACE_DAYS)
         ? planAccessRank
         : ACCESS_RANK.free;
 
     case 'canceled':
       // Cancelled but already paid through the end of the period.
-      if (!currentPeriodEnd) return ACCESS_RANK.free;
-      return now <= currentPeriodEnd ? planAccessRank : ACCESS_RANK.free;
+      if (!paidUntil) return ACCESS_RANK.free;
+      return now <= paidUntil ? planAccessRank : ACCESS_RANK.free;
 
     // No paid access: 'free', 'unpaid', 'paused', 'incomplete', 'expired'.
     default:
@@ -191,9 +202,13 @@ export function paidAccessEndsAt(
   const { status, currentPeriodEnd, cancelAtPeriodEnd } = subscription;
   if (!currentPeriodEnd) return null;
 
-  if (status === 'canceled') return currentPeriodEnd;
+  const paidUntil =
+    subscription.paidThrough === undefined
+      ? currentPeriodEnd
+      : subscription.paidThrough;
+  if (status === 'canceled') return paidUntil;
   if (status === 'past_due')
-    return addDays(currentPeriodEnd, PAST_DUE_GRACE_DAYS);
+    return paidUntil ? addDays(paidUntil, PAST_DUE_GRACE_DAYS) : null;
   if ((status === 'active' || status === 'trialing') && cancelAtPeriodEnd) {
     return currentPeriodEnd;
   }

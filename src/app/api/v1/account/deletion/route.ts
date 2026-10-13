@@ -7,6 +7,7 @@ import {
   purgeDueAt,
 } from '@/lib/account/deletion';
 import { track } from '@/lib/analytics/events';
+import { closeAccountBilling } from '@/lib/billing/close-account';
 import { getViewer } from '@/lib/auth/session';
 import { createServerSupabaseClient } from '@/lib/db/server';
 import {
@@ -65,15 +66,29 @@ export const POST = withErrorHandling(
 
     await track('account_deletion_requested', { userId: viewer.userId });
 
+    // The profile trigger queues this even when a member calls the RPC directly.
+    // A provider outage cannot lose the task or permit the later account purge.
+    let billingStopped = false;
+    try {
+      billingStopped = await closeAccountBilling(viewer.userId);
+    } catch (error) {
+      console.error('[account-deletion] Billing cleanup remains queued', error);
+    }
+
     return ok(
       {
         requestedAt: requestedAt.toISOString(),
         purgeDueAt: purgeDueAt(requestedAt).toISOString(),
         graceDays: DELETION_GRACE_DAYS,
+        billingStopped,
         daysRemaining: daysUntilPurge(requestedAt, requestedAt),
         message:
           `Your account is closed and will be permanently deleted in ` +
-          `${DELETION_GRACE_DAYS} days. Sign in before then to change your ` +
+          `${DELETION_GRACE_DAYS} days. ` +
+          (billingStopped
+            ? 'Your subscription billing has stopped. '
+            : 'Your billing cancellation is processing and will be retried automatically. ') +
+          `Sign in before then to change your ` +
           `mind. Records we are required to keep for tax and accounting are ` +
           `retained, without your name attached.`,
       },
@@ -143,7 +158,10 @@ export const DELETE = withErrorHandling(
     }
 
     return ok(
-      { message: 'Your account is open again and nothing has been deleted.' },
+      {
+        message:
+          'Your account is open again and your saved records remain. Any canceled subscription stays canceled; you can choose a new subscription from the billing page.',
+      },
       undefined,
       { headers: rateLimitHeaders(limit) },
     );

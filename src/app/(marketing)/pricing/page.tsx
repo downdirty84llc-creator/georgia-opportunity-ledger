@@ -191,6 +191,15 @@ export default async function PricingPage() {
           plans={plans}
           isAuthenticated={session.viewer.isAuthenticated}
           currentPlanCode={session.planCode}
+          currentInterval={session.billingInterval}
+          hasCurrentSubscription={[
+            'active',
+            'trialing',
+            'past_due',
+            'unpaid',
+            'paused',
+            'incomplete',
+          ].includes(session.subscriptionStatus ?? '')}
         />
       </div>
 

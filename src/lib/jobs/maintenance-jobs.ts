@@ -4,8 +4,8 @@ import { createAdminClient } from '@/lib/db/admin';
 import { runExportJob, type ExportJobRow } from '@/lib/exports/service';
 import { cleanupExpiredExports } from '@/lib/exports/cleanup';
 import { planForPriceId } from '@/lib/billing/plans';
-import { fromStripeStatus } from '@/lib/billing/subscription';
-import { stripe, toDate } from '@/lib/billing/stripe';
+import { subscriptionPaymentState } from '@/lib/billing/payment-state';
+import { stripe } from '@/lib/billing/stripe';
 import { dailyKey, type JobDefinition } from '@/lib/jobs/runner';
 
 /**
@@ -85,32 +85,33 @@ export const syncSubscriptionsJob: JobDefinition = {
       // the row type from this literal, and splitting it across an expression
       // collapses the result to an untyped error shape.
       .select(
-        'id, user_id, stripe_subscription_id, status, current_period_end, plan_id, billing_interval, cancel_at_period_end',
+        'id, user_id, stripe_subscription_id, status, paid_through_at, updated_at, current_period_end, plan_id, billing_interval, cancel_at_period_end',
       )
       .not('stripe_subscription_id', 'is', null)
-      .limit(500);
+      .order('last_sync_attempt_at', { ascending: true, nullsFirst: true })
+      .order('id', { ascending: true })
+      .limit(25);
 
     if (error) throw new Error(error.message);
 
     let corrected = 0;
     let failed = 0;
 
+    const deadline = Date.now() + 28000;
     for (const record of subscriptions ?? []) {
+      if (Date.now() >= deadline) break;
       if (!record.stripe_subscription_id) continue;
       try {
         const remote = await stripe().subscriptions.retrieve(
           record.stripe_subscription_id,
         );
-        const status = fromStripeStatus(remote.status);
-
-        const item = remote.items.data[0] as unknown as
-          Record<string, unknown> | undefined;
-        const periodEnd =
-          (item?.current_period_end as number | undefined) ??
-          ((remote as unknown as Record<string, unknown>).current_period_end as
-            number | undefined) ??
-          null;
-        const remotePeriodEnd = toDate(periodEnd)?.toISOString() ?? null;
+        const payment = await subscriptionPaymentState(
+          stripe(),
+          remote,
+          record.paid_through_at,
+        );
+        const status = payment.status;
+        const remotePeriodEnd = payment.periodEnd;
 
         // The plan is reconciled too, not just the status. It previously was
         // not, which left the one piece of state that decides what a member
@@ -121,7 +122,10 @@ export const syncSubscriptionsJob: JobDefinition = {
         const priceId = ((
           remote.items.data[0]?.price as { id?: string } | undefined
         )?.id ?? null) as string | null;
-        const plan = await planForPriceId(priceId, supabase);
+        const plan = await planForPriceId(
+          payment.paidPriceId ?? priceId,
+          supabase,
+        );
 
         const planChanged =
           plan !== null &&
@@ -130,15 +134,17 @@ export const syncSubscriptionsJob: JobDefinition = {
 
         if (
           status !== record.status ||
+          payment.paidThrough !== record.paid_through_at ||
           remotePeriodEnd !== record.current_period_end ||
           remote.cancel_at_period_end !== record.cancel_at_period_end ||
           planChanged
         ) {
-          const { error: updateError } = await supabase
+          const { data: saved, error: updateError } = await supabase
             .from('subscriptions')
             .update({
               status,
               current_period_end: remotePeriodEnd,
+              paid_through_at: payment.paidThrough,
               cancel_at_period_end: remote.cancel_at_period_end,
               // Only when the price resolved to a known plan. An unrecognised
               // price means the catalogue and the database disagree, and
@@ -148,8 +154,15 @@ export const syncSubscriptionsJob: JobDefinition = {
                 ? { plan_id: plan.id, billing_interval: plan.interval }
                 : {}),
             })
-            .eq('id', record.id);
+            .eq('id', record.id)
+            .eq('updated_at', record.updated_at)
+            .select('id')
+            .maybeSingle();
           if (updateError) throw new Error(updateError.message);
+          if (!saved)
+            throw new Error(
+              'Subscription changed concurrently; retry next reconciliation',
+            );
           corrected += 1;
         }
       } catch (error) {
@@ -158,6 +171,12 @@ export const syncSubscriptionsJob: JobDefinition = {
           id: record.id,
           message: error instanceof Error ? error.message : String(error),
         });
+      } finally {
+        const { error: attemptError } = await supabase
+          .from('subscriptions')
+          .update({ last_sync_attempt_at: new Date().toISOString() })
+          .eq('id', record.id);
+        if (attemptError) throw new Error(attemptError.message);
       }
     }
 
@@ -197,7 +216,9 @@ export const expireLapsedAccessJob: JobDefinition = {
       .from('subscriptions')
       .update({ status: 'expired' })
       .eq('status', 'canceled')
-      .lt('current_period_end', now.toISOString())
+      .or(
+        `and(stripe_subscription_id.not.is.null,paid_through_at.lt.${now.toISOString()}),and(stripe_subscription_id.is.null,current_period_end.lt.${now.toISOString()})`,
+      )
       .select('id');
     if (cancelError) throw new Error(cancelError.message);
 
@@ -205,7 +226,9 @@ export const expireLapsedAccessJob: JobDefinition = {
       .from('subscriptions')
       .update({ status: 'expired' })
       .eq('status', 'past_due')
-      .lt('current_period_end', graceCutoff.toISOString())
+      .or(
+        `and(stripe_subscription_id.not.is.null,paid_through_at.lt.${graceCutoff.toISOString()}),and(stripe_subscription_id.is.null,current_period_end.lt.${graceCutoff.toISOString()})`,
+      )
       .select('id');
     if (pastDueError) throw new Error(pastDueError.message);
 

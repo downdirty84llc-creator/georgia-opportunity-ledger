@@ -12,8 +12,10 @@ let cached: AdminSupabaseClient | null = null;
  *
  * Legitimate callers are: the Stripe webhook handler (it writes subscription
  * state for a user who is not the caller), the background jobs, and the seed
- * script. Nothing that runs on behalf of a signed-in member should use this —
- * use `createServerSupabaseClient()` so RLS stays in the loop.
+ * script. Billing coordination also uses narrowly scoped service-only RPCs
+ * after authenticating the member; their user ID must come from the session.
+ * Ordinary member reads/writes use `createServerSupabaseClient()` so RLS stays
+ * in the loop.
  */
 export function createAdminClient(): AdminSupabaseClient {
   if (cached) return cached;

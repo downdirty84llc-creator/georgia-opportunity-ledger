@@ -163,6 +163,11 @@ export function PrivacyControls({
               afterwards it cannot be recovered.
             </p>
             <p className="mt-2 text-sm text-ink-700">
+              Closing your account also cancels your subscription and future
+              renewals. It does not issue a refund. Reopening your account does
+              not restart the canceled subscription.
+            </p>
+            <p className="mt-2 text-sm text-ink-700">
               Records we are required to keep for tax and accounting are
               retained, with your name removed.
             </p>

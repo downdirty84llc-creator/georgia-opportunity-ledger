@@ -23,11 +23,13 @@ export const POST = withErrorHandling(async (): Promise<NextResponse> => {
   }
 
   const supabase = await createServerSupabaseClient();
-  const { data: subscription } = await supabase
+  const { data: subscription, error } = await supabase
     .from('subscriptions')
     .select('stripe_customer_id')
     .eq('user_id', viewer.userId)
     .maybeSingle();
+
+  if (error) throw new Error(error.message);
 
   if (!subscription?.stripe_customer_id) {
     return apiError(

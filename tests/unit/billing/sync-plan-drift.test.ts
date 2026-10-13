@@ -24,10 +24,22 @@ vi.mock('@/lib/db/admin', () => ({
         const chain: Record<string, unknown> = {
           select: () => chain,
           not: () => chain,
+          order: () => chain,
           limit: () => Promise.resolve({ data: [localRow], error: null }),
           update: (values: Record<string, unknown>) => {
+            if ('last_sync_attempt_at' in values)
+              return { eq: () => Promise.resolve({ error: null }) };
             updates.push(values);
-            return { eq: () => Promise.resolve({ error: updateError }) };
+            const result: Record<string, unknown> = {
+              eq: () => result,
+              select: () => result,
+              maybeSingle: () =>
+                Promise.resolve({
+                  data: { id: 'sub-row-1' },
+                  error: updateError,
+                }),
+            };
+            return result;
           },
         };
         return chain;
@@ -70,6 +82,22 @@ vi.mock('@/lib/billing/stripe', () => ({
         Promise.resolve({
           id: 'sub_1',
           status: 'active',
+          latest_invoice: {
+            id: 'in_1',
+            status: 'paid',
+            lines: {
+              data: [
+                {
+                  amount: 1500,
+                  pricing: { price_details: { price: remotePriceId } },
+                  parent: {
+                    subscription_item_details: { subscription: 'sub_1' },
+                  },
+                  period: { end: 1790000000 },
+                },
+              ],
+            },
+          },
           cancel_at_period_end: false,
           items: {
             data: [
@@ -105,6 +133,7 @@ describe('sync-subscriptions', () => {
       stripe_subscription_id: 'sub_1',
       status: 'active',
       current_period_end: new Date(1790000000 * 1000).toISOString(),
+      paid_through_at: new Date(1790000000 * 1000).toISOString(),
       plan_id: 'plan-weekly',
       billing_interval: 'monthly',
       cancel_at_period_end: false,

@@ -16,6 +16,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
  */
 
 interface SubscriptionRow {
+  [key: string]: unknown;
   status: string;
 }
 
@@ -28,11 +29,27 @@ const retrieve = vi.fn(() =>
     id: 'sub_1',
     customer: 'cus_1',
     status: 'active',
+    latest_invoice: {
+      id: 'in_1',
+      status: 'paid',
+      lines: {
+        data: [
+          {
+            amount: 1500,
+            pricing: { price_details: { price: 'price_1' } },
+            parent: { subscription_item_details: { subscription: 'sub_1' } },
+            period: { end: 2000000000 },
+          },
+        ],
+      },
+    },
     cancel_at_period_end: false,
     trial_end: null,
     canceled_at: null,
     metadata: { user_id: 'member-1' },
-    items: { data: [{ price: { id: 'price_1' }, current_period_end: 0 }] },
+    items: {
+      data: [{ price: { id: 'price_1' }, current_period_end: 2000000000 }],
+    },
   }),
 );
 
@@ -60,6 +77,18 @@ vi.mock('@/lib/db/admin', () => ({
   createAdminClient: () => ({
     from: (table: string) => {
       if (table === 'subscriptions') return subscriptionsTable();
+      if (table === 'profiles')
+        return {
+          select: () => ({
+            eq: () => ({
+              maybeSingle: () =>
+                Promise.resolve({
+                  data: { account_status: 'active' },
+                  error: null,
+                }),
+            }),
+          }),
+        };
       if (table === 'notifications') {
         return {
           insert: (values: Record<string, unknown>) => {
@@ -261,5 +290,36 @@ describe('invoice.payment_succeeded', () => {
     );
 
     expect(retrieve).toHaveBeenCalledWith('sub_1');
+  });
+});
+
+describe('out-of-order provider events', () => {
+  it('does not mark a recovered invoice past due when its old failure arrives late', async () => {
+    const response = await deliver('invoice.payment_failed', invoice());
+    expect(response.status).toBe(200);
+    expect(subscriptionUpdates.some((u) => u.status === 'past_due')).toBe(
+      false,
+    );
+    expect(notifications).toHaveLength(0);
+  });
+  it('does not replace a newer subscription with an old cancellation', async () => {
+    subscriptionRow = { status: 'active', stripe_subscription_id: 'sub_new' };
+    retrieve.mockResolvedValueOnce({
+      id: 'sub_old',
+      created: 10,
+      customer: 'cus_1',
+      status: 'canceled',
+      metadata: { user_id: 'member-1' },
+    } as never);
+    retrieve.mockResolvedValueOnce({
+      id: 'sub_new',
+      created: 20,
+      status: 'active',
+    } as never);
+    const response = await deliver('customer.subscription.deleted', {
+      id: 'sub_old',
+    });
+    expect(response.status).toBe(200);
+    expect(subscriptionUpdates).toHaveLength(0);
   });
 });

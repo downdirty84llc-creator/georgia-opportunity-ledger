@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server';
 import type Stripe from 'stripe';
 
+import { stopSubscriptionForClosure } from '@/lib/billing/close-account';
 import { track } from '@/lib/analytics/events';
 import { planForPriceId } from '@/lib/billing/plans';
-import { fromStripeStatus } from '@/lib/billing/subscription';
+import { subscriptionPaymentState } from '@/lib/billing/payment-state';
 import { stripe, toDate } from '@/lib/billing/stripe';
 import { createAdminClient } from '@/lib/db/admin';
 import { serverEnv } from '@/lib/env';
@@ -52,10 +53,9 @@ export async function POST(request: Request): Promise<NextResponse> {
   // answered 400. That is the readiness-check bug again: a configuration fault
   // wearing the costume of a caller error.
   //
-  // The status matters more than the message. Stripe treats 4xx as permanent
-  // and does not retry, so every event arriving while the key was missing was
-  // discarded rather than deferred. A 500 is retried, which means the events
-  // land once the configuration is fixed instead of being lost.
+  // Configuration failures are server errors; a bad signature is a caller
+  // error. Stripe retries failed deliveries, while monitoring needs the two
+  // causes to remain distinguishable.
   let stripeClient: Stripe;
   let webhookSecret: string;
   try {
@@ -162,10 +162,11 @@ export async function POST(request: Request): Promise<NextResponse> {
 
   try {
     await handleEvent(event);
-    await supabase
+    const { error: processedError } = await supabase
       .from('billing_events')
       .update({ processed: true, processed_at: new Date().toISOString() })
       .eq('stripe_event_id', event.id);
+    if (processedError) throw new Error(processedError.message);
     return NextResponse.json({ received: true });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
@@ -213,9 +214,14 @@ async function handleEvent(event: Stripe.Event): Promise<void> {
     case 'customer.subscription.created':
     case 'customer.subscription.updated':
     case 'customer.subscription.deleted':
-      await onSubscriptionChanged(event.data.object as Stripe.Subscription);
+      await onSubscriptionChanged(
+        await stripeClientSubscription(
+          event.data.object as Stripe.Subscription,
+        ),
+      );
       break;
 
+    case 'invoice.paid':
     case 'invoice.payment_succeeded':
       await onPaymentSucceeded(event.data.object as Stripe.Invoice);
       break;
@@ -239,11 +245,12 @@ async function resolveUserId(
   if (!customerId) return null;
 
   const supabase = createAdminClient();
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('subscriptions')
     .select('user_id')
     .eq('stripe_customer_id', customerId)
     .maybeSingle();
+  if (error) throw new Error(error.message);
   return data?.user_id ?? null;
 }
 
@@ -263,13 +270,15 @@ async function onCheckoutCompleted(
   const supabase = createAdminClient();
   // Record the customer id straight away so later subscription events can be
   // matched even if their metadata is missing.
-  await supabase
+  const { error: customerError } = await supabase
     .from('subscriptions')
     .update({
       stripe_customer_id:
         typeof session.customer === 'string' ? session.customer : null,
     })
     .eq('user_id', userId);
+
+  if (customerError) throw new Error(customerError.message);
 
   // Finishing the session is not the same as paying for it. A delayed payment
   // method — ACH debit, bank transfer, some wallets — completes the session
@@ -326,8 +335,47 @@ async function onSubscriptionChanged(
 
   const supabase = createAdminClient();
 
+  const { data: profile, error: profileError } = await supabase
+    .from('profiles')
+    .select('account_status')
+    .eq('id', userId)
+    .maybeSingle();
+  if (profileError) throw new Error(profileError.message);
+  if (!profile) return; // A late event for a permanently deleted member.
+  if (
+    profile.account_status === 'closed' &&
+    !['canceled', 'incomplete_expired'].includes(subscription.status)
+  ) {
+    await stopSubscriptionForClosure(stripe(), subscription);
+    subscription = await stripe().subscriptions.retrieve(subscription.id);
+  }
+
+  const { data: before, error: beforeError } = await supabase
+    .from('subscriptions')
+    .select('stripe_subscription_id, paid_through_at, updated_at')
+    .eq('user_id', userId)
+    .maybeSingle();
+  if (beforeError) throw new Error(beforeError.message);
+  if (!before) return;
+  if (
+    before.stripe_subscription_id &&
+    before.stripe_subscription_id !== subscription.id
+  ) {
+    const current = await stripe().subscriptions.retrieve(
+      before.stripe_subscription_id,
+    );
+    // A late cancellation from a previous subscription must not replace a new purchase.
+    if (current.created > subscription.created) return;
+  }
+  const payment = await subscriptionPaymentState(
+    stripe(),
+    subscription,
+    before.stripe_subscription_id === subscription.id
+      ? before.paid_through_at
+      : null,
+  );
   const item = subscription.items.data[0];
-  const priceId = item?.price?.id ?? null;
+  const priceId = payment.paidPriceId ?? item?.price?.id ?? null;
   const plan = await planForPriceId(priceId, supabase);
 
   // A deleted subscription drops the member to the free plan, but only after
@@ -344,25 +392,9 @@ async function onSubscriptionChanged(
   }
   if (!planId) throw new Error('No subscription plan available to assign');
 
-  const status =
-    subscription.status === 'canceled' && !subscription.cancel_at_period_end
-      ? 'canceled'
-      : fromStripeStatus(subscription.status);
+  const status = payment.status;
 
-  // The current period lives on the subscription item in recent API versions
-  // and on the subscription itself in older ones; read whichever is present.
-  const itemRecord = item as unknown as Record<string, unknown> | undefined;
-  const subscriptionRecord = subscription as unknown as Record<string, unknown>;
-  const periodStart =
-    (itemRecord?.current_period_start as number | undefined) ??
-    (subscriptionRecord.current_period_start as number | undefined) ??
-    null;
-  const periodEnd =
-    (itemRecord?.current_period_end as number | undefined) ??
-    (subscriptionRecord.current_period_end as number | undefined) ??
-    null;
-
-  const { error } = await supabase
+  const { data: saved, error } = await supabase
     .from('subscriptions')
     .update({
       plan_id: planId,
@@ -370,15 +402,21 @@ async function onSubscriptionChanged(
       stripe_subscription_id: subscription.id,
       billing_interval: plan?.interval ?? 'monthly',
       status,
-      current_period_start: toDate(periodStart)?.toISOString() ?? null,
-      current_period_end: toDate(periodEnd)?.toISOString() ?? null,
+      current_period_start: payment.periodStart,
+      current_period_end: payment.periodEnd,
+      paid_through_at: payment.paidThrough,
       cancel_at_period_end: subscription.cancel_at_period_end,
       trial_end: toDate(subscription.trial_end)?.toISOString() ?? null,
       canceled_at: toDate(subscription.canceled_at)?.toISOString() ?? null,
     })
-    .eq('user_id', userId);
+    .eq('user_id', userId)
+    .eq('updated_at', before.updated_at)
+    .select('user_id')
+    .maybeSingle();
 
   if (error) throw new Error(error.message);
+  if (!saved)
+    throw new Error('Subscription changed concurrently; retry this event');
 
   if (subscription.cancel_at_period_end || status === 'canceled') {
     await track('subscription_canceled', {
@@ -429,11 +467,13 @@ async function onPaymentSucceeded(invoice: Stripe.Invoice): Promise<void> {
 
   const supabase = createAdminClient();
 
-  const { data: before } = await supabase
+  const { data: before, error: beforeError } = await supabase
     .from('subscriptions')
     .select('status')
     .eq('user_id', userId)
     .maybeSingle();
+
+  if (beforeError) throw new Error(beforeError.message);
 
   const wasBehind =
     before?.status === 'past_due' || before?.status === 'unpaid';
@@ -449,7 +489,7 @@ async function onPaymentSucceeded(invoice: Stripe.Invoice): Promise<void> {
   // thing a member heard — after the charge has since succeeded — is its own
   // small failure.
   if (wasBehind) {
-    await supabase.from('notifications').insert({
+    await insertBillingNotice(supabase, {
       user_id: userId,
       notification_type: 'billing_notice',
       title: 'Your payment went through',
@@ -482,7 +522,7 @@ async function onAsyncPaymentFailed(
   if (!userId) return;
 
   const supabase = createAdminClient();
-  await supabase.from('notifications').insert({
+  await insertBillingNotice(supabase, {
     user_id: userId,
     notification_type: 'billing_notice',
     title: 'Your payment could not be completed',
@@ -502,14 +542,17 @@ async function onPaymentFailed(invoice: Stripe.Invoice): Promise<void> {
   if (!userId) return;
 
   const supabase = createAdminClient();
-  await supabase
-    .from('subscriptions')
-    .update({ status: 'past_due' })
-    .eq('user_id', userId)
-    // Do not overwrite a subscription Stripe has already moved past retrying.
-    .in('status', ['active', 'trialing', 'past_due']);
+  const subscriptionId = subscriptionIdOf(invoice);
+  if (!subscriptionId) return;
+  const remote = await stripe().subscriptions.retrieve(subscriptionId);
+  await onSubscriptionChanged(remote, userId);
+  const latest =
+    typeof remote.latest_invoice === 'string'
+      ? await stripe().invoices.retrieve(remote.latest_invoice)
+      : remote.latest_invoice;
+  if (!latest || latest.id !== invoice.id || latest.status === 'paid') return;
 
-  await supabase.from('notifications').insert({
+  await insertBillingNotice(supabase, {
     user_id: userId,
     notification_type: 'billing_notice',
     title: 'We could not process your payment',
@@ -520,4 +563,19 @@ async function onPaymentFailed(invoice: Stripe.Invoice): Promise<void> {
     action_url: '/account/billing',
     dedupe_key: `payment_failed:${invoice.id}`,
   });
+}
+
+/** Events can arrive out of order. Resolve current provider state before writing. */
+async function stripeClientSubscription(
+  eventSubscription: Stripe.Subscription,
+): Promise<Stripe.Subscription> {
+  return stripe().subscriptions.retrieve(eventSubscription.id);
+}
+
+async function insertBillingNotice(
+  supabase: ReturnType<typeof createAdminClient>,
+  notice: Record<string, unknown>,
+) {
+  const { error } = await supabase.from('notifications').insert(notice);
+  if (error && error.code !== '23505') throw new Error(error.message);
 }

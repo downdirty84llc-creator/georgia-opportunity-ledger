@@ -62,6 +62,18 @@ vi.mock('@/lib/db/admin', () => ({
     from: (table: string) => {
       if (table === 'billing_events') return billingEventsTable();
       if (table === 'subscriptions') return subscriptionsTable();
+      if (table === 'profiles')
+        return {
+          select: () => ({
+            eq: () => ({
+              maybeSingle: () =>
+                Promise.resolve({
+                  data: { account_status: 'active' },
+                  error: null,
+                }),
+            }),
+          }),
+        };
       return {
         insert: () => Promise.resolve({ error: null }),
         select: () => ({
@@ -96,11 +108,27 @@ const STRIPE_EVENT = {
       id: 'sub_1',
       customer: 'cus_1',
       status: 'active',
+      latest_invoice: {
+        id: 'in_1',
+        status: 'paid',
+        lines: {
+          data: [
+            {
+              amount: 1500,
+              pricing: { price_details: { price: 'price_1' } },
+              parent: { subscription_item_details: { subscription: 'sub_1' } },
+              period: { end: 2000000000 },
+            },
+          ],
+        },
+      },
       cancel_at_period_end: false,
       trial_end: null,
       canceled_at: null,
       metadata: { user_id: 'member-1' },
-      items: { data: [{ price: { id: 'price_1' }, current_period_end: 0 }] },
+      items: {
+        data: [{ price: { id: 'price_1' }, current_period_end: 2000000000 }],
+      },
     },
   },
 };
@@ -137,6 +165,7 @@ describe('a redelivered webhook event', () => {
     handlerThrows = false;
     updates.length = 0;
     vi.clearAllMocks();
+    subscriptionRetrieve.mockResolvedValue(STRIPE_EVENT.data.object);
   });
 
   it('is acknowledged without reprocessing when it was already processed', async () => {

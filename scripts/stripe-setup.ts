@@ -245,7 +245,7 @@ async function main(): Promise<void> {
   // belonging to a different account than the one the keys opened — a failure
   // that looked fine in every listing until a real checkout said "No such
   // price". One line here makes the wrong account obvious before the write.
-  const account = await stripe.accounts.retrieve();
+  const account = await stripe.accounts.retrieveCurrent();
   console.log(`Stripe catalogue — ${mode.toUpperCase()} mode`);
   console.log(
     `  account:  ${account.id}` +

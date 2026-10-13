@@ -3,7 +3,7 @@
 --
 -- Run this once per environment, AFTER storing the two secrets in Vault:
 --
---   select vault.create_secret('https://gaopportunityledger.com', 'ledger_site_url');
+--   select vault.create_secret('https://georgiaopportunityledger.com', 'ledger_site_url');
 --   select vault.create_secret('<the CRON_SECRET value>',        'ledger_cron_secret');
 --
 -- schedule_ledger_job() is defined in the migration that enables pg_cron; it is
@@ -27,6 +27,11 @@ select public.schedule_ledger_job(
 
 select public.schedule_ledger_job(
   'process-exports',
+  '*/5 * * * *'
+);
+
+select public.schedule_ledger_job(
+  'close-account-billing',
   '*/5 * * * *'
 );
 
@@ -57,7 +62,7 @@ select public.schedule_ledger_job(
 
 select public.schedule_ledger_job(
   'sync-subscriptions',
-  '0 */6 * * *'
+  '*/5 * * * *'
 );
 
 select public.schedule_ledger_job(

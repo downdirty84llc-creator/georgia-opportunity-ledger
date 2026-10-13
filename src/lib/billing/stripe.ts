@@ -7,15 +7,17 @@ let client: Stripe | null = null;
 /**
  * Stripe client.
  *
- * No `apiVersion` is pinned here on purpose: the version is set once on the
- * Stripe account itself, so upgrading is a deliberate dashboard action with a
- * test-mode rehearsal, rather than something that changes when a dependency
- * bump lands.
+ * Pin the API version with the SDK. The SDK otherwise sends its own default,
+ * not the version selected in the Dashboard. Webhooks accept both invoice and
+ * subscription shapes while the endpoint's event version is upgraded separately.
  */
 export function stripe(): Stripe {
   if (client) return client;
   client = new Stripe(serverEnv().stripeSecretKey, {
+    apiVersion: '2026-09-30.endive',
     typescript: true,
+    timeout: 8_000,
+    maxNetworkRetries: 0,
     appInfo: {
       name: 'Georgia Opportunity Ledger',
       version: '0.1.0',

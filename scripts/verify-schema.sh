@@ -30,6 +30,8 @@ SEED=supabase/seed.sql
 VERIFY=supabase/verify-rls.sql
 VERIFY_DELETION=supabase/verify-account-deletion.sql
 VERIFY_PURGE=supabase/verify-purge-claims.sql
+VERIFY_BILLING=supabase/verify-billing-operations.sql
+VERIFY_SETTLED=supabase/verify-settled-access.sql
 
 # --- Mode 2: an existing database -------------------------------------------
 #
@@ -44,6 +46,8 @@ if [[ $# -gt 0 && "$1" != "--help" && "$1" != "-h" ]]; then
   psql "$1" -v ON_ERROR_STOP=1 -f "${VERIFY}"
   psql "$1" -v ON_ERROR_STOP=1 -f "${VERIFY_DELETION}"
   psql "$1" -v ON_ERROR_STOP=1 -f "${VERIFY_PURGE}"
+  psql "${1}" -v ON_ERROR_STOP=1 -f "${VERIFY_BILLING}"
+  psql "${1}" -v ON_ERROR_STOP=1 -f "${VERIFY_SETTLED}"
   exec node scripts/verify-purge-concurrency.mjs "$1"
 fi
 
@@ -147,6 +151,8 @@ grep -oE 'ok  .*' "${WORKDIR}/verify" | sed 's/^/  /'
 checks=$(grep -c 'ok  ' "${WORKDIR}/verify" || true)
 run "Account deletion window and direct-write guards" "${VERIFY_DELETION}"
 run "Account purge claims and provider retries" "${VERIFY_PURGE}"
+run "Billing operation, closure and retry guards" "${VERIFY_BILLING}"
+run "Settled payment and renewal grace guards" "${VERIFY_SETTLED}"
 node scripts/verify-purge-concurrency.mjs
 echo
-echo "${count} migrations applied, reference data idempotent, ${checks} schema/RLS checks, 17 deletion checks, 16 purge checks and 3 concurrency checks passed."
+echo "${count} migrations applied, reference data idempotent, ${checks} schema/RLS checks, 17 deletion checks, 16 purge checks, 15 billing checks, 6 settlement checks and 3 concurrency checks passed."

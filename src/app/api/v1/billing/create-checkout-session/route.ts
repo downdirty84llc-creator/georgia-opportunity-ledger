@@ -1,6 +1,10 @@
 import type { NextResponse } from 'next/server';
 import { z } from 'zod';
 
+import { createMemberCheckout } from '@/lib/billing/checkout';
+import { billingOperation } from '@/lib/billing/operations';
+import { BillingConflict } from '@/lib/billing/plan-change';
+import { createAdminClient } from '@/lib/db/admin';
 import { track } from '@/lib/analytics/events';
 import { priceIdFor, stripe } from '@/lib/billing/stripe';
 import { getSessionContext } from '@/lib/auth/session';
@@ -40,7 +44,7 @@ export const POST = withErrorHandling(
     if (!parsed.success) return validationFailed(parsed.error);
 
     const supabase = await createServerSupabaseClient();
-    const { data: plan } = await supabase
+    const { data: plan, error: planError } = await supabase
       .from('subscription_plans')
       .select(
         'id, code, name, access_rank, stripe_monthly_price_id, stripe_annual_price_id',
@@ -49,6 +53,7 @@ export const POST = withErrorHandling(
       .eq('is_active', true)
       .maybeSingle();
 
+    if (planError) throw new Error(planError.message);
     if (!plan) return apiError('not_found', 'That plan is not available.');
 
     const priceId = priceIdFor(
@@ -76,33 +81,27 @@ export const POST = withErrorHandling(
       );
     }
 
-    const { data: subscription } = await supabase
-      .from('subscriptions')
-      .select('stripe_customer_id')
-      .eq('user_id', viewer.userId)
-      .maybeSingle();
-
-    const siteUrl = publicEnv.siteUrl.replace(/\/$/, '');
-
-    const session = await stripe().checkout.sessions.create({
-      mode: 'subscription',
-      line_items: [{ price: priceId, quantity: 1 }],
-      // Reusing the stored customer keeps one Stripe customer per member, so
-      // the portal shows their whole billing history rather than a fragment.
-      customer: subscription?.stripe_customer_id ?? undefined,
-      client_reference_id: viewer.userId,
-      metadata: { user_id: viewer.userId, plan_code: plan.code },
-      subscription_data: {
-        metadata: { user_id: viewer.userId, plan_code: plan.code },
-      },
-      allow_promotion_codes: !parsed.data.promotionCode,
-      discounts: parsed.data.promotionCode
-        ? [{ promotion_code: parsed.data.promotionCode }]
-        : undefined,
-      success_url: `${siteUrl}/dashboard?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${siteUrl}/pricing?checkout=cancelled`,
-      billing_address_collection: 'auto',
-    });
+    let session;
+    try {
+      session = await billingOperation(
+        viewer.userId,
+        'checkout',
+        parsed.data,
+        (operation) =>
+          createMemberCheckout(stripe(), createAdminClient(), {
+            userId: viewer.userId!,
+            priceId,
+            planCode: plan.code,
+            promotionCode: parsed.data.promotionCode,
+            siteUrl: publicEnv.siteUrl.replace(/\/$/, ''),
+            operationId: operation.id,
+          }),
+      );
+    } catch (error) {
+      if (error instanceof BillingConflict)
+        return apiError('conflict', error.message);
+      throw error;
+    }
 
     await track('checkout_started', {
       userId: viewer.userId,
@@ -113,6 +112,6 @@ export const POST = withErrorHandling(
       },
     });
 
-    return ok({ url: session.url, sessionId: session.id });
+    return ok(session);
   },
 );

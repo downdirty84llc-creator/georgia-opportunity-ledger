@@ -16,24 +16,37 @@ export function PlanGrid({
   plans,
   isAuthenticated,
   currentPlanCode,
+  currentInterval = 'monthly',
+  hasCurrentSubscription = false,
 }: {
   plans: readonly PlanSummary[];
   isAuthenticated: boolean;
   currentPlanCode: string;
+  currentInterval?: 'monthly' | 'annual';
+  hasCurrentSubscription?: boolean;
 }) {
   const [interval, setInterval] = useState<'monthly' | 'annual'>('monthly');
   const [pending, setPending] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [confirmPlan, setConfirmPlan] = useState<PlanSummary | null>(null);
+  const isPaidMember = isAuthenticated && hasCurrentSubscription;
 
   async function startCheckout(planCode: string) {
     setPending(planCode);
     setError(null);
+    setNotice(null);
     try {
-      const response = await fetch('/api/v1/billing/create-checkout-session', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ planCode, interval }),
-      });
+      const response = await fetch(
+        isPaidMember
+          ? '/api/v1/billing/change-plan'
+          : '/api/v1/billing/create-checkout-session',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ planCode, interval }),
+        },
+      );
       const payload = await response.json();
       if (!response.ok) {
         setError(payload?.error?.message ?? 'Checkout could not be started.');
@@ -41,6 +54,9 @@ export function PlanGrid({
       }
       if (payload?.data?.url) {
         window.location.href = payload.data.url;
+      } else if (payload?.data?.message) {
+        setNotice(payload.data.message);
+        setConfirmPlan(null);
       }
     } catch {
       setError('Checkout could not be started. Please try again.');
@@ -62,6 +78,7 @@ export function PlanGrid({
               key={option}
               type="button"
               onClick={() => setInterval(option)}
+              disabled={pending !== null || confirmPlan !== null}
               aria-pressed={interval === option}
               className={cx(
                 'rounded-md px-4 py-2 text-sm font-medium capitalize transition-colors',
@@ -89,13 +106,60 @@ export function PlanGrid({
           {error}
         </p>
       ) : null}
+      {notice ? (
+        <p
+          role="status"
+          className="mx-auto mb-6 max-w-xl rounded-lg bg-emerald-50 px-4 py-3 text-sm text-emerald-900"
+        >
+          {notice}{' '}
+          <a className="underline" href="/account/billing">
+            View billing
+          </a>
+        </p>
+      ) : null}
+      {confirmPlan ? (
+        <div
+          role="region"
+          aria-label="Confirm subscription change"
+          className="surface mx-auto mb-6 max-w-xl p-5"
+        >
+          <h3 className="font-semibold">Change to {confirmPlan.name}?</h3>
+          <p className="mt-2 text-sm">
+            The recurring price is $
+            {interval === 'annual'
+              ? confirmPlan.annualPrice
+              : confirmPlan.monthlyPrice}{' '}
+            per {interval === 'annual' ? 'year' : 'month'}. Upgrades are
+            invoiced now, with credit for unused paid time, and activate after
+            payment. An upgrade to annual billing starts a new annual period.
+            Downgrades and changes of interval within the same tier start at the
+            end of your paid period.
+          </p>
+          <div className="mt-4 flex gap-3">
+            <Button
+              disabled={pending !== null}
+              onClick={() => startCheckout(confirmPlan.code)}
+            >
+              {pending ? 'Updating…' : 'Confirm plan change'}
+            </Button>
+            <Button
+              variant="secondary"
+              disabled={pending !== null}
+              onClick={() => setConfirmPlan(null)}
+            >
+              Keep current plan
+            </Button>
+          </div>
+        </div>
+      ) : null}
 
       <div className="grid gap-5 lg:grid-cols-4">
         {plans.map((plan) => {
           const price =
             interval === 'annual' ? plan.annualPrice : plan.monthlyPrice;
           const isFree = plan.accessRank === 0;
-          const isCurrent = plan.code === currentPlanCode;
+          const isCurrent =
+            plan.code === currentPlanCode && (isFree || hasCurrentSubscription);
           const monthlyEquivalent =
             interval === 'annual' && plan.annualPrice > 0
               ? plan.annualPrice / 12
@@ -151,7 +215,7 @@ export function PlanGrid({
                       ? 'Go to dashboard'
                       : 'Create a free account'}
                   </ButtonLink>
-                ) : isCurrent ? (
+                ) : isCurrent && currentInterval === interval ? (
                   <ButtonLink
                     href="/account/billing"
                     variant="secondary"
@@ -163,11 +227,17 @@ export function PlanGrid({
                   <Button
                     className="w-full"
                     disabled={pending !== null}
-                    onClick={() => startCheckout(plan.code)}
+                    onClick={() =>
+                      isPaidMember
+                        ? setConfirmPlan(plan)
+                        : startCheckout(plan.code)
+                    }
                     variant={plan.isRecommended ? 'primary' : 'secondary'}
                   >
                     {pending === plan.code
-                      ? 'Opening checkout…'
+                      ? isPaidMember
+                        ? 'Updating…'
+                        : 'Opening checkout…'
                       : `Choose ${plan.name}`}
                   </Button>
                 ) : (

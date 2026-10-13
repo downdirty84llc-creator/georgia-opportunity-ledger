@@ -49,7 +49,7 @@ async function loadRecipients(now: Date): Promise<AlertRecipient[]> {
       access_rank_override, access_rank_override_expires_at,
       user_preferences ( email_alerts_enabled, minimum_score,
                          preferred_county_ids, preferred_industry_ids ),
-      subscriptions ( status, current_period_end, cancel_at_period_end,
+      subscriptions ( status, stripe_subscription_id, paid_through_at, current_period_end, cancel_at_period_end,
                       subscription_plans ( code, access_rank,
                                            feature_configuration ) ),
       alert_preferences ( alert_type, enabled )
@@ -94,6 +94,11 @@ async function loadRecipients(now: Date): Promise<AlertRecipient[]> {
       subscription
         ? {
             status: subscription.status as SubscriptionStatus,
+            paidThrough: subscription.stripe_subscription_id
+              ? subscription.paid_through_at
+                ? new Date(subscription.paid_through_at)
+                : null
+              : undefined,
             currentPeriodEnd: subscription.current_period_end
               ? new Date(subscription.current_period_end)
               : null,

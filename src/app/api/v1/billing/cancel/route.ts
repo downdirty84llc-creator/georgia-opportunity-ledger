@@ -1,5 +1,7 @@
 import type { NextResponse } from 'next/server';
 
+import { billingOperation } from '@/lib/billing/operations';
+import { BillingConflict } from '@/lib/billing/plan-change';
 import { track } from '@/lib/analytics/events';
 import { stripe } from '@/lib/billing/stripe';
 import { getSessionContext } from '@/lib/auth/session';
@@ -21,29 +23,65 @@ export const POST = withErrorHandling(async (): Promise<NextResponse> => {
   if (!viewer.isAuthenticated || !viewer.userId) {
     return apiError('unauthorized', 'Sign in to cancel your subscription.');
   }
+  if (viewer.accountStatus === 'closed') {
+    return apiError(
+      'conflict',
+      'Your account closure is already canceling billing.',
+    );
+  }
 
   const supabase = await createServerSupabaseClient();
-  const { data: subscription } = await supabase
+  const { data: subscription, error: subscriptionError } = await supabase
     .from('subscriptions')
     .select('stripe_subscription_id, current_period_end, cancel_at_period_end')
     .eq('user_id', viewer.userId)
     .maybeSingle();
 
+  if (subscriptionError) throw new Error(subscriptionError.message);
   if (!subscription?.stripe_subscription_id) {
     return apiError('conflict', 'There is no active subscription to cancel.');
   }
-  if (subscription.cancel_at_period_end) {
-    return ok({
-      alreadyScheduled: true,
-      accessUntil: subscription.current_period_end,
-      message: 'Your subscription is already set to end at the period close.',
-    });
+  let updated;
+  try {
+    updated = await billingOperation(
+      viewer.userId,
+      'cancel',
+      {},
+      async (operation) => {
+        const client = stripe();
+        const current = await client.subscriptions.retrieve(
+          subscription.stripe_subscription_id,
+        );
+        if (
+          current.cancel_at_period_end ||
+          ['canceled', 'incomplete_expired'].includes(current.status)
+        )
+          return current;
+        if (current.schedule) {
+          const scheduleId =
+            typeof current.schedule === 'string'
+              ? current.schedule
+              : current.schedule.id;
+          await client.subscriptionSchedules.release(
+            scheduleId,
+            {},
+            { idempotencyKey: `ledger:release:${operation.id}` },
+          );
+        }
+        return client.subscriptions.update(
+          current.id,
+          { cancel_at_period_end: true },
+          {
+            idempotencyKey: `ledger:cancel:${operation.id}`,
+          },
+        );
+      },
+    );
+  } catch (error) {
+    if (error instanceof BillingConflict)
+      return apiError('conflict', error.message);
+    throw error;
   }
-
-  const updated = await stripe().subscriptions.update(
-    subscription.stripe_subscription_id,
-    { cancel_at_period_end: true },
-  );
 
   await track('subscription_canceled', {
     userId: viewer.userId,

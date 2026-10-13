@@ -1,13 +1,14 @@
 import type { NextResponse } from 'next/server';
 import { z } from 'zod';
 
-import { track } from '@/lib/analytics/events';
+import { billingOperation } from '@/lib/billing/operations';
 import {
-  planChangeDirection,
-  priceIdFor,
-  prorationBehaviorFor,
-  stripe,
-} from '@/lib/billing/stripe';
+  BillingConflict,
+  changeSubscriptionPlan,
+} from '@/lib/billing/plan-change';
+import { planForPriceId } from '@/lib/billing/plans';
+import { track } from '@/lib/analytics/events';
+import { planChangeDirection, priceIdFor, stripe } from '@/lib/billing/stripe';
 import { getSessionContext } from '@/lib/auth/session';
 import { createServerSupabaseClient } from '@/lib/db/server';
 import {
@@ -49,7 +50,7 @@ export const POST = withErrorHandling(
 
     const supabase = await createServerSupabaseClient();
 
-    const { data: subscription } = await supabase
+    const { data: subscription, error: subscriptionError } = await supabase
       .from('subscriptions')
       .select(
         'stripe_subscription_id, plan_id, subscription_plans!inner(access_rank, code)',
@@ -57,6 +58,7 @@ export const POST = withErrorHandling(
       .eq('user_id', viewer.userId)
       .maybeSingle();
 
+    if (subscriptionError) throw new Error(subscriptionError.message);
     if (!subscription?.stripe_subscription_id) {
       return apiError(
         'conflict',
@@ -68,7 +70,7 @@ export const POST = withErrorHandling(
       ? subscription.subscription_plans[0]
       : subscription.subscription_plans;
 
-    const { data: targetPlan } = await supabase
+    const { data: targetPlan, error: targetError } = await supabase
       .from('subscription_plans')
       .select(
         'id, code, name, access_rank, stripe_monthly_price_id, stripe_annual_price_id',
@@ -77,6 +79,7 @@ export const POST = withErrorHandling(
       .eq('is_active', true)
       .maybeSingle();
 
+    if (targetError) throw new Error(targetError.message);
     if (!targetPlan)
       return apiError('not_found', 'That plan is not available.');
 
@@ -95,32 +98,46 @@ export const POST = withErrorHandling(
       return apiError('conflict', 'That billing option is not available yet.');
     }
 
-    const direction = planChangeDirection(
-      currentPlan?.access_rank ?? 0,
-      targetPlan.access_rank,
-    );
-    if (direction === 'same') {
-      return apiError('conflict', 'You are already on that plan.');
-    }
-
-    const existing = await stripe().subscriptions.retrieve(
-      subscription.stripe_subscription_id,
-    );
-    const itemId = existing.items.data[0]?.id;
-    if (!itemId) {
-      throw new Error(
-        `Stripe subscription ${existing.id} has no line item to update`,
+    let result;
+    try {
+      result = await billingOperation(
+        viewer.userId,
+        'change_plan',
+        parsed.data,
+        async (operation) => {
+          const existing = await stripe().subscriptions.retrieve(
+            subscription.stripe_subscription_id,
+          );
+          const remotePlan = await planForPriceId(
+            existing.items.data[0]?.price.id ?? null,
+            supabase,
+          );
+          if (!remotePlan)
+            throw new BillingConflict(
+              'Your current Stripe price is not in the plan catalogue. Contact support.',
+            );
+          return changeSubscriptionPlan(
+            stripe(),
+            existing,
+            {
+              priceId,
+              planCode: targetPlan.code,
+              interval: parsed.data.interval,
+              direction: planChangeDirection(
+                remotePlan.accessRank,
+                targetPlan.access_rank,
+              ),
+            },
+            operation.id,
+          );
+        },
       );
+    } catch (error) {
+      if (error instanceof BillingConflict)
+        return apiError('conflict', error.message);
+      throw error;
     }
-
-    await stripe().subscriptions.update(subscription.stripe_subscription_id, {
-      items: [{ id: itemId, price: priceId }],
-      proration_behavior: prorationBehaviorFor(direction),
-      // A downgrade should not take effect until the paid period ends.
-      billing_cycle_anchor: direction === 'upgrade' ? 'now' : 'unchanged',
-      cancel_at_period_end: false,
-      metadata: { user_id: viewer.userId, plan_code: targetPlan.code },
-    });
+    const direction = result.direction;
 
     await track(
       direction === 'upgrade'
@@ -136,14 +153,6 @@ export const POST = withErrorHandling(
       },
     );
 
-    return ok({
-      direction,
-      plan: targetPlan.code,
-      effective: direction === 'upgrade' ? 'immediately' : 'end_of_period',
-      message:
-        direction === 'upgrade'
-          ? 'Your upgrade is active now. The difference has been prorated.'
-          : 'Your plan will change at the end of the period you have already paid for.',
-    });
+    return ok(result);
   },
 );
