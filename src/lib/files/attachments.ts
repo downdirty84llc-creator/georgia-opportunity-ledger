@@ -2,7 +2,11 @@ import { createAdminClient } from '@/lib/db/admin';
 import { createServerSupabaseClient } from '@/lib/db/server';
 import { serverEnv } from '@/lib/env';
 import { isAllowedMimeType, sniffMimeType } from '@/lib/files/signatures';
-import { scanBytes, type ScanOutcome } from '@/lib/files/scanner';
+import {
+  isDownloadable,
+  scanBytes,
+  type ScanOutcome,
+} from '@/lib/files/scanner';
 
 /**
  * Attachment upload, scanning and download.
@@ -13,8 +17,8 @@ import { scanBytes, type ScanOutcome } from '@/lib/files/scanner';
  *   - Scanning a 25MB file can take longer than a serverless request should
  *     live. Holding the bytes in memory until a verdict arrives makes upload
  *     failure modes worse, not better.
- *   - A `pending` row is invisible to members (the read policy in migration
- *     0022 withholds anything that is not `clean` or `skipped`), so a file
+ *   - A `pending` row is invisible to members (the read policy
+ *     withholds anything that is not `clean`), so a file
  *     that is stored but unscanned is not a file anyone can reach.
  *   - If the process dies between store and verdict, the row stays `pending`
  *     and the `scan-attachments` job picks it up. Dying halfway leaves a file
@@ -205,16 +209,13 @@ export async function scanAndRecord(
   const env = serverEnv();
   const admin = createAdminClient();
 
-  await admin
+  const { error: claimError } = await admin
     .from('attachments')
     .update({ scan_status: 'scanning' })
     .eq('id', attachmentId);
+  if (claimError) throw new Error(claimError.message);
 
   const outcome = await scanBytes(bytes, fileName);
-
-  if (outcome.verdict === 'infected') {
-    await admin.storage.from(env.storageBuckets.attachments).remove([path]);
-  }
 
   const { error } = await admin
     .from('attachments')
@@ -227,6 +228,17 @@ export async function scanAndRecord(
     .eq('id', attachmentId);
 
   if (error) throw new Error(error.message);
+  // Persist quarantine before deleting bytes. A storage outage must never
+  // leave a previously readable record pointing to an infected object.
+  if (outcome.verdict === 'infected') {
+    const { error: removalError } = await admin.storage
+      .from(env.storageBuckets.attachments)
+      .remove([path]);
+    if (removalError)
+      throw new Error(
+        `File quarantined; object removal failed: ${removalError.message}`,
+      );
+  }
   return outcome;
 }
 
@@ -247,13 +259,14 @@ export async function signedAttachmentUrl(
   const env = serverEnv();
   const supabase = await createServerSupabaseClient();
 
-  const { data: attachment } = await supabase
+  const { data: attachment, error: readError } = await supabase
     .from('attachments')
     .select('id, file_path, file_name, scan_status')
     .eq('id', attachmentId)
     .maybeSingle();
 
-  if (!attachment) return null;
+  if (readError) throw new Error(readError.message);
+  if (!attachment || !isDownloadable(attachment.scan_status)) return null;
 
   const admin = createAdminClient();
   const { data, error } = await admin.storage

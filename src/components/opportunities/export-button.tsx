@@ -70,7 +70,7 @@ export function ExportButton({
       setStatus('ready');
       setMessage(
         payload?.data?.message ??
-          'Your export is being prepared. We will email you when it is ready.',
+          'Your export is being prepared. Check Account → Exports for progress.',
       );
     } catch {
       setStatus('error');
@@ -101,6 +101,13 @@ export function ExportButton({
               className="font-medium text-ink-900 underline"
             >
               Download
+            </a>
+          ) : status === 'ready' ? (
+            <a
+              href="/account/exports"
+              className="font-medium text-ink-900 underline"
+            >
+              View exports
             </a>
           ) : null}
         </p>

@@ -25,7 +25,7 @@ export const runtime = 'nodejs';
 const bodySchema = z.object({
   filters: z.record(z.unknown()).optional(),
   savedSearchId: z.string().uuid().optional(),
-  opportunityIds: z.array(z.string().uuid()).max(5000).optional(),
+  opportunityIds: z.array(z.string().uuid()).min(1).max(5000).optional(),
   format: z.enum(['csv']).default('csv'),
 });
 
@@ -56,14 +56,19 @@ export const POST = withErrorHandling(
 
     let filterConfiguration: Record<string, unknown> = {};
     if (parsed.data.savedSearchId) {
-      const { data: savedSearch } = await supabase
+      const { data: savedSearch, error: savedError } = await supabase
         .from('saved_searches')
         .select('filter_configuration')
         .eq('id', parsed.data.savedSearchId)
         .eq('user_id', viewer.userId)
         .maybeSingle();
+      if (savedError) throw new Error(savedError.message);
       if (!savedSearch) return apiError('not_found', 'Saved search not found.');
-      filterConfiguration = savedSearch.filter_configuration ?? {};
+      const stored = filterSchema.safeParse(
+        savedSearch.filter_configuration ?? {},
+      );
+      if (!stored.success) return validationFailed(stored.error);
+      filterConfiguration = JSON.parse(JSON.stringify(stored.data));
     } else if (parsed.data.filters) {
       const filterResult = filterSchema.safeParse(parsed.data.filters);
       if (!filterResult.success) return validationFailed(filterResult.error);
@@ -99,28 +104,38 @@ export const POST = withErrorHandling(
     });
 
     const estimatedRows = parsed.data.opportunityIds?.length ?? 0;
-    if (shouldGenerateAsynchronously(estimatedRows)) {
+    if (
+      !parsed.data.opportunityIds ||
+      shouldGenerateAsynchronously(estimatedRows)
+    ) {
       return created({
         id: job.id,
         status: 'queued',
         message:
-          'Your export is being prepared. We will email you when it is ready.',
+          'Your export is queued. Open Account → Exports to check progress and download it.',
       });
     }
 
-    const { rowCount, filePath } = await runExportJob(
+    const completed = await runExportJob(
       job as unknown as Parameters<typeof runExportJob>[0],
-      supabase,
-      viewer.accessRank,
     );
+    if (!completed)
+      return created({
+        id: job.id,
+        status: 'queued',
+        message:
+          'Your export is being prepared. Check Account → Exports for progress.',
+      });
+    const { rowCount, filePath, truncated } = completed;
     const downloadUrl = await signExportDownload(filePath);
 
     return created({
       id: job.id,
       status: 'ready',
       rowCount,
+      truncated,
       downloadUrl,
-      message: `${rowCount} record${rowCount === 1 ? '' : 's'} exported.`,
+      message: `${rowCount} record${rowCount === 1 ? '' : 's'} exported.${truncated ? ' This export reached the 5,000-record limit; narrow your filters for the rest.' : ''}`,
     });
   },
 );

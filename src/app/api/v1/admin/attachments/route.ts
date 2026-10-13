@@ -130,7 +130,7 @@ export const POST = withErrorHandling(
       if (stored.scanStatus === 'infected') {
         return apiError(
           'conflict',
-          `That file was rejected by the virus scanner and has been deleted. ` +
+          `That file was rejected by the virus scanner and quarantined. ` +
             `Reported: ${stored.scanDetail ?? 'signature match'}.`,
         );
       }
@@ -141,7 +141,7 @@ export const POST = withErrorHandling(
           stored.scanStatus === 'clean'
             ? 'Uploaded and scanned.'
             : stored.scanStatus === 'skipped'
-              ? 'Uploaded. No virus scanner is configured for this environment.'
+              ? 'Uploaded but withheld. No virus scanner is configured.'
               : 'Uploaded. The scan did not complete; the file stays hidden ' +
                 'from members until it does, and will be retried.',
       });

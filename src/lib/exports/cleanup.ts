@@ -9,9 +9,8 @@ export async function cleanupExpiredExports(
   const { data: jobs, error } = await supabase
     .from('export_jobs')
     .select('id, file_path')
-    .in('status', ['ready', 'expired'])
     .lt('expires_at', now.toISOString())
-    .or('status.eq.ready,file_path.not.is.null')
+    .or('status.neq.expired,file_path.not.is.null,prepared_csv.not.is.null')
     .order('expires_at', { ascending: true })
     .limit(100);
   if (error)
@@ -29,7 +28,7 @@ export async function cleanupExpiredExports(
       }
       const { error: updateError } = await supabase
         .from('export_jobs')
-        .update({ status: 'expired', file_path: null })
+        .update({ status: 'expired', file_path: null, prepared_csv: null })
         .eq('id', job.id);
       if (updateError) throw new Error(updateError.message);
       expired += 1;

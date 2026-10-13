@@ -63,8 +63,10 @@ export const scanAttachmentsJob: JobDefinition = {
     let processed = 0;
     let failed = 0;
     let infected = 0;
+    const deadline = Date.now() + 25_000;
 
     for (const row of pending) {
+      if (Date.now() >= deadline) break;
       try {
         const { data: blob, error: downloadError } = await supabase.storage
           .from(env.storageBuckets.attachments)
@@ -74,7 +76,7 @@ export const scanAttachmentsJob: JobDefinition = {
           // The object is gone but the row survives. That is what an infected
           // file looks like after quarantine, and what a manual deletion from
           // the bucket looks like too. Either way there is nothing to scan.
-          await supabase
+          const { error: recordError } = await supabase
             .from('attachments')
             .update({
               scan_status: 'failed',
@@ -84,15 +86,17 @@ export const scanAttachmentsJob: JobDefinition = {
               scanned_at: now.toISOString(),
             })
             .eq('id', row.id);
+          if (recordError) throw new Error(recordError.message);
           failed += 1;
           continue;
         }
 
-        await supabase
+        const { error: attemptError } = await supabase
           .from('attachments')
           .update({ scan_attempts: row.scan_attempts + 1 })
           .eq('id', row.id);
 
+        if (attemptError) throw new Error(attemptError.message);
         const bytes = new Uint8Array(await blob.arrayBuffer());
         const outcome = await scanAndRecord(
           row.id,
@@ -115,12 +119,13 @@ export const scanAttachmentsJob: JobDefinition = {
 
     // Anything that has exhausted its attempts needs a person, not another
     // retry. Surfacing the count here puts it on the admin dashboard.
-    const { count: exhausted } = await supabase
+    const { count: exhausted, error: exhaustedError } = await supabase
       .from('attachments')
       .select('id', { count: 'exact', head: true })
       .in('scan_status', ['pending', 'failed', 'scanning'])
       .gte('scan_attempts', MAX_ATTEMPTS);
 
+    if (exhaustedError) throw new Error(exhaustedError.message);
     return {
       processed,
       failed,

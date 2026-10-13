@@ -24,6 +24,11 @@ export const dynamic = 'force-dynamic';
 
 const PRIVACY_CONTROLS = [
   {
+    title: 'CSV exports',
+    body: 'Check progress and download your recent exports.',
+    href: '/account/exports',
+  },
+  {
     title: 'Email preferences',
     body: 'Choose which alerts, reminders and reports you receive.',
     href: '/account/email-preferences',

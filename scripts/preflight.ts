@@ -29,6 +29,8 @@
  * remaining work is a list rather than a feeling.
  */
 
+import { parseScanResponse } from '../src/lib/files/scanner';
+
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
 import { LEGAL_DOCUMENTS } from '../src/lib/legal/documents';
@@ -407,7 +409,13 @@ async function checkScanner(): Promise<void> {
   try {
     const response = await fetch(url, {
       method: 'POST',
-      headers: { 'Content-Type': `multipart/form-data; boundary=${boundary}` },
+      headers: {
+        'Content-Type': `multipart/form-data; boundary=${boundary}`,
+        ...(env('FILE_SCANNER_API_KEY')
+          ? { Authorization: `Bearer ${env('FILE_SCANNER_API_KEY')}` }
+          : {}),
+      },
+      redirect: 'error',
       body,
       signal: AbortSignal.timeout(20_000),
     });
@@ -417,7 +425,7 @@ async function checkScanner(): Promise<void> {
     // explicit detection is treated as a failure: a scanner that returns 200
     // "clean" for EICAR is worse than none, because it is believed.
     const detected =
-      response.status === 406 || /FOUND|infected|virus/i.test(text);
+      parseScanResponse(response.status, text).verdict === 'infected';
     record(
       'blocking',
       'Scanner detects the EICAR test file',

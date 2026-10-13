@@ -51,6 +51,7 @@ const PROTECTED_PAGES = [
   '/account',
   '/account/billing',
   '/account/preferences',
+  '/account/exports',
   '/admin',
   '/admin/staff',
   '/admin/security',

@@ -12,9 +12,8 @@ import { isProduction } from '@/lib/env';
  *   - `clamav`, which posts the bytes to a ClamAV REST front end (clamav-rest,
  *     clamd's HTTP wrapper, or any service with the same shape). This is the
  *     one to run in production; a scanner is not something to reimplement.
- *   - `none`, which returns `skipped`. Honest about having done nothing rather
- *     than returning `clean`, which is the failure that makes an unconfigured
- *     scanner worse than no scanner at all.
+ *   - `none`, which returns `failed` in production and `skipped` in development.
+ *     Neither state permits a download.
  *
  * Anything unexpected returns `failed`, never `clean`. A `failed` file is not
  * downloadable and the rescan job retries it, so a scanner outage delays
@@ -46,7 +45,36 @@ export function scannerConfig(): ScannerConfig {
     provider: declared === 'clamav' && url ? 'clamav' : 'none',
     url,
     apiKey: process.env.FILE_SCANNER_API_KEY ?? '',
-    timeoutMs: Number(process.env.FILE_SCANNER_TIMEOUT_MS ?? 20_000),
+    timeoutMs: scanTimeout(
+      Number(process.env.FILE_SCANNER_TIMEOUT_MS ?? 20_000),
+    ),
+  };
+}
+
+function scanTimeout(value: number): number {
+  return Number.isFinite(value) && value > 0 ? Math.min(value, 20_000) : 20_000;
+}
+
+/** The HTTP adapter must return a single, explicit ClamD result. */
+export function parseScanResponse(status: number, body: string): ScanOutcome {
+  const result = body.replace(/\0$/, '').trim();
+  if (
+    (status === 200 || status === 406) &&
+    /^[^\r\n\0]+: [^\r\n\0]+ FOUND$/.test(result)
+  ) {
+    return {
+      verdict: 'infected',
+      detail: result.slice(0, 500),
+      scanner: 'clamav',
+    };
+  }
+  if (status === 200 && /^(?:stream: )?OK$/.test(result)) {
+    return { verdict: 'clean', detail: null, scanner: 'clamav' };
+  }
+  return {
+    verdict: 'failed',
+    detail: `Scanner returned no recognized verdict (HTTP ${status}).`,
+    scanner: 'clamav',
   };
 }
 
@@ -70,45 +98,43 @@ async function scanWithClamav(
   );
 
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), config.timeoutMs);
+  const timeoutMs = scanTimeout(config.timeoutMs);
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
     const response = await fetch(config.url, {
       method: 'POST',
       body: form,
       signal: controller.signal,
+      redirect: 'error',
       headers: config.apiKey
         ? { Authorization: `Bearer ${config.apiKey}` }
         : {},
     });
 
-    const body = (await response.text()).slice(0, 500);
-
-    // 406 is clamav-rest's "found something". 200 with "FOUND" in the body is
-    // the other convention. Treat either as infected.
-    if (response.status === 406 || /\bFOUND\b/i.test(body)) {
-      return {
-        verdict: 'infected',
-        detail: body.trim() || 'Signature match reported by scanner.',
-        scanner: 'clamav',
-      };
+    const reader = response.body?.getReader();
+    const chunks: Uint8Array[] = [];
+    let size = 0;
+    if (reader) {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        size += value.length;
+        if (size > 4096) {
+          await reader.cancel();
+          throw new Error('Scanner response exceeded the verdict size limit.');
+        }
+        chunks.push(value);
+      }
     }
-
-    if (!response.ok) {
-      return {
-        verdict: 'failed',
-        detail: `Scanner returned ${response.status}: ${body}`,
-        scanner: 'clamav',
-      };
-    }
-
-    return { verdict: 'clean', detail: null, scanner: 'clamav' };
+    const body = Buffer.concat(chunks).toString('utf8');
+    return parseScanResponse(response.status, body);
   } catch (error) {
     return {
       verdict: 'failed',
       detail:
         error instanceof Error && error.name === 'AbortError'
-          ? `Scanner did not answer within ${config.timeoutMs}ms.`
+          ? `Scanner did not answer within ${timeoutMs}ms.`
           : error instanceof Error
             ? error.message
             : String(error),
@@ -130,13 +156,21 @@ export async function scanBytes(
       // a silent skip in production is exactly what that line is guarding.
       console.warn(
         '[scanner] no FILE_SCANNER_URL configured in production; ' +
-          'attachments are being stored unscanned',
+          'attachments are withheld until scanning succeeds',
       );
     }
     return {
-      verdict: 'skipped',
+      verdict: isProduction ? 'failed' : 'skipped',
       detail: 'No scanner configured for this environment.',
       scanner: 'none',
+    };
+  }
+
+  if (isProduction && !config.url.startsWith('https://')) {
+    return {
+      verdict: 'failed',
+      detail: 'The production scanner requires HTTPS.',
+      scanner: 'clamav',
     };
   }
 
@@ -145,5 +179,5 @@ export async function scanBytes(
 
 /** Whether a member (as opposed to staff) may download a file in this state. */
 export function isDownloadable(scanStatus: string): boolean {
-  return scanStatus === 'clean' || scanStatus === 'skipped';
+  return scanStatus === 'clean';
 }

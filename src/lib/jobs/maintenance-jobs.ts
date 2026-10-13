@@ -29,7 +29,9 @@ export const processExportsJob: JobDefinition = {
         'id, user_id, format, status, filter_configuration, saved_search_id, ' +
           'opportunity_ids, file_path',
       )
-      .eq('status', 'queued')
+      .or(
+        `status.eq.queued,and(status.eq.processing,lease_until.lt.${new Date().toISOString()}),and(status.eq.processing,lease_until.is.null)`,
+      )
       .order('requested_at', { ascending: true })
       .limit(20);
 
@@ -39,22 +41,11 @@ export const processExportsJob: JobDefinition = {
     let processed = 0;
     let failed = 0;
 
+    const deadline = Date.now() + 25_000;
     for (const job of (jobs ?? []) as unknown as ExportJobRow[]) {
+      if (Date.now() >= deadline) break;
       try {
-        // The worker has no member session, so row-level security cannot scope
-        // the query for it. It resolves the member's rank through the same
-        // database function the API uses and passes it as an explicit cap.
-        const client = createAdminClient();
-        const { data: rank, error: rankError } = await client.rpc(
-          'effective_access_rank',
-          {
-            target_user: job.user_id,
-          },
-        );
-        if (rankError) throw new Error(rankError.message);
-
-        await runExportJob(job, client, Number(rank ?? 0));
-        processed += 1;
+        if (await runExportJob(job)) processed += 1;
       } catch (error) {
         failed += 1;
         console.error('[jobs] export failed', {

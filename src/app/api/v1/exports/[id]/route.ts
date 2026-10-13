@@ -1,9 +1,11 @@
 import type { NextResponse } from 'next/server';
+import { z } from 'zod';
 
+import { canExportCsv } from '@/lib/access/entitlements';
 import { getViewer } from '@/lib/auth/session';
 import { createServerSupabaseClient } from '@/lib/db/server';
 import { signExportDownload } from '@/lib/exports/service';
-import { apiError, ok, withErrorHandling } from '@/lib/http/responses';
+import { apiError, denied, ok, withErrorHandling } from '@/lib/http/responses';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -22,24 +24,23 @@ export const GET = withErrorHandling(
   async (_request: Request, context: any): Promise<NextResponse> => {
     const { id } = await (context as RouteContext).params;
     const viewer = await getViewer();
-    if (!viewer.isAuthenticated) {
-      return apiError('unauthorized', 'Sign in to download an export.');
-    }
-    if (viewer.accountStatus !== 'active') {
-      return apiError(
-        'forbidden',
-        'Your account is suspended, so exports are unavailable.',
-      );
+    const decision = canExportCsv(viewer);
+    if (!decision.allowed) return denied(decision);
+    if (!z.string().uuid().safeParse(id).success) {
+      return apiError('bad_request', 'Invalid export ID.');
     }
 
     const supabase = await createServerSupabaseClient();
-    const { data: job } = await supabase
+    const { data: job, error } = await supabase
       .from('export_jobs')
-      .select('id, status, row_count, file_path, error_message, expires_at')
+      .select(
+        'id, status, row_count, file_path, error_message, expires_at, truncated',
+      )
       .eq('id', id)
       .eq('user_id', viewer.userId)
       .maybeSingle();
 
+    if (error) throw new Error(error.message);
     if (!job) return apiError('not_found', 'Export not found.');
 
     if (job.status === 'failed') {
@@ -79,6 +80,7 @@ export const GET = withErrorHandling(
       id: job.id,
       status: 'ready',
       rowCount: job.row_count,
+      truncated: job.truncated,
       downloadUrl,
       expiresInSeconds: 300,
     });

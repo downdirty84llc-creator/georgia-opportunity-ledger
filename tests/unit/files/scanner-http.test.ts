@@ -74,6 +74,24 @@ beforeAll(async () => {
         return;
       }
 
+      const badResponses: Record<string, [number, string]> = {
+        '/html': [200, '<html>Sign in</html>'],
+        '/empty': [200, ''],
+        '/error-text': [200, 'stream: Access denied ERROR'],
+        '/mixed': [200, 'stream: OK\nstream: Access denied ERROR'],
+        '/truncated': [200, 'OK' + ' '.repeat(5000) + 'ERROR'],
+        '/unrecognized': [406, 'Not Acceptable'],
+        '/error-found': [500, 'stream: Eicar-Signature FOUND'],
+        '/no-content': [204, ''],
+        '/stream-clean': [200, 'stream: OK\0'],
+        '/stream-infected': [200, 'stream: Eicar-Signature FOUND\0'],
+      };
+      const configured = badResponses[request.url ?? ''];
+      if (configured) {
+        response.writeHead(configured[0]);
+        response.end(configured[1]);
+        return;
+      }
       const text = body.toString('binary');
       if (text.includes('EICAR-STANDARD-ANTIVIRUS-TEST-FILE')) {
         // clamav-rest answers 406 for a hit, with the signature in the body.
@@ -108,6 +126,38 @@ function config(path = '/scan', timeoutMs = 5000): ScannerConfig {
 }
 
 describe('the ClamAV provider', () => {
+  it.each([
+    '/html',
+    '/empty',
+    '/error-text',
+    '/mixed',
+    '/truncated',
+    '/unrecognized',
+    '/error-found',
+    '/no-content',
+  ])(
+    'withholds files when the response is not a scan verdict: %s',
+    async (path) => {
+      expect(
+        (await scanBytes(new Uint8Array([1]), 'x.pdf', config(path))).verdict,
+      ).toBe('failed');
+    },
+  );
+  it('parses complete ClamD stream records', async () => {
+    expect(
+      (await scanBytes(new Uint8Array([1]), 'x.pdf', config('/stream-clean')))
+        .verdict,
+    ).toBe('clean');
+    expect(
+      (
+        await scanBytes(
+          new Uint8Array([1]),
+          'x.pdf',
+          config('/stream-infected'),
+        )
+      ).verdict,
+    ).toBe('infected');
+  });
   it('delivers the file unaltered', async () => {
     // A scanner is worthless if the multipart encoding corrupts what it sees.
     // This exact defect made an earlier manual check report a known-bad file
@@ -131,7 +181,7 @@ describe('the ClamAV provider', () => {
     expect(outcome.detail).toContain('FOUND');
   });
 
-  it('reads a 200 as clean', async () => {
+  it('reads an explicit OK verdict as clean', async () => {
     const outcome = await scanBytes(
       new Uint8Array(Buffer.from('%PDF-1.4 harmless', 'binary')),
       'clean.pdf',

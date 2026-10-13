@@ -46,7 +46,7 @@ describe('expired export cleanup', () => {
     });
     expect(await run()).toEqual({ expired: 1, failed: 0 });
     expect(update).toHaveBeenCalledWith(
-      { status: 'expired', file_path: null },
+      { status: 'expired', file_path: null, prepared_csv: null },
       'id',
       'export-1',
     );

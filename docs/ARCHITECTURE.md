@@ -389,17 +389,11 @@ stored-but-unscanned file is not a reachable file — and if the process dies
 between the two steps, what is left behind is a file nobody can download. That
 is the correct direction to fail.
 
-**The read policy is the enforcement.** Migration 0022 rewrites
-`attachments_read` to require `scan_status in ('clean', 'skipped')` on top of
-the existing access-rank and parent-visibility rules. `GET /api/v1/attachments/
-{id}` deliberately contains no scan check of its own: it looks the row up
-through the caller's session client and mints a signed URL only if the row comes
-back. One decision, in the database, that the endpoint cannot drift away from.
-
-`skipped` is readable and `failed` is not, which looks inconsistent until you
-notice they answer different questions. `skipped` means no scanner is configured
-— a deployment decision, recorded in the runbook, that applies to every file
-equally. `failed` means we tried to check _this_ file and could not.
+**Downloads require a positive scan.** The attachment row policy and Storage
+object policy both require `clean` for members, alongside access rank and parent
+visibility. The signed-URL service checks `clean` independently, including for
+staff. Staff retain access to quarantine metadata so they can investigate.
+No scanner, a skipped scan or an unrecognized provider reply permits no download.
 
 **Retry, and know when to stop.** `scan-attachments` picks up anything left
 `pending`, `failed`, or stuck in `scanning` past fifteen minutes, and gives up

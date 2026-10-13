@@ -67,27 +67,26 @@ Two things the script cannot do for you:
 - Add the webhook endpoint `POST /api/v1/webhooks/stripe`, subscribed to
   `checkout.session.completed`,
   `customer.subscription.created|updated|deleted` and
-  `invoice.payment_failed`. Put the signing secret in `STRIPE_WEBHOOK_SECRET`.
-- Pin the API version on the Stripe account. The client deliberately does not
-  pin one in code, so upgrading is a deliberate dashboard action with a
+  `invoice.payment_succeeded`, `invoice.paid`, `invoice.payment_failed` and
+  `checkout.session.async_payment_succeeded|async_payment_failed`. Put the signing secret in `STRIPE_WEBHOOK_SECRET`.
+- Pin the API version on the Stripe account. The client pins `2026-09-30.endive` in code, so upgrading is a deliberate dashboard action with a
   test-mode rehearsal rather than a side effect of a dependency bump.
 
 ### Virus scanning
 
-Uploads are scanned before members can reach them. With no scanner configured
-files store as `scan_status = 'skipped'`, which is readable — and which logs a
-warning on every upload in production, because shipping without one is a
-decision somebody should have made on purpose.
+Only `clean` attachments can be downloaded. Production without a scanner stores
+files as `failed` and withholds them; development `skipped` files are withheld too.
+Staff can inspect quarantine metadata but cannot mint download links for it.
 
-To turn scanning on, run a ClamAV REST front end and point `FILE_SCANNER_URL`
-at it:
-
-```bash
-docker run -d -p 9000:9000 --name clamav-rest clamav/clamav-rest
-# then, in the environment:
-FILE_SCANNER_PROVIDER="clamav"
-FILE_SCANNER_URL="http://clamav-rest:9000/scan"
-```
+Configure `FILE_SCANNER_PROVIDER=clamav`, an HTTPS `FILE_SCANNER_URL`, and the
+adapter's bearer key in `FILE_SCANNER_API_KEY`. The adapter accepts multipart
+`file` bytes and must return HTTP 200 with exactly `OK` or `stream: OK` for a
+successful scan, or HTTP 200/406 with a single ClamD `path: signature FOUND`
+record for infection. Newline or NUL termination is accepted. Unknown, empty,
+HTML, multiple-result and error replies fail closed; redirects are refused.
+See [ClamD replies](https://docs.clamav.net/manual/Usage/ClamdProtocol.html#reading-replies).
+Use a private scanner with current signatures; do not send private uploads to
+public sample-sharing services. No hosted scanner has been provisioned yet.
 
 Verify it end to end with the EICAR test string — a harmless file every scanner
 recognises. Upload it through `/admin/opportunities/{id}` and the endpoint
@@ -109,7 +108,7 @@ engine at all, so the client is checked on every push regardless.
 
 ### Background jobs
 
-The fourteen schedules live in `src/lib/jobs/registry.ts`. Both platforms'
+The fifteen schedules live in `src/lib/jobs/registry.ts`. Both platforms'
 config is generated from it:
 
 ```bash
@@ -244,7 +243,7 @@ is why it is the fallback.
 
 ### An attachment is not visible to members
 
-Check `scan_status` on the row. Members see only `clean` and `skipped`; the read
+Check `scan_status` on the row. Members see only `clean`; the read
 policy withholds `pending`, `scanning`, `failed` and `infected`, so an
 attachment that "disappeared" is almost always one whose scan has not resolved.
 
@@ -530,9 +529,8 @@ means a real failure; exit 2 means it could not look.
   would bake an empty home page and serve it for the whole revalidate window.
   A failed deploy is the cheaper outcome. Local builds without Supabase still
   pass, with the failures logged.
-- **`scan_status = 'skipped'` is downloadable.** It means no scanner is
-  configured, not that a file was checked and cleared. That is a deployment
-  decision with a line on the checklist above, not a per-file verdict.
+- **Only `scan_status = 'clean'` is downloadable.** A skipped scan does not
+  clear a file. Quarantined metadata remains visible to staff.
 - **Prices are immutable in Stripe.** Changing an amount means minting a new
   price and migrating subscribers onto it. `stripe:setup` will not do that for
   you, and should not.
@@ -551,3 +549,12 @@ means a real failure; exit 2 means it could not look.
 - **The plan matrix lives in two places.** Changing a limit means changing both
   `subscription_plans.feature_configuration` and `PLAN_FEATURE_DEFAULTS`.
   `tests/unit/access/plan-parity.test.ts` fails if you forget.
+
+### Export recovery
+
+Export jobs use two-minute worker leases and stop after five unsuccessful
+attempts. A durable CSV snapshot preserves the exact bytes through an uncertain
+Storage response. Paths use the job UUID, and stale completion writes are fenced
+by their claim token. Expired objects and snapshots are removed by pruning.
+Members check queued results at Account → Exports; no completion email is
+promised. Downloads recheck Premium/staff entitlement, readiness and expiry.

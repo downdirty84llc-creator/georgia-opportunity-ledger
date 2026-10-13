@@ -250,8 +250,7 @@ export function AttachmentsPanel({
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  {row.scan_status === 'clean' ||
-                  row.scan_status === 'skipped' ? (
+                  {row.scan_status === 'clean' ? (
                     <a
                       href={`/api/v1/attachments/${row.id}`}
                       className="rounded-md px-2.5 py-1.5 text-sm font-medium text-ink-700 underline hover:bg-ink-100"

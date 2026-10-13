@@ -26,9 +26,9 @@ describe('scanBytes with no scanner configured', () => {
 });
 
 describe('isDownloadable', () => {
-  it('allows only the two resolved-safe states', () => {
+  it('allows only explicitly clean files', () => {
     expect(isDownloadable('clean')).toBe(true);
-    expect(isDownloadable('skipped')).toBe(true);
+    expect(isDownloadable('skipped')).toBe(false);
   });
 
   it('withholds anything unresolved or rejected', () => {
