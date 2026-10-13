@@ -45,7 +45,13 @@ const putSchema = z.object({
         minimumScore: z.number().int().min(0).max(100).optional(),
       }),
     )
-    .max(20),
+    .max(ALERT_TYPES.length)
+    .refine(
+      (entries) =>
+        new Set(entries.map((entry) => entry.alertType)).size ===
+        entries.length,
+      { message: 'Each alert type may appear only once.' },
+    ),
 });
 
 /** GET /api/v1/alert-preferences */
@@ -68,6 +74,9 @@ export const GET = withErrorHandling(async (): Promise<NextResponse> => {
       .eq('user_id', viewer.userId),
   ]);
 
+  if (preferences.error) throw new Error(preferences.error.message);
+  if (alertPreferences.error) throw new Error(alertPreferences.error.message);
+
   return ok({
     emailAlertsEnabled: preferences.data?.email_alerts_enabled ?? true,
     marketingEmailEnabled: preferences.data?.marketing_email_enabled ?? false,
@@ -78,8 +87,8 @@ export const GET = withErrorHandling(async (): Promise<NextResponse> => {
 /**
  * PUT /api/v1/alert-preferences
  *
- * Replaces the whole email preference set in one call, so the form cannot leave
- * a half-applied state if a request fails partway.
+ * Saves the master switches and supplied email choices in one database
+ * transaction. Omitted alert types, frequencies and scores are preserved.
  *
  * Note what is *not* gated here: a member on any plan may switch an alert type
  * off. Entitlement decides whether an alert would ever have been sent, never
@@ -100,32 +109,12 @@ export const PUT = withErrorHandling(
 
     const supabase = await createServerSupabaseClient();
 
-    const { error: preferencesError } = await supabase
-      .from('user_preferences')
-      .update({
-        email_alerts_enabled: parsed.data.emailAlertsEnabled,
-        marketing_email_enabled: parsed.data.marketingEmailEnabled,
-      })
-      .eq('user_id', viewer.userId);
-
-    if (preferencesError) throw new Error(preferencesError.message);
-
-    if (parsed.data.alertTypes.length > 0) {
-      const rows = parsed.data.alertTypes.map((entry) => ({
-        user_id: viewer.userId,
-        alert_type: entry.alertType,
-        delivery_method: 'email' as const,
-        enabled: entry.enabled,
-        frequency: entry.frequency ?? 'immediate',
-        minimum_score: entry.minimumScore ?? 0,
-      }));
-
-      const { error } = await supabase
-        .from('alert_preferences')
-        .upsert(rows, { onConflict: 'user_id,alert_type,delivery_method' });
-
-      if (error) throw new Error(error.message);
-    }
+    const { error } = await supabase.rpc('save_email_preferences', {
+      p_email_alerts_enabled: parsed.data.emailAlertsEnabled,
+      p_marketing_email_enabled: parsed.data.marketingEmailEnabled,
+      p_alert_types: parsed.data.alertTypes,
+    });
+    if (error) throw new Error(error.message);
 
     return ok({
       emailAlertsEnabled: parsed.data.emailAlertsEnabled,

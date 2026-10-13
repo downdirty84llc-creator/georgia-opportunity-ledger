@@ -82,7 +82,9 @@ export function EmailPreferencesForm({
   const [disabledTypes, setDisabledTypes] = useState<Set<string>>(() => {
     const initial = new Set<string>();
     for (const preference of alertPreferences) {
-      if (!preference.enabled) initial.add(preference.alert_type);
+      if (!preference.enabled || preference.frequency === 'never') {
+        initial.add(preference.alert_type);
+      }
     }
     if (prefillUnsubscribe) {
       for (const entry of ALERT_TYPES) initial.add(entry.type);
@@ -116,10 +118,20 @@ export function EmailPreferencesForm({
         body: JSON.stringify({
           emailAlertsEnabled: alerts,
           marketingEmailEnabled: marketing,
-          alertTypes: ALERT_TYPES.map((entry) => ({
-            alertType: entry.type,
-            enabled: !disabledTypes.has(entry.type),
-          })),
+          alertTypes: ALERT_TYPES.map((entry) => {
+            const enabled = !disabledTypes.has(entry.type);
+            const frequency = alertPreferences.find(
+              (preference) => preference.alert_type === entry.type,
+            )?.frequency;
+            return {
+              alertType: entry.type,
+              enabled,
+              // Explicitly opting back in must also clear a stored "never".
+              ...(enabled && frequency === 'never'
+                ? { frequency: 'immediate' }
+                : {}),
+            };
+          }),
         }),
       });
 
