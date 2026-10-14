@@ -25,6 +25,17 @@ vi.mock('@/lib/db/admin', () => ({
           select: () => chain,
           not: () => chain,
           order: () => chain,
+          // The adoption pass asks for rows with no `stripe_subscription_id`.
+          // These tests reconcile a row that already has one, so that query
+          // answers empty and the two passes stay independent —
+          // `adopt-subscription.test.ts` covers the adoption decision itself.
+          is: () => {
+            const unclaimed: Record<string, unknown> = {
+              order: () => unclaimed,
+              limit: () => Promise.resolve({ data: [], error: null }),
+            };
+            return unclaimed;
+          },
           limit: () => Promise.resolve({ data: [localRow], error: null }),
           update: (values: Record<string, unknown>) => {
             if ('last_sync_attempt_at' in values)

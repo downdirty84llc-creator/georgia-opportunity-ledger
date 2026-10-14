@@ -612,6 +612,47 @@ falling back to free; a catalogue mismatch must not revoke paid access.
 The price → plan lookup is shared by both in `src/lib/billing/plans.ts`, so the
 webhook and the job cannot disagree about what a price means.
 
+**A net keyed on what the webhook writes cannot catch what the webhook
+missed.** `sync-subscriptions` selected `.not('stripe_subscription_id', 'is',
+null)`, and only the webhook ever writes that column — so it reconciled
+subscriptions it already knew and could not discover one it had never heard of.
+That is the first purchase, where the net is needed most. It is why the failure
+on 2026-10-13 read as total rather than late: the events were refused on a
+signature mismatch, Stripe treated the 400 as permanent and never retried, and
+nothing downstream could find the subscription again.
+
+The job now has a second pass that adopts unclaimed rows, keyed on
+`metadata.user_id` — written by `create-checkout-session` on
+`subscription_data`. That key matters beyond convenience: our own server sets
+it, so a customer cannot forge it, and it ties a subscription to an account
+without trusting an email address. **Never match on email** — addresses
+collide, change, and are chosen by whoever signed up.
+
+The decision lives in `src/lib/billing/adopt-subscription.ts` so it can be
+tested without Stripe, and the tests that matter are the refusals:
+
+- Another account's subscription is never adopted. The `metadata.user_id` check
+  is repeated locally even though the Stripe query filters on it, because
+  Stripe's search is eventually consistent and granting paid access must not
+  rest on a remote filter we cannot see.
+- `incomplete` and `incomplete_expired` are never adopted — the customer never
+  completed payment, so adopting would record a subscription nobody owed.
+  `past_due` and `unpaid` **are**, because they carry entitlement through the
+  grace window and `expire-lapsed-access` needs the row to exist first.
+- The user id is **validated as a UUID rather than escaped** before being
+  interpolated into Stripe's query language.
+- Two adoptable subscriptions for one account is logged as a billing fault
+  rather than settled quietly; the newest is taken so access is not withheld.
+
+Adoption routes through `subscriptionPaymentState`, the same resolver the
+reconcile pass uses, so it inherits the settled-payment rule instead of
+deciding entitlement for itself. It shares that pass's deadline, and writes
+under both `updated_at` and `.is('stripe_subscription_id', null)` — a webhook
+landing between the read and the write is the authoritative writer and must not
+be overwritten by a slower reconciler. An unrecognised price still adopts the
+ids and status but leaves `plan_id` alone. Eight of the twenty-one tests were
+watched to fail against a version with the guards removed.
+
 **Finishing a Checkout session is not paying for it.** A delayed payment method
 — ACH debit, bank transfer, some wallets — completes the session with
 `payment_status: 'unpaid'` and settles, or fails, days later. So
