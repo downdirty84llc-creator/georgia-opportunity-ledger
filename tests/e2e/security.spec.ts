@@ -67,6 +67,16 @@ async function statusOf(
 }
 
 test.describe('unauthorised API access', () => {
+  for (const path of [
+    '/admin/attachments/uploads',
+    '/admin/attachments/uploads/complete',
+  ]) {
+    test(`${path} refuses anonymous upload writes`, async ({ request }) => {
+      const response = await request.post(`${API}${path}`, { data: {} });
+      expect(response.status()).toBe(403);
+      expect((await response.json()).error.code).toBe('forbidden');
+    });
+  }
   test('public report previews expose only archive metadata', async ({
     request,
   }) => {

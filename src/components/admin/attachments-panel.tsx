@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { Button, Card, Pill } from '@/components/ui/primitives';
 import { ACCESS_RANK } from '@/lib/access/ranks';
+import { uploadAttachmentFromBrowser } from '@/lib/files/browser-upload';
 
 interface AttachmentRow {
   id: string;
@@ -73,7 +74,8 @@ export function AttachmentsPanel({
         cache: 'no-store',
       });
       const body: { data?: AttachmentRow[] } = await response.json();
-      if (response.ok) setRows(body.data ?? []);
+      if (!response.ok) throw new Error('Could not load the file list.');
+      setRows(body.data ?? []);
     } catch {
       setError('Could not load the file list.');
     } finally {
@@ -90,31 +92,21 @@ export function AttachmentsPanel({
     setError(null);
     setNotice(null);
 
-    const form = new FormData();
-    form.append('file', file);
-    form.append('minimumAccessRank', String(rank));
-    if (opportunityId) form.append('opportunityId', opportunityId);
-    if (reportId) form.append('reportId', reportId);
-
     try {
-      const response = await fetch('/api/v1/admin/attachments', {
-        method: 'POST',
-        body: form,
+      const message = await uploadAttachmentFromBrowser(file, {
+        minimumAccessRank: rank,
+        opportunityId,
+        reportId,
       });
-      const body: {
-        data?: { message?: string };
-        error?: { message?: string };
-      } = await response.json();
-
-      if (!response.ok) {
-        setError(body.error?.message ?? 'The upload was refused.');
-        return;
-      }
-      setNotice(body.data?.message ?? 'Uploaded.');
+      setNotice(message);
       if (inputRef.current) inputRef.current.value = '';
       await load();
-    } catch {
-      setError('Could not reach the server. Nothing was uploaded.');
+    } catch (error) {
+      setError(
+        error instanceof Error
+          ? error.message
+          : 'The upload could not be confirmed. Refresh the file list before retrying.',
+      );
     } finally {
       setBusy(false);
     }
@@ -193,7 +185,7 @@ export function AttachmentsPanel({
 
       {busy ? (
         <p role="status" className="mt-3 text-sm text-ink-600">
-          Uploading and scanning…
+          Uploading and validating…
         </p>
       ) : null}
 

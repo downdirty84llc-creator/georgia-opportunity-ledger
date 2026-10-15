@@ -1,13 +1,14 @@
 import { createAdminClient } from '@/lib/db/admin';
 import { serverEnv } from '@/lib/env';
+import { cleanupAttachmentUploads } from '@/lib/files/direct-uploads';
 import { scanAndRecord } from '@/lib/files/attachments';
 import type { JobDefinition } from '@/lib/jobs/runner';
 
 /**
  * Attachment scanning follow-up (spec 17, 20).
  *
- * Uploads scan inline, so in the ordinary case this job finds nothing. It
- * exists for the cases where inline scanning did not finish:
+ * Direct uploads enter this queue after server validation. The legacy multipart
+ * path also uses it when inline scanning did not finish:
  *
  *   - the scanner was down or slow, and the verdict came back `failed`;
  *   - the function was killed between storing the file and recording a
@@ -64,6 +65,7 @@ export const scanAttachmentsJob: JobDefinition = {
     let failed = 0;
     let infected = 0;
     const deadline = Date.now() + 25_000;
+    const uploadsCleaned = await cleanupAttachmentUploads(Date.now() + 3_000);
 
     for (const row of pending) {
       if (Date.now() >= deadline) break;
@@ -129,7 +131,7 @@ export const scanAttachmentsJob: JobDefinition = {
     return {
       processed,
       failed,
-      detail: { infected, exhausted: exhausted ?? 0 },
+      detail: { infected, exhausted: exhausted ?? 0, uploadsCleaned },
     };
   },
 };

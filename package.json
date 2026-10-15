@@ -30,6 +30,7 @@
     "preflight": "tsx scripts/preflight.ts"
   },
   "dependencies": {
+    "@opentelemetry/api": "^1.9.1",
     "@supabase/ssr": "^0.5.2",
     "@supabase/supabase-js": "^2.45.4",
     "date-fns": "^4.1.0",

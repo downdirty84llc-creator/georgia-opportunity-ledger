@@ -17,21 +17,10 @@
   package = "@netlify/plugin-nextjs"
 
 [functions]
+  # Supabase pg_cron is the single scheduler. Do not deploy the generated
+  # proxy functions as well: they duplicate calls and bill their wait time.
+  directory = "netlify/manual-functions"
   node_bundler = "esbuild"
 
-# --- Function budgets -------------------------------------------------------
-#
-# Two routes declare a longer budget than the default, through Next.js
-# `maxDuration` exports that Vercel reads directly:
-#
-#   /api/v1/jobs/[job]         300s  jobs iterate the whole member list
-#   /api/v1/admin/attachments   60s  uploads are read whole to be scanned
-#
-# Netlify does not read those exports, and its synchronous function limit is
-# well below 300 seconds on every plan. The jobs are therefore the one thing
-# that does not port unchanged. Which remedy applies depends on the plan this
-# deploys under, so it is recorded in docs/RUNBOOK.md as a deployment decision
-# rather than guessed at here.
-#
-# The scheduled functions themselves are tiny — they POST to the job endpoint
-# and return — so they are not the constraint. The endpoint is.
+# API jobs and upload finalization use the 60-second synchronous budget.
+# File bytes travel directly to Supabase; only metadata crosses this host.

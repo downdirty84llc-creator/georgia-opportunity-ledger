@@ -90,7 +90,7 @@ public sample-sharing services. No hosted scanner has been provisioned yet.
 
 Verify it end to end with the EICAR test string — a harmless file every scanner
 recognises. Upload it through `/admin/opportunities/{id}` and the endpoint
-should refuse it, the object should be gone from the bucket, and the row should
+should quarantine it; after the scanner job, the final object should be gone and the row should
 read `infected` with the signature name in `scan_detail`.
 
 If the host cannot reach `database.clamav.net` for signature definitions, the
@@ -108,7 +108,7 @@ engine at all, so the client is checked on every push regardless.
 
 ### Background jobs
 
-The fifteen schedules live in `src/lib/jobs/registry.ts`. Both platforms'
+The sixteen schedules live in `src/lib/jobs/registry.ts`. Both platforms'
 config is generated from it:
 
 ```bash
@@ -116,10 +116,11 @@ npm run schedules:generate   # rewrite vercel.json and netlify/functions
 npm run schedules:check      # fail if either has drifted (runs in CI)
 ```
 
-**On Netlify** each job is a scheduled function in `netlify/functions`. Netlify
-has no equivalent of Vercel Cron's automatic credential, so each function sends
-`CRON_SECRET` as a bearer token itself. Set `CRON_SECRET`; `URL` is provided by
-Netlify.
+**On Netlify** `netlify.toml` selects the empty `netlify/manual-functions`
+directory. The generated proxy jobs in `netlify/functions` are retained as
+reference but are not deployed: Supabase remains the single scheduler. Deploying
+both would duplicate invocations and consume extra compute credits. The Next.js
+adapter generates the application functions independently.
 
 **On Vercel** `vercel.json` declares **no** crons. The hobby plan enforces a
 once-per-day minimum cadence and fails the deploy on anything more frequent, and
@@ -143,7 +144,7 @@ select vault.create_secret(
 
 -- 2. The base URL pg_net calls. Must be publicly reachable.
 select vault.create_secret(
-  'https://gaopportunityledger.com',
+  'https://georgiaopportunityledger.com',
   'ledger_site_url'
 );
 
@@ -162,7 +163,7 @@ changes — connecting the custom domain, for instance — update the secret:
 ```sql
 select vault.update_secret(
   (select id from vault.secrets where name = 'ledger_site_url'),
-  'https://gaopportunityledger.com'
+  'https://georgiaopportunityledger.com'
 );
 ```
 
@@ -181,19 +182,28 @@ ran and found no work, and this schedule is unattended.
 The endpoint authorises on the header rather than on who is calling, so it is
 identical however it is driven.
 
-### The one thing that does not port
+### Function budgets and direct uploads
 
-`/api/v1/jobs/[job]` declares `maxDuration = 60` (the hobby ceiling) and
-`/api/v1/admin/attachments` declares `60`. Vercel reads those exports; Netlify
-does not, and its synchronous function limit is well below 300 seconds on every
-plan. Long jobs — `distribute-weekly-report` and `process-exports` especially —
-will be cut off mid-run on Netlify unless one of these applies:
+The job and attachment-finalization routes declare `maxDuration = 60` for
+Vercel. Netlify synchronous functions also have a 60-second limit; scheduled
+functions have a shorter 30-second limit. Calling from an external scheduler
+does not extend the destination function's timeout. The bounded job handlers
+must still finish within their host budget; unfinished work resumes from its
+checkpoint. Validate actual runtime and credit consumption before a host cutover.
 
-- run them as Netlify **background functions**, which raises the ceiling to 15
-  minutes (paid plans);
-- or leave the schedule to an external caller (Supabase `pg_cron`, GitHub
-  Actions, any uptime pinger) hitting `/api/v1/jobs/{job}` with the bearer
-  token, and delete the scheduled functions.
+Attachment uploads reserve metadata through `/api/v1/admin/attachments/uploads`,
+transfer bytes directly to the private `attachment-uploads` Supabase bucket,
+then call `/api/v1/admin/attachments/uploads/complete` with only the upload ID.
+This keeps a 25 MiB file out of the web host's buffered request body. Finalization
+checks owner, size and file signature, then creates a separate immutable object
+and a pending attachment. Only a subsequent clean scanner verdict allows member
+downloads. Signed upload tokens cannot replace the final scanned object.
+
+Migration `20261015120000` must be applied before deploying this flow. Temporary
+objects are collected by `scan-attachments` after three hours, beyond the signed
+token's two-hour lifetime. Failed cleanup retains its record for retry. A request
+that loses its response can finalize the same upload ID again without creating a
+duplicate; if the editor starts a new upload, first refresh the file list.
 
 Every job writes a `job_runs` row before it starts and updates it at the end, so
 a truncated run is visible on the admin dashboard as one that began and never

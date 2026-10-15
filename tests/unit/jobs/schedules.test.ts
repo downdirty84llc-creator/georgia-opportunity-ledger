@@ -151,3 +151,15 @@ describe('the registry itself', () => {
     }
   });
 });
+
+describe('Netlify scheduler selection', () => {
+  it('excludes generated cron proxies while Supabase owns the schedule', () => {
+    const config = readFileSync(join(ROOT, 'netlify.toml'), 'utf8');
+    expect(config).toMatch(/directory = "netlify\/manual-functions"/);
+    expect(
+      readdirSync(join(ROOT, 'netlify', 'manual-functions')).filter((file) =>
+        /\.(m?ts|m?js)$/.test(file),
+      ),
+    ).toEqual([]);
+  });
+});
