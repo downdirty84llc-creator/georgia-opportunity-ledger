@@ -162,6 +162,25 @@ clock stopped matters as much as what it read** — a tool timeout or proxy
 response does not measure database execution time. A tool timeout also does
 not establish whether the request reached the database.
 
+**A control that does not vary the thing that matters is not a control.** A
+fifth instance, two days later and the same shape. After rebasing onto a commit
+that bumped `stripe` from `^17.3.0` to `^23.0.0`, `npm run typecheck` reported
+19 errors, one test failed and `npm run build` broke — and this was reported as
+"`main` is already broken". The cause was an un-reinstalled `node_modules`
+still holding 17.7.0 against a manifest requiring 23. The commit message of
+`04af80c` carries that false claim; it is wrong, and `npm ci` clears every one
+of those failures.
+
+What made it stick was the check meant to rule it out: the changes were stashed
+and the gate re-run, which looked like a clean comparison. **`git stash` does
+not touch `node_modules`**, so both runs shared the real fault and agreed for
+the wrong reason. Two readings that agree are not corroboration when they share
+an uncontrolled variable.
+
+So: **run `npm ci` after any rebase or pull that touches `package.json` or
+`package-lock.json`**, and before concluding anything about a build or
+typecheck failure, check the installed version of whatever the error names.
+
 **A guard that fails open needs a test that watches it refuse.** The rate
 limiter is the case that proves it. `checkRateLimit` returns `allowed: true` on
 any limiter fault — deliberate, because a database hiccup should not lock every
@@ -177,7 +196,7 @@ refusal; anything less tests the fail-open branch and calls it success.
 npm ci
 npm run typecheck && npm run lint && npm run format:check
 npm run schedules:check          # deploy cron config must match the job registry
-npm test                         # 457 tests
+npm test                         # 580 tests
 npm run build
 npx playwright test --project=desktop-chrome   # 16 skip without a seeded DB — correct
 ./scripts/verify-schema.sh       # 36 migrations; 17 RLS, 17 deletion, 16 purge, 3 concurrency checks
@@ -652,6 +671,14 @@ landing between the read and the write is the authoritative writer and must not
 be overwritten by a slower reconciler. An unrecognised price still adopts the
 ids and status but leaves `plan_id` alone. Eight of the twenty-one tests were
 watched to fail against a version with the guards removed.
+
+The job's `detail` reports `refused` beside `adopted` and `ambiguous`. A row
+skipped by the UUID guard used to `continue` without counting anything, which
+in the report was indistinguishable from "asked Stripe and found nothing
+eligible" — both `adopted: 0`, `failed: 0`. That mattered on 2026-10-15, when
+those zeroes were the only surviving evidence about a member who had paid and
+had no access, the runtime logs having already passed the hobby plan's one-hour
+retention. A console line that outlives nothing is not a record.
 
 **Finishing a Checkout session is not paying for it.** A delayed payment method
 — ACH debit, bank transfer, some wallets — completes the session with

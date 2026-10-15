@@ -205,6 +205,7 @@ export const syncSubscriptionsJob: JobDefinition = {
 
     let adopted = 0;
     let ambiguous = 0;
+    let refused = 0;
 
     for (const record of unclaimed ?? []) {
       // Shares the reconcile pass's budget rather than opening a new one: the
@@ -213,6 +214,11 @@ export const syncSubscriptionsJob: JobDefinition = {
 
       const query = subscriptionSearchQuery(record.user_id);
       if (!query) {
+        // Counted, not just logged. Without this the row reads exactly like
+        // "searched Stripe and found nothing eligible" in `detail` — two very
+        // different facts behind one set of zeroes, and the job report is the
+        // only place anybody looks after the hour of runtime logs has expired.
+        refused += 1;
         console.error('[jobs] refusing to search for a non-UUID user id', {
           id: record.id,
         });
@@ -322,6 +328,7 @@ export const syncSubscriptionsJob: JobDefinition = {
         unclaimedChecked: unclaimed?.length ?? 0,
         adopted,
         ambiguous,
+        refused,
         unprocessedWebhookEvents: unprocessed ?? 0,
       },
     };
