@@ -1,12 +1,13 @@
+import { withAdminHandling } from '@/lib/http/admin-handler';
 import {
   beginAttachmentUpload,
   uploadMetadataSchema,
 } from '@/lib/files/direct-uploads';
 import { uploadAuthority, uploadFailure } from '@/lib/files/upload-route';
-import { apiError, created, withErrorHandling } from '@/lib/http/responses';
+import { apiError, created } from '@/lib/http/responses';
 
 export const dynamic = 'force-dynamic';
-export const POST = withErrorHandling(async (request) => {
+export const POST = withAdminHandling(async (request) => {
   const owner = await uploadAuthority(request);
   if (typeof owner !== 'string') return owner;
   const raw = await request.json().catch(() => null);

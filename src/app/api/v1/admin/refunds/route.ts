@@ -1,3 +1,4 @@
+import { withAdminHandling } from '@/lib/http/admin-handler';
 import type { NextResponse } from 'next/server';
 import { z } from 'zod';
 
@@ -14,7 +15,6 @@ import {
   created,
   rateLimited,
   validationFailed,
-  withErrorHandling,
 } from '@/lib/http/responses';
 
 export const dynamic = 'force-dynamic';
@@ -40,7 +40,7 @@ const refundSchema = z.object({
   note: z.string().trim().min(3).max(500),
 });
 
-export const POST = withErrorHandling(
+export const POST = withAdminHandling(
   async (request: Request): Promise<NextResponse> => {
     const viewer = await getViewer();
 

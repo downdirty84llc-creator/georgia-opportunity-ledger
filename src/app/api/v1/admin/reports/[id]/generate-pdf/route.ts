@@ -1,3 +1,4 @@
+import { withAdminHandling } from '@/lib/http/admin-handler';
 import type { NextResponse } from 'next/server';
 
 import { getViewer } from '@/lib/auth/session';
@@ -5,12 +6,7 @@ import { createAdminClient } from '@/lib/db/admin';
 import { createServerSupabaseClient } from '@/lib/db/server';
 import { serverEnv } from '@/lib/env';
 import { checkRateLimit, rateLimitIdentity } from '@/lib/http/rate-limit';
-import {
-  apiError,
-  ok,
-  rateLimited,
-  withErrorHandling,
-} from '@/lib/http/responses';
+import { apiError, ok, rateLimited } from '@/lib/http/responses';
 import {
   renderPdf,
   reportToBlocks,
@@ -38,7 +34,7 @@ function toPlainText(value: unknown): string | null {
 }
 
 /** POST /api/v1/admin/reports/{id}/generate-pdf */
-export const POST = withErrorHandling(
+export const POST = withAdminHandling(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   async (request: Request, context: any): Promise<NextResponse> => {
     const { id } = await (context as RouteContext).params;

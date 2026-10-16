@@ -1,6 +1,7 @@
 import type { NextResponse } from 'next/server';
 
 import { getSessionContext } from '@/lib/auth/session';
+import { mfaRequiredForRole } from '@/lib/auth/mfa';
 import {
   paidAccessEndsAt,
   needsPaymentAttention,
@@ -38,6 +39,7 @@ export const GET = withErrorHandling(async (): Promise<NextResponse> => {
     planCode: context.planCode,
     planName: context.planName,
     isStaff: viewer.isStaff,
+    needsStaffVerification: mfaRequiredForRole(viewer.role) && !viewer.isStaff,
     features: viewer.features,
     subscription: {
       status: context.subscriptionStatus,

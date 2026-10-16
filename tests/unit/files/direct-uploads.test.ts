@@ -19,6 +19,10 @@ const mocks = vi.hoisted(() => ({
   results: new Map<string, { data: unknown; error: unknown }>(),
 }));
 vi.mock('@/lib/auth/session', () => ({ getViewer: mocks.viewer }));
+vi.mock('@/lib/auth/mfa', () => ({
+  getMfaStatus: async () => ({ state: 'satisfied' }),
+  mfaRequiredForRole: (role: string) => role !== 'member',
+}));
 vi.mock('@/lib/http/rate-limit', () => ({
   checkRateLimit: mocks.rate,
   rateLimitIdentity: () => 'owner',

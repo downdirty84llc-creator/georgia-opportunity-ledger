@@ -4,8 +4,6 @@ import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
 import { Button, Card } from '@/components/ui/primitives';
-import { createBrowserSupabaseClient } from '@/lib/db/browser';
-import { titleCase } from '@/lib/format';
 import type { MfaState } from '@/lib/auth/mfa';
 
 /**
@@ -19,11 +17,9 @@ import type { MfaState } from '@/lib/auth/mfa';
 export function MfaSetup({
   state,
   factorId,
-  role,
 }: {
   state: MfaState;
   factorId: string | null;
-  role: string;
 }) {
   const router = useRouter();
   const [qr, setQr] = useState<string | null>(null);
@@ -37,22 +33,23 @@ export function MfaSetup({
     setBusy(true);
     setError(null);
     try {
-      const supabase = createBrowserSupabaseClient();
-      const { data, error: enrolError } = await supabase.auth.mfa.enroll({
-        factorType: 'totp',
-        friendlyName: `Ledger admin — ${titleCase(role)}`,
+      const response = await fetch('/api/v1/auth/mfa', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'enroll' }),
       });
+      const { data, error: enrolError } = await response.json();
 
-      if (enrolError || !data) {
+      if (!response.ok || enrolError || !data) {
         setError(
           enrolError?.message ?? 'Enrolment could not be started. Try again.',
         );
         return;
       }
 
-      setEnrolFactorId(data.id);
-      setQr(data.totp.qr_code);
-      setSecret(data.totp.secret);
+      setEnrolFactorId(data.factorId);
+      setQr(data.qrCode);
+      setSecret(data.secret);
     } catch {
       setError('Enrolment could not be started. Try again.');
     } finally {
@@ -64,28 +61,19 @@ export function MfaSetup({
     setBusy(true);
     setError(null);
     try {
-      const supabase = createBrowserSupabaseClient();
-
-      const { data: challenge, error: challengeError } =
-        await supabase.auth.mfa.challenge({ factorId: targetFactorId });
-
-      if (challengeError || !challenge) {
-        setError(challengeError?.message ?? 'Could not start the challenge.');
-        return;
-      }
-
-      const { error: verifyError } = await supabase.auth.mfa.verify({
-        factorId: targetFactorId,
-        challengeId: challenge.id,
-        code: code.replace(/\s/g, ''),
+      const response = await fetch('/api/v1/auth/mfa', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'verify',
+          factorId: targetFactorId,
+          code: code.replace(/\s/g, ''),
+        }),
       });
+      const { error: verifyError } = await response.json();
 
-      if (verifyError) {
-        setError(
-          verifyError.message.toLowerCase().includes('invalid')
-            ? 'That code was not accepted. Codes expire after 30 seconds — try the next one.'
-            : verifyError.message,
-        );
+      if (!response.ok || verifyError) {
+        setError(verifyError?.message ?? 'Verification failed. Try again.');
         return;
       }
 
@@ -96,6 +84,20 @@ export function MfaSetup({
     } finally {
       setBusy(false);
     }
+  }
+
+  if (state === 'unavailable') {
+    return (
+      <Card>
+        <p role="alert">
+          Two-factor verification is temporarily unavailable. Staff access stays
+          locked until verification succeeds.
+        </p>
+        <Button className="mt-4" onClick={() => router.refresh()}>
+          Try again
+        </Button>
+      </Card>
+    );
   }
 
   if (state === 'satisfied') {

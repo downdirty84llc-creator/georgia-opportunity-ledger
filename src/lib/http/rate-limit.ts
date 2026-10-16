@@ -9,6 +9,7 @@ import { createAdminClient } from '@/lib/db/admin';
  */
 export const RATE_LIMITS = {
   login: { limit: 10, windowSeconds: 300 },
+  mfa: { limit: 10, windowSeconds: 300 },
   passwordReset: { limit: 5, windowSeconds: 3600 },
   register: { limit: 5, windowSeconds: 3600 },
   contact: { limit: 5, windowSeconds: 3600 },
@@ -72,6 +73,15 @@ export async function checkRateLimit(
     .single();
 
   if (error || !data) {
+    if (action === 'mfa') {
+      console.error('[rate-limit] MFA limiter unavailable; request denied');
+      return {
+        allowed: false,
+        remaining: 0,
+        resetAt: new Date(Date.now() + 60_000),
+        limit: config.limit,
+      };
+    }
     // Fail open on limiter faults. A database hiccup should not lock every
     // member out of search; the failure is logged and the request proceeds.
     console.error('[rate-limit] check failed, allowing request', {

@@ -13,6 +13,7 @@ import type {
   UserRole,
 } from '@/lib/billing/subscription';
 import { createServerSupabaseClient } from '@/lib/db/server';
+import { getMfaStatus, mfaRequiredForRole } from '@/lib/auth/mfa';
 
 export interface SessionContext {
   viewer: Viewer;
@@ -122,12 +123,15 @@ export const getSessionContext = cache(async (): Promise<SessionContext> => {
       }
     : null;
 
+  const staffRole = mfaRequiredForRole(profile.role as string);
+  const staffVerified =
+    !staffRole || (await getMfaStatus(true)).state === 'satisfied';
   const viewer = buildViewer(
     {
       userId: user.id,
-      role: profile.role as UserRole,
+      role: staffVerified ? (profile.role as UserRole) : 'member',
       accountStatus: profile.account_status as AccountStatus,
-      accessRankOverride: profile.access_rank_override,
+      accessRankOverride: staffVerified ? profile.access_rank_override : null,
       accessRankOverrideExpiresAt: toDate(
         profile.access_rank_override_expires_at,
       ),
@@ -135,6 +139,9 @@ export const getSessionContext = cache(async (): Promise<SessionContext> => {
     subscription,
     plan ? parsePlanFeatures(plan.feature_configuration, planCode) : null,
   );
+  // Keep the actual role for the enrolment gate, but grant only member
+  // capabilities until this session has presented the second factor.
+  viewer.role = profile.role as UserRole;
 
   return {
     viewer,

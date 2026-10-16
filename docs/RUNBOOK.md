@@ -569,3 +569,34 @@ Storage response. Paths use the job UUID, and stale completion writes are fenced
 by their claim token. Expired objects and snapshots are removed by pruning.
 Members check queued results at Account → Exports; no completion email is
 promised. Downloads recheck Premium/staff entitlement, readiness and expiry.
+
+### Staff two-factor authentication
+
+Staff enrolment and verification use `/api/v1/auth/mfa`, bound to the existing
+HttpOnly session. The browser never receives session tokens. Staff sign-ins
+without a verified second factor retain ordinary member access and see a
+"Verify staff access" link. The Security page remains reachable for enrolment
+and retries; a provider error does not unlock the admin area.
+
+Every administrator API handler uses `withAdminHandling` before its specific
+role check. Migration `20261016010000` also requires an active account and an
+`aal2` JWT for database staff predicates. Password-only staff receive their
+subscription rank, not the staff preview rank. `verify-staff-mfa.sql` exercises
+missing assurance, password-only access, valid MFA and suspended accounts.
+
+### Isolated Netlify preview
+
+The private `georgia-opportunity-ledger-preview` site uses only `gol-staging`
+(`bahdfxljazvegvgccvxy`). Production remains separate. CLI alias `launch-check`
+is a **branch deploy**, so runtime variables need that context as well as the
+deploy-preview build context. Manual uploads of an already-adapted build must
+publish `.netlify/static`; uploading `.next` directly breaks static asset URLs.
+
+Netlify Free requires all variable scopes; selecting only Builds/Functions
+returns HTTP 403. Its standard environment variables are readable by authorized
+project administrators; Secrets Controller is not enabled here. Server keys must
+never use a `NEXT_PUBLIC_` prefix or be injected into static assets. Verify saved
+configuration through the API and a real runtime request: the CLI returned exit
+zero for rejected environment changes during this setup. The preview sends no
+email (`EMAIL_PROVIDER=console`) and has no live payment credentials or cron
+schedules. No production domain cutover has been made.

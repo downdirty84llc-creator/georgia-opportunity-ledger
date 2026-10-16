@@ -1,14 +1,10 @@
+import { withAdminHandling } from '@/lib/http/admin-handler';
 import type { NextResponse } from 'next/server';
 import { z } from 'zod';
 
 import { getViewer } from '@/lib/auth/session';
 import { createServerSupabaseClient } from '@/lib/db/server';
-import {
-  apiError,
-  ok,
-  validationFailed,
-  withErrorHandling,
-} from '@/lib/http/responses';
+import { apiError, ok, validationFailed } from '@/lib/http/responses';
 import { roleMayPerform } from '@/lib/opportunities/workflow';
 import { buildScore } from '@/lib/scoring/score';
 import {
@@ -148,7 +144,7 @@ const COLUMN_MAP: Record<string, string> = {
  * `workflow_status` is deliberately not accepted here — otherwise a researcher
  * could publish by PATCHing a field they are allowed to edit.
  */
-export const PATCH = withErrorHandling(
+export const PATCH = withAdminHandling(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   async (request: Request, context: any): Promise<NextResponse> => {
     const { id } = await (context as RouteContext).params;

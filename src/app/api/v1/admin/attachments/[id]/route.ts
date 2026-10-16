@@ -1,8 +1,9 @@
+import { withAdminHandling } from '@/lib/http/admin-handler';
 import type { NextResponse } from 'next/server';
 
 import { getViewer } from '@/lib/auth/session';
 import { deleteAttachment } from '@/lib/files/attachments';
-import { apiError, noContent, withErrorHandling } from '@/lib/http/responses';
+import { apiError, noContent } from '@/lib/http/responses';
 
 export const dynamic = 'force-dynamic';
 
@@ -17,7 +18,7 @@ type RouteContext = { params: Promise<{ id: string }> };
  * row without its file is untidy but a file without its row is unreachable and
  * permanent.
  */
-export const DELETE = withErrorHandling(
+export const DELETE = withAdminHandling(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   async (_request: Request, context: any): Promise<NextResponse> => {
     const { id } = await (context as RouteContext).params;

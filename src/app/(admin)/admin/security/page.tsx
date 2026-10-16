@@ -14,7 +14,7 @@ export const dynamic = 'force-dynamic';
 
 export default async function AdminSecurityPage() {
   const { viewer } = await getSessionContext();
-  if (!viewer.isStaff) redirect('/dashboard');
+  if (!mfaRequiredForRole(viewer.role)) redirect('/dashboard');
 
   const status = await getMfaStatus(mfaRequiredForRole(viewer.role));
 
@@ -26,11 +26,7 @@ export default async function AdminSecurityPage() {
         description="Required for every staff role before the admin area will open. A support representative can read member accounts and a billing manager can move money — both are worth a second factor."
       />
 
-      <MfaSetup
-        state={status.state}
-        factorId={status.factorId}
-        role={viewer.role}
-      />
+      <MfaSetup state={status.state} factorId={status.factorId} />
 
       <Card className="mt-6">
         <h2 className="text-base font-semibold">What this protects</h2>

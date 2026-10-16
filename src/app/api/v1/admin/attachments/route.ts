@@ -1,15 +1,10 @@
+import { withAdminHandling } from '@/lib/http/admin-handler';
 import type { NextResponse } from 'next/server';
 
 import { getViewer } from '@/lib/auth/session';
 import { createServerSupabaseClient } from '@/lib/db/server';
 import { UploadRejected, uploadAttachment } from '@/lib/files/attachments';
-import {
-  apiError,
-  created,
-  ok,
-  rateLimited,
-  withErrorHandling,
-} from '@/lib/http/responses';
+import { apiError, created, ok, rateLimited } from '@/lib/http/responses';
 import { checkRateLimit, rateLimitIdentity } from '@/lib/http/rate-limit';
 
 export const dynamic = 'force-dynamic';
@@ -32,7 +27,7 @@ const EDITORIAL_ROLES = [
  * Quarantined files appear here deliberately: somebody has to know that an
  * upload was rejected and why.
  */
-export const GET = withErrorHandling(
+export const GET = withAdminHandling(
   async (request: Request): Promise<NextResponse> => {
     const viewer = await getViewer();
     if (!viewer.isStaff || viewer.accountStatus !== 'active') {
@@ -81,7 +76,7 @@ export const GET = withErrorHandling(
  * are staff but have no reason to add files to published records, and an
  * upload endpoint is the last place to be generous with who may call it.
  */
-export const POST = withErrorHandling(
+export const POST = withAdminHandling(
   async (request: Request): Promise<NextResponse> => {
     const viewer = await getViewer();
     if (

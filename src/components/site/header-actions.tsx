@@ -5,6 +5,7 @@ import { ButtonLink } from '@/components/ui/primitives';
 export interface HeaderSession {
   authenticated: boolean;
   isStaff: boolean;
+  needsStaffVerification?: boolean;
   planCode: string;
   planName: string;
 }
@@ -58,13 +59,13 @@ export function HeaderNav({ session }: { session: HeaderSession }) {
           </Link>
         </li>
       ))}
-      {session.isStaff ? (
+      {session.isStaff || session.needsStaffVerification ? (
         <li>
           <Link
-            href="/admin"
+            href={session.needsStaffVerification ? '/admin/security' : '/admin'}
             className="rounded-md bg-clay-50 px-2.5 py-1.5 font-medium text-clay-800 hover:bg-clay-100"
           >
-            Admin
+            {session.needsStaffVerification ? 'Verify staff access' : 'Admin'}
           </Link>
         </li>
       ) : null}

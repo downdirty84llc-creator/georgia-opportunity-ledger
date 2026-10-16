@@ -30,7 +30,7 @@ export default async function AdminLayout({
   // Administrator access is decided by role, never by subscription plan
   // (spec 9). A Premium member has rank 30 and no admin access whatsoever.
   if (!viewer.isAuthenticated) redirect('/login?next=/admin');
-  if (!viewer.isStaff || viewer.accountStatus !== 'active')
+  if (!mfaRequiredForRole(viewer.role) || viewer.accountStatus !== 'active')
     redirect('/dashboard');
 
   // Multi-factor is required of every staff role (spec 3.3, 20). The security
@@ -39,10 +39,7 @@ export default async function AdminLayout({
   const pathname = (await headers()).get(PATHNAME_HEADER) ?? '';
   if (!pathname.startsWith('/admin/security')) {
     const mfa = await getMfaStatus(mfaRequiredForRole(viewer.role));
-    if (
-      mfa.state === 'enrolment_required' ||
-      mfa.state === 'challenge_required'
-    ) {
+    if (mfa.state !== 'satisfied') {
       redirect('/admin/security');
     }
   }

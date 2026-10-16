@@ -1,14 +1,10 @@
+import { withAdminHandling } from '@/lib/http/admin-handler';
 import type { NextResponse } from 'next/server';
 import { z } from 'zod';
 
 import { getViewer } from '@/lib/auth/session';
 import { createServerSupabaseClient } from '@/lib/db/server';
-import {
-  apiError,
-  ok,
-  validationFailed,
-  withErrorHandling,
-} from '@/lib/http/responses';
+import { apiError, ok, validationFailed } from '@/lib/http/responses';
 
 export const dynamic = 'force-dynamic';
 
@@ -26,7 +22,7 @@ const bodySchema = z.object({
  * handled by the weekly-distribution job, so a report can go live quietly and
  * be mailed later (or never).
  */
-export const POST = withErrorHandling(
+export const POST = withAdminHandling(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   async (request: Request, context: any): Promise<NextResponse> => {
     const { id } = await (context as RouteContext).params;

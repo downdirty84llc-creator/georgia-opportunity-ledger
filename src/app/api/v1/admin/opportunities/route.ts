@@ -1,15 +1,10 @@
+import { withAdminHandling } from '@/lib/http/admin-handler';
 import type { NextResponse } from 'next/server';
 import { z } from 'zod';
 
 import { getViewer } from '@/lib/auth/session';
 import { createServerSupabaseClient } from '@/lib/db/server';
-import {
-  apiError,
-  created,
-  ok,
-  validationFailed,
-  withErrorHandling,
-} from '@/lib/http/responses';
+import { apiError, created, ok, validationFailed } from '@/lib/http/responses';
 import { roleMayPerform } from '@/lib/opportunities/workflow';
 import { OPPORTUNITY_CATEGORIES } from '@/lib/search/filters';
 
@@ -41,7 +36,7 @@ function slugify(input: string): string {
 }
 
 /** GET /api/v1/admin/opportunities — the editorial queue. */
-export const GET = withErrorHandling(
+export const GET = withAdminHandling(
   async (request: Request): Promise<NextResponse> => {
     const viewer = await getViewer();
     if (!viewer.isStaff || viewer.accountStatus !== 'active') {
@@ -77,7 +72,7 @@ export const GET = withErrorHandling(
  * Always creates a draft. Publishing is a separate, separately authorised
  * action — there is no way to create a published record in one call.
  */
-export const POST = withErrorHandling(
+export const POST = withAdminHandling(
   async (request: Request): Promise<NextResponse> => {
     const viewer = await getViewer();
     if (

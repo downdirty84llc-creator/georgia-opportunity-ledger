@@ -22,6 +22,8 @@
 \set ON_ERROR_STOP on
 
 begin;
+-- Existing staff fixtures represent sessions that passed MFA.
+select set_config('request.jwt.claims','{"aal":"aal2"}',true);
 
 -- --- Fixtures ---------------------------------------------------------------
 --

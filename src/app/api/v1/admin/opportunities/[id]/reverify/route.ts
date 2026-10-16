@@ -1,7 +1,8 @@
+import { withAdminHandling } from '@/lib/http/admin-handler';
 import type { NextResponse } from 'next/server';
 
 import { performWorkflowAction } from '@/lib/opportunities/admin-actions';
-import { withErrorHandling } from '@/lib/http/responses';
+import {} from '@/lib/http/responses';
 
 export const dynamic = 'force-dynamic';
 
@@ -12,7 +13,7 @@ type RouteContext = { params: Promise<{ id: string }> };
  *
  * Records a fresh verification event.
  */
-export const POST = withErrorHandling(
+export const POST = withAdminHandling(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   async (request: Request, context: any): Promise<NextResponse> => {
     const { id } = await (context as RouteContext).params;

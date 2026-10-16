@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation';
 import { SiteFooter } from '@/components/site/footer';
 import { SiteHeader } from '@/components/site/header';
 import { getSessionContext } from '@/lib/auth/session';
+import { mfaRequiredForRole } from '@/lib/auth/mfa';
 
 /**
  * Member area shell.
@@ -30,6 +31,8 @@ export default async function MemberLayout({
         session={{
           authenticated: true,
           isStaff: viewer.isStaff,
+          needsStaffVerification:
+            mfaRequiredForRole(viewer.role) && !viewer.isStaff,
           planCode,
           planName,
         }}

@@ -1,14 +1,10 @@
+import { withAdminHandling } from '@/lib/http/admin-handler';
 import type { NextResponse } from 'next/server';
 import { z } from 'zod';
 
 import { MfaResetError, resetStaffMfa } from '@/lib/auth/mfa-admin';
 import { getViewer } from '@/lib/auth/session';
-import {
-  apiError,
-  ok,
-  validationFailed,
-  withErrorHandling,
-} from '@/lib/http/responses';
+import { apiError, ok, validationFailed } from '@/lib/http/responses';
 
 export const dynamic = 'force-dynamic';
 
@@ -32,7 +28,7 @@ const bodySchema = z.object({
  * so "who asked, and how did we know it was them" needs to survive the
  * conversation it was agreed in.
  */
-export const POST = withErrorHandling(
+export const POST = withAdminHandling(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   async (request: Request, context: any): Promise<NextResponse> => {
     const { id } = await (context as RouteContext).params;

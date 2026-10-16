@@ -115,7 +115,8 @@ try {
     '  ok  stale purge candidate cannot defeat a successful cancellation',
   );
 
-  await coordinator.query(`select set_config('request.jwt.claim.sub','${staff}',false);
+  await coordinator.query(`select set_config('request.jwt.claims','{"aal":"aal2"}',false);
+    select set_config('request.jwt.claim.sub','${staff}',false);
     update public.profiles set account_status='closed',
       deletion_requested_at=clock_timestamp()-interval '721 hours' where id='${member}';`);
   await worker.query('begin;');
@@ -125,6 +126,7 @@ try {
   const reopening =
     cancellation.query(`set application_name='ledger_purge_reopening_check';
     begin; set local role authenticated;
+    select set_config('request.jwt.claims','{"aal":"aal2"}',true);
     select set_config('request.jwt.claim.sub','${staff}',true);
     do $$ begin
       begin
@@ -172,6 +174,7 @@ try {
       deletion_requested_at=clock_timestamp()-interval '721 hours' where id='${member}';`);
   await cancellation.query(`begin isolation level repeatable read;
     set local role authenticated;
+    select set_config('request.jwt.claims','{"aal":"aal2"}',true);
     select set_config('request.jwt.claim.sub','${staff}',true);
     select account_status from public.profiles where id='${member}';`);
   assert.equal(await worker.query(claim), 't');

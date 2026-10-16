@@ -1,14 +1,10 @@
+import { withAdminHandling } from '@/lib/http/admin-handler';
 import type { NextResponse } from 'next/server';
 import { z } from 'zod';
 
 import { getViewer } from '@/lib/auth/session';
 import { createServerSupabaseClient } from '@/lib/db/server';
-import {
-  apiError,
-  ok,
-  validationFailed,
-  withErrorHandling,
-} from '@/lib/http/responses';
+import { apiError, ok, validationFailed } from '@/lib/http/responses';
 
 export const dynamic = 'force-dynamic';
 
@@ -72,7 +68,7 @@ async function requireEditor() {
 }
 
 /** GET /api/v1/admin/reports/{id} — the composer's data. */
-export const GET = withErrorHandling(
+export const GET = withAdminHandling(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   async (_request: Request, context: any): Promise<NextResponse> => {
     const { id } = await (context as RouteContext).params;
@@ -106,7 +102,7 @@ export const GET = withErrorHandling(
  * once; sending the whole ordered list means the stored order can never end up
  * half-applied with duplicate display positions.
  */
-export const PATCH = withErrorHandling(
+export const PATCH = withAdminHandling(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   async (request: Request, context: any): Promise<NextResponse> => {
     const { id } = await (context as RouteContext).params;

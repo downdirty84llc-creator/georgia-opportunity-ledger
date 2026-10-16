@@ -1,6 +1,8 @@
 -- Local/CI only. All fixtures and mutations roll back; never run in production.
 \set ON_ERROR_STOP on
 begin;
+-- The administrator cancellation fixture has completed MFA.
+select set_config('request.jwt.claims','{"aal":"aal2"}',true);
 insert into auth.users (id, email) values
   ('eeeeeeee-0000-4000-8000-000000000001', 'purge.due@example.test'),
   ('eeeeeeee-0000-4000-8000-000000000002', 'purge.current@example.test'),

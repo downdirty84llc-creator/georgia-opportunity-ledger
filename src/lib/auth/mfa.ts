@@ -14,7 +14,11 @@ import { createServerSupabaseClient } from '@/lib/db/server';
  */
 
 export type MfaState =
-  'not_required' | 'enrolment_required' | 'challenge_required' | 'satisfied';
+  | 'not_required'
+  | 'enrolment_required'
+  | 'challenge_required'
+  | 'satisfied'
+  | 'unavailable';
 
 export interface MfaStatus {
   state: MfaState;
@@ -27,11 +31,8 @@ export interface MfaStatus {
 /**
  * Whether the caller has satisfied MFA, and if not, what is missing.
  *
- * Fails **open** on an unexpected error rather than locking staff out of the
- * admin area entirely: a Supabase outage should not be indistinguishable from a
- * missing second factor. The database still enforces every permission through
- * row-level security, so the worst case is a password-only admin session during
- * an outage, not unauthorised access.
+ * An unavailable check cannot grant staff authority. Member access remains
+ * available, and the security page explains that verification must be retried.
  */
 export async function getMfaStatus(required: boolean): Promise<MfaStatus> {
   const empty: MfaStatus = {
@@ -73,7 +74,7 @@ export async function getMfaStatus(required: boolean): Promise<MfaStatus> {
     }
 
     // Enrolled but this session has not presented the factor.
-    if (nextLevel === 'aal2' && currentLevel !== 'aal2') {
+    if (currentLevel !== 'aal2') {
       return {
         state: 'challenge_required',
         hasVerifiedFactor: true,
@@ -91,10 +92,10 @@ export async function getMfaStatus(required: boolean): Promise<MfaStatus> {
       factorId: verified[0]?.id ?? null,
     };
   } catch (error) {
-    console.error('[mfa] status check failed, allowing through', {
+    console.error('[mfa] status check unavailable; staff access denied', {
       message: error instanceof Error ? error.message : String(error),
     });
-    return { ...empty, state: 'satisfied' };
+    return { ...empty, state: 'unavailable' };
   }
 }
 

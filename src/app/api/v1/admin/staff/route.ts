@@ -1,8 +1,9 @@
+import { withAdminHandling } from '@/lib/http/admin-handler';
 import type { NextResponse } from 'next/server';
 
 import { listStaffFactors } from '@/lib/auth/mfa-admin';
 import { getViewer } from '@/lib/auth/session';
-import { apiError, ok, withErrorHandling } from '@/lib/http/responses';
+import { apiError, ok } from '@/lib/http/responses';
 
 export const dynamic = 'force-dynamic';
 
@@ -15,7 +16,7 @@ export const dynamic = 'force-dynamic';
  * colleagues have no second factor is a target list, and the only people who
  * can act on it are the ones who can perform a reset.
  */
-export const GET = withErrorHandling(async (): Promise<NextResponse> => {
+export const GET = withAdminHandling(async (): Promise<NextResponse> => {
   const viewer = await getViewer();
   if (
     viewer.role !== 'super_administrator' ||

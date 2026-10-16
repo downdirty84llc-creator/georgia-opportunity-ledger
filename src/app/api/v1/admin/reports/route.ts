@@ -1,15 +1,10 @@
+import { withAdminHandling } from '@/lib/http/admin-handler';
 import type { NextResponse } from 'next/server';
 import { z } from 'zod';
 
 import { getViewer } from '@/lib/auth/session';
 import { createServerSupabaseClient } from '@/lib/db/server';
-import {
-  apiError,
-  created,
-  ok,
-  validationFailed,
-  withErrorHandling,
-} from '@/lib/http/responses';
+import { apiError, created, ok, validationFailed } from '@/lib/http/responses';
 
 export const dynamic = 'force-dynamic';
 
@@ -40,7 +35,7 @@ function slugify(input: string): string {
 }
 
 /** GET /api/v1/admin/reports — the editorial report list. */
-export const GET = withErrorHandling(async (): Promise<NextResponse> => {
+export const GET = withAdminHandling(async (): Promise<NextResponse> => {
   const viewer = await getViewer();
   if (!viewer.isStaff || viewer.accountStatus !== 'active') {
     return apiError('forbidden', 'Administrator access required.');
@@ -61,7 +56,7 @@ export const GET = withErrorHandling(async (): Promise<NextResponse> => {
 });
 
 /** POST /api/v1/admin/reports */
-export const POST = withErrorHandling(
+export const POST = withAdminHandling(
   async (request: Request): Promise<NextResponse> => {
     const viewer = await getViewer();
     if (

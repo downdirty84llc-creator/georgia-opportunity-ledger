@@ -85,6 +85,7 @@ export function HeaderSessionArea() {
         setSession({
           authenticated,
           isStaff: data.isStaff === true,
+          needsStaffVerification: data.needsStaffVerification === true,
           planCode: typeof data.planCode === 'string' ? data.planCode : 'free',
           planName:
             typeof data.planName === 'string' ? data.planName : 'Free Preview',
