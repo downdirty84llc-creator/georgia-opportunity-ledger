@@ -88,6 +88,7 @@ test.describe('keyboard and structure', () => {
   });
 
   test('every page has exactly one level-one heading', async ({ page }) => {
+    test.setTimeout(60_000); // Eight live navigations share this test's budget.
     for (const { path } of PUBLIC_PAGES.slice(0, 8)) {
       await page.goto(path);
       const count = await page.locator('h1').count();
