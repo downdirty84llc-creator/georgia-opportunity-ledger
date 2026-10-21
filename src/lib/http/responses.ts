@@ -139,7 +139,7 @@ export function withErrorHandling(
       });
       return apiError(
         'internal_error',
-        'Something went wrong on our side. The team has been notified.',
+        'Something went wrong on our side. Please try again.',
       );
     }
   };

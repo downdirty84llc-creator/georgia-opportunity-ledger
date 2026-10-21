@@ -28,7 +28,7 @@ export async function captureToPostHog(
   );
 
   try {
-    await fetch(`${host}/i/v0/e/`, {
+    const response = await fetch(`${host}/i/v0/e/`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -44,6 +44,11 @@ export async function captureToPostHog(
       }),
       signal: AbortSignal.timeout(3000),
     });
+    if (!response.ok) {
+      // A resolved fetch does not mean the provider accepted the event.
+      // Keep the vendor body out of logs because it may echo event data.
+      throw new Error(`PostHog rejected delivery (HTTP ${response.status})`);
+    }
   } catch (error) {
     // Analytics must never break the request it is describing.
     console.warn('[analytics] PostHog capture failed', {

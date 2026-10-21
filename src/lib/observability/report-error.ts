@@ -110,7 +110,7 @@ export async function reportError(
       JSON.stringify(payload),
     ].join('\n');
 
-    await fetch(parsed.endpoint, {
+    const response = await fetch(parsed.endpoint, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-sentry-envelope',
@@ -124,6 +124,11 @@ export async function reportError(
       // Never let error reporting hold a request open.
       signal: AbortSignal.timeout(3000),
     });
+    if (!response.ok) {
+      // fetch resolves for rejected credentials, quotas and provider failures.
+      // Do not log response bodies: a vendor may echo submitted event data.
+      throw new Error(`Sentry rejected delivery (HTTP ${response.status})`);
+    }
   } catch (reportingFailure) {
     console.warn('[error] could not forward to Sentry', {
       message:
