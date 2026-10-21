@@ -253,6 +253,46 @@ Grouped so they can be answered in one pass.
    property and funding without being a broker, lender or adviser. Are the
    real-estate and funding disclaimers sufficient to avoid an
    unlicensed-brokerage or loan-brokering characterisation in Georgia?
+
+   **We asked the regulator first, and it declined to answer.** On 8 October
+   2026 the facts below were put to the Georgia Real Estate Commission in
+   writing — what the service does, and the five things it does not do (no
+   representation of any party, no commission or transaction-contingent
+   compensation, no payment from owners or brokers, no negotiating or showing,
+   and express disclaimers). The Commission replied the same day:
+
+   > "You would need to refer to license law 43-40-18, 43-40-30, and 520-1-12
+   > all laws regarding Brokerage business and activities. We don't have any
+   > legal team on staff, and I can't interpret the law."
+   > — Information Specialist, Georgia Real Estate Commission
+
+   So this question cannot be outsourced to the Commission, and counsel should
+   not spend time suggesting it. Of the three provisions cited, only
+   **O.C.G.A. § 43-40-30** (acting without a licence; cease and desist) is
+   squarely on the question. **§ 43-40-18** governs management and supervision
+   duties inside licensed firms. **Rule 520-1-.12** is Business Brokerage,
+   which requires a licence where a business sale transfers an interest in
+   real property — adjacent rather than on point for an information service,
+   but worth knowing given the product also covers business funding.
+
+   Counsel may also want a view on **Rule 520-1-.09**, which defines
+   advertising as "any method, manner or activity conducted to inform the
+   general public of real estate for rent, lease, sale or exchange" and
+   includes Internet media. We asked whether it reaches a person who holds no
+   licence and acts for no party; the Commission did not address it. Our own
+   reading is that it governs licensees' advertising rather than creating a
+   licence requirement for a publisher, but that is a reading, not an answer.
+
+   A follow-up asking only procedural questions — whether a declaratory
+   ruling or advisory opinion route exists, and whether any published guidance
+   distinguishes information services from brokerage — was sent on 21 October 2026. If it produces anything, it belongs here.
+
+   The practical point for the engagement: **this is the question that could
+   change the product rather than its wording**, and § 43-40-30 gives the
+   Commission cease-and-desist power, so the downside is a regulator stopping
+   publication rather than a plaintiff suing over it. It is worth answering
+   before the rest.
+
 5. Scores are presented as a ranking, explicitly "not predictions of outcome".
    Is that framing adequate, given members pay for the scoring?
 6. Tax and sheriff sale coverage mentions redemption periods and encumbered
@@ -312,10 +352,13 @@ Grouped so they can be answered in one pass.
 
 ## Suggested order
 
-1. **Owner decides** the open gap (§5) — publish the export limits on the
-   pricing page, or reword the Acceptable Use Policy. Counsel cannot usefully
-   review a document whose factual basis is about to change.
-2. Counsel reviews all twelve, answering the questions above.
+1. **Question 4 first, ahead of the document review.** It is the only question
+   whose answer could change the product rather than its wording, and
+   § 43-40-30 gives the Commission cease-and-desist power, so the downside is
+   a regulator stopping publication. Reviewing twelve documents before knowing
+   the answer risks reviewing them twice. The Commission has already declined
+   to answer it, so there is no shorter path than counsel.
+2. Counsel reviews all twelve, answering the remaining questions.
 3. Corrections applied to `src/lib/legal/documents.ts`.
 4. `requiresReview` flipped to `false` per document as each is signed off, and
    the date and reviewer recorded. `tests/unit/legal/documents.test.ts` pins
