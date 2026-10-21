@@ -96,6 +96,23 @@ test.describe('keyboard and structure', () => {
     }
   });
 
+  for (const path of ['/', '/login', '/auth/reset-password']) {
+    test(`activating the skip link focuses main content on ${path}`, async ({
+      page,
+    }) => {
+      await page.goto(path);
+      // This checks activation separately from the first-Tab test above. The
+      // Windows WebKit build skips links during Tab traversal even on plain
+      // HTML. press() focuses only the link; the browser must move focus to
+      // main through the real fragment navigation, without help from the test.
+      await page
+        .getByRole('link', { name: 'Skip to main content' })
+        .press('Enter');
+      await expect(page).toHaveURL(/#main$/);
+      await expect(page.locator('#main')).toBeFocused();
+    });
+  }
+
   test('the focus ring is visible on interactive elements', async ({
     page,
   }) => {

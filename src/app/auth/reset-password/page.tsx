@@ -35,7 +35,7 @@ export default async function ResetPasswordPage({
   return (
     <div className="flex min-h-screen flex-col">
       <SiteHeader />
-      <main id="main" className="flex-1">
+      <main id="main" tabIndex={-1} className="flex-1">
         <div className="mx-auto max-w-md px-4 py-14 sm:px-6">
           <Suspense>
             <ResetPasswordForm />

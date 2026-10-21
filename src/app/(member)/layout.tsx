@@ -47,7 +47,7 @@ export default async function MemberLayout({
           .
         </p>
       ) : null}
-      <main id="main" className="flex-1">
+      <main id="main" tabIndex={-1} className="flex-1">
         {children}
       </main>
       <SiteFooter />
