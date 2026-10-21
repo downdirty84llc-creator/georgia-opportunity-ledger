@@ -9,7 +9,17 @@
 export type StripeMode = 'live' | 'test';
 
 export function modeOf(secretKey: string): StripeMode {
-  return secretKey.startsWith('sk_live_') ? 'live' : 'test';
+  const match = /^(?:sk|rk)_(live|test)_[A-Za-z0-9]+$/.exec(secretKey);
+  if (match?.[0] === secretKey) return match[1] as StripeMode;
+
+  // Claimable sandbox keys are restricted test keys, never live credentials.
+  const claimable = /^rkcs_test_[A-Za-z0-9]+$/.exec(secretKey);
+  if (claimable?.[0] === secretKey) return 'test';
+
+  // Never include the supplied credential in errors or logs.
+  throw new Error(
+    'Unrecognised Stripe key: expected a secret or restricted key.',
+  );
 }
 
 /**
@@ -39,6 +49,12 @@ export function assertModeMatchesEnvironment(
       'NEXT_PUBLIC_ENVIRONMENT is not set.\n' +
         '  Set it explicitly (development | staging | production) so the Stripe\n' +
         '  mode can be checked against the database being written to.',
+    );
+  }
+
+  if (!['development', 'staging', 'production'].includes(environment)) {
+    throw new Error(
+      'Unsupported NEXT_PUBLIC_ENVIRONMENT: use development, staging, or production.',
     );
   }
 

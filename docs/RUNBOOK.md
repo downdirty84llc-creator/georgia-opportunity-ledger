@@ -48,6 +48,14 @@ STRIPE_SECRET_KEY=sk_test_... npm run stripe:setup   # test catalogue
 STRIPE_SECRET_KEY=sk_live_... npm run stripe:setup   # live catalogue
 ```
 
+Set `NEXT_PUBLIC_ENVIRONMENT` explicitly to `development`, `staging`, or
+`production` before setup. Secret (`sk_`) and restricted (`rk_`) keys are both
+recognized. Live keys are refused outside production, and test keys are refused
+in production; malformed keys and unknown environment names are also refused
+before catalogue writes. A key's format does not verify its account or API
+permissions: confirm the printed account id and database host belong to the
+intended Ledger environment.
+
 The mode is decided entirely by the key. Products are matched on
 `metadata.plan_code` and prices on their lookup key (`gol_weekly_monthly` and so
 on), so running it twice changes nothing. Prices are immutable in Stripe: if an

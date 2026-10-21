@@ -36,6 +36,7 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { LEGAL_DOCUMENTS } from '../src/lib/legal/documents';
 import { emailConfigurationCheck } from './email-configuration';
 import { emailDnsCheck } from './email-dns';
+import { modeOf } from './stripe-mode';
 import {
   probeUrl,
   redirectCheckRow,
@@ -104,15 +105,24 @@ function checkConfiguration(): void {
   if (!stripeKey) {
     record('blocking', 'Stripe key is live mode', 'unknown', 'key not set');
   } else {
-    const live = stripeKey.startsWith('sk_live_');
-    record(
-      'blocking',
-      'Stripe key is live mode',
-      live ? 'pass' : isProduction ? 'fail' : 'unknown',
-      live
-        ? 'live'
-        : `test-mode key${isProduction ? ' in a production environment' : ' — expected outside production'}`,
-    );
+    try {
+      const live = modeOf(stripeKey) === 'live';
+      record(
+        'blocking',
+        'Stripe key is live mode',
+        live ? 'pass' : isProduction ? 'fail' : 'unknown',
+        live
+          ? 'live key format; account access and permissions still need verification'
+          : `test-mode key${isProduction ? ' in a production environment' : ' — expected outside production'}`,
+      );
+    } catch {
+      record(
+        'blocking',
+        'Stripe key is live mode',
+        'fail',
+        'unsupported or malformed key; use a Stripe secret or restricted key',
+      );
+    }
   }
 
   // Rotating CRON_SECRET must not invalidate every unsubscribe link already
@@ -139,7 +149,7 @@ function checkConfiguration(): void {
       ? scannerProvider === 'none'
         ? 'URL set but provider is "none" — nothing will be scanned'
         : `${scannerProvider} at ${scannerUrl}`
-      : 'unset — every attachment stores as skipped, readable and unscanned',
+      : 'unset — attachments cannot receive a clean verdict and member downloads stay blocked',
   );
 
   // sendEmail() rejects missing keys and console sending in production.

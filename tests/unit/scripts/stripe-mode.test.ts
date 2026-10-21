@@ -20,25 +20,24 @@ import {
 // Deliberately too short to be mistaken for a real credential. An earlier
 // version used realistic-length placeholders and GitHub's push protection
 // rejected the commit — correctly, since a scanner cannot tell a convincing
-// fake from the real thing. `modeOf` only reads the prefix, so these carry
-// exactly as much signal as the test needs.
+// fake from the real thing. These retain the key's prefix and character shape
+// without resembling a usable credential.
 const TEST_KEY = 'sk_test_fake';
 const LIVE_KEY = 'sk_live_fake';
 
 describe('modeOf', () => {
-  it('reads live only from the sk_live_ prefix', () => {
+  it('recognises secret and restricted key modes', () => {
     expect(modeOf(LIVE_KEY)).toBe('live');
     expect(modeOf(TEST_KEY)).toBe('test');
+    expect(modeOf('rk_live_fake')).toBe('live');
+    expect(modeOf('rk_test_fake')).toBe('test');
+    expect(modeOf('rkcs_test_fake')).toBe('test');
   });
 
-  it('treats anything unrecognised as test rather than live', () => {
-    // Failing open here would mean an unparseable key got treated as live and
-    // allowed to write to production. Restricted keys (rk_), managed keys (mk_)
-    // and junk all land on the safe side.
-    expect(modeOf('rk_live_fake')).toBe('test');
-    expect(modeOf('mk_fake')).toBe('test');
-    expect(modeOf('')).toBe('test');
-  });
+  it.each(['mk_fake', 'pk_test_fake', '', 'sk_test_', 'sk_live_fake\n'])(
+    'refuses unsupported or malformed key %j',
+    (key) => expect(() => modeOf(key)).toThrow(/Unrecognised Stripe key/),
+  );
 });
 
 describe('assertModeMatchesEnvironment', () => {
@@ -74,6 +73,30 @@ describe('assertModeMatchesEnvironment', () => {
     },
   );
 
+  it.each(['development', 'staging'])(
+    'refuses a live restricted key against %s before catalogue writes',
+    (environment) => {
+      expect(() =>
+        assertModeMatchesEnvironment('rk_live_fake', environment),
+      ).toThrow(/LIVE Stripe catalogue/);
+    },
+  );
+
+  it('allows a live restricted key only against production', () => {
+    expect(() =>
+      assertModeMatchesEnvironment('rk_live_fake', 'production'),
+    ).not.toThrow();
+    expect(() =>
+      assertModeMatchesEnvironment('rk_test_fake', 'production'),
+    ).toThrow(/TEST price ids into the production database/);
+  });
+
+  it('refuses an unknown environment before catalogue writes', () => {
+    expect(() => assertModeMatchesEnvironment(TEST_KEY, 'prodution')).toThrow(
+      /Unsupported NEXT_PUBLIC_ENVIRONMENT/,
+    );
+  });
+
   it('refuses an unset environment rather than assuming one', () => {
     // Same reasoning as seed.ts: the dangerous operator is the one who never
     // set it while the Supabase URL points at production. Defaulting is what
@@ -90,7 +113,7 @@ describe('assertModeMatchesEnvironment', () => {
     // An mk_ key is an id, not a usable secret, and would otherwise be treated
     // as a test key and blocked only by luck. Blocked explicitly here.
     expect(() => assertModeMatchesEnvironment('mk_fake', 'production')).toThrow(
-      /TEST price ids into the production database/,
+      /Unrecognised Stripe key/,
     );
   });
 });
