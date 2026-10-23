@@ -48,7 +48,8 @@ jobs:
   # state is a migration that will fail on the next environment.
   migrations:
     name: Migrations apply from scratch
-    runs-on: ubuntu-latest
+    # This runner includes PostgreSQL 16 at the path used below.
+    runs-on: ubuntu-24.04
     # No `services:` block. The script starts its own throwaway cluster, which
     # keeps the local and CI paths identical instead of merely similar.
     steps:
