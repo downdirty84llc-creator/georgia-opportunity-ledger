@@ -32,7 +32,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version-file: .nvmrc
           cache: npm
       - run: npm ci
       - run: npm run typecheck
@@ -48,14 +48,15 @@ jobs:
   # state is a migration that will fail on the next environment.
   migrations:
     name: Migrations apply from scratch
-    runs-on: ubuntu-latest
+    # This runner includes PostgreSQL 16 at the path used below.
+    runs-on: ubuntu-24.04
     # No `services:` block. The script starts its own throwaway cluster, which
     # keeps the local and CI paths identical instead of merely similar.
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version-file: .nvmrc
       - name: Apply migrations, load reference data, check RLS
         env:
           PGPASSWORD: postgres
@@ -72,7 +73,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version-file: .nvmrc
           cache: npm
       - run: npm ci
       - run: npm run build
@@ -100,7 +101,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version-file: .nvmrc
           cache: npm
       - run: npm ci
       - run: npx playwright install --with-deps chromium
