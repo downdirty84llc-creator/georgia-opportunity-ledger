@@ -15,23 +15,31 @@ built in, and **re-verified line by line against this one** on 2026-09-25.
 Several facts changed in the move and are corrected below; nothing was ported
 on trust.
 
+**Engineering update: 2026-10-26, application revision `f643633`.** The owner
+confirmed that no attorney review has been completed. The deletion path,
+payment-grace wording, processor status and remaining operational checks below
+have been updated. This is a targeted factual update, not a fresh verification
+of every September statement or a legal sign-off. All nine review flags remain
+set.
+
 ---
 
-## Before counsel opens this: all five promise-vs-product gaps are closed
+## Implementation history and current review gaps
 
-This section records the places where the documents described behaviour the
-software did not have. **Every one has been settled in the software or on the
-published page** rather than by softening the document, so counsel is reviewing
-an accurate description — which was the point of settling them first. Each is
-kept below with what was built, because the implementation is what counsel is
-signing off, not the promise.
+This section records five original gaps and the implementation that addressed
+them. Implemented controls do not establish that every published promise is
+accurate or that live operations have been verified. In particular, the
+payment-grace wording identified below still differs from the access rule.
 
 Four were built (§1–§4). The fifth (§5) was closed by publishing figures the
 server already enforced, on an owner decision of 2026-09-25; no legal document
 was changed to close it.
 
-**Nothing here is waiting on us.** The remaining questions for counsel are
-further down and are ordinary drafting and jurisdiction questions.
+Production backup/restore, an operational scanner, staging billing checks,
+verified launch content and a human accessibility review remain open. The owner
+has no existing always-on server and has retained a no-cost service limit.
+These constraints must be resolved before describing the service as ready for
+paid launch. The engineering findings and counsel's review are separate gates.
 
 ### 1. Account deletion — ~~promised, not built~~ **built**
 
@@ -50,13 +58,29 @@ not active — but the data survives a **30-day grace window**
 deliberate: deletion is irreversible, so a mistake or a compromised session
 should not destroy an account outright.
 
-The purge is a single `auth.users` delete. The cascade takes the profile,
+The daily job first calls `claim_account_for_purge` for the exact expired
+request under a profile row lock, then calls `auth.admin.deleteUser`. It does
+not issue a direct SQL deletion. A successful cancellation that wins the lock
+prevents the claim. Claims remain closed and retryable if the provider call
+fails or times out; they are not released merely because the outcome is unknown.
+See `src/lib/jobs/maintenance-jobs.ts` and migrations
+`20261012170000_enforce_account_deletion_window.sql` and
+`20261012190000_claim_accounts_before_purge.sql` for the current implementation.
+
+The resulting cascade takes the profile,
 preferences, saved records, saved searches, alert preferences, notifications
 and the subscription cache; `audit_logs`, `billing_events`, `analytics_events`,
 `support_tickets` and `correction_requests` are `on delete set null`, so they
-survive **de-identified**. The append-only audit trail is not rewritten by
-someone closing their account, and the retention promise holds without a
-hand-maintained list of tables that would rot the first time one was added.
+survive with their referencing user columns cleared. Clearing those columns
+does not establish that free text, JSON payloads, provider records or backups
+contain no identifying information. Counsel should review those retention
+surfaces before treating this as complete anonymization. The append-only audit
+trail is not rewritten by someone closing their account.
+
+During the 30-day window, password sign-in lets a closed account reach the
+account page to withdraw the request; it does not itself reopen the account.
+Cancellation is refused after the deadline even if the daily purge has not yet
+run. Database checks also prevent moving the deadline to evade that rule.
 
 One guard detail worth counsel knowing: `request_account_deletion` raises
 unless the caller's `account_status` is `active`, so a **suspended** account
@@ -100,10 +124,11 @@ memoised for thirty seconds (`CONSENT_TTL_MS`) so a page of events costs one
 read rather than several, and so an opt-out takes effect in seconds rather than
 at the end of a session.
 
-Counsel should still confirm the _wording_, and note the default is opt-out
-rather than opt-in — appropriate for first-party product analytics under US
-law, but not under an opt-in consent regime if members in such jurisdictions
-are ever in scope.
+Counsel should confirm the wording and whether this opt-out default is suitable
+for the jurisdictions and data processing actually in scope. Engineering has
+not established that opt-out is legally sufficient. PostHog delivery is
+conditional on configuration; its live configuration and funnel receipt have
+not been verified in the October 26 readiness check.
 
 ### 4. Refund workflow — ~~described, not built~~ **built**
 
@@ -196,11 +221,13 @@ Offered so counsel can spend their time on the drafting rather than on
 confirming the engineering. Each of these was checked against the code in this
 repository on 2026-09-25:
 
-- **Three-day past-due grace.** Subscription Terms describe access continuing
-  "while the card is retried and for three days afterwards". This matches
-  `public.past_due_grace_period()` (`interval '3 days'`, migration
-  `…001500_access_functions.sql`) and the TypeScript in
-  `src/lib/billing/subscription.ts`.
+- **Payment-grace mismatch found October 26; unresolved.** Subscription Terms
+  describe access continuing "while the card is retried and for three days
+  afterwards". `subscriptionAccessRank` instead grants a past-due Stripe
+  subscription access through its settled `paidThrough` date plus three days;
+  it does not wait until Stripe finishes retrying. A longer retry schedule can
+  outlast paid access. Counsel and the owner must reconcile the wording with
+  this behavior. Do not treat the earlier claim that they match as sign-off.
 - **Downgrades defer to period end.** `change-plan` sets the proration
   behaviour by direction and does not apply a downgrade mid-period.
 - **A suspended account can still appeal.** The `support_tickets_insert` policy
@@ -304,18 +331,28 @@ Grouped so they can be answered in one pass.
     published standards may be read as representations?
 16. What retention periods should replace the current general statement that
     billing records are kept "where we are required to keep them"?
-17. Is a data processing agreement or subprocessor list required, given
-    Supabase, Stripe, the email provider, Sentry and PostHog all process member
-    data?
+17. Which processor disclosures, agreements and retention commitments are
+    needed for the verified configuration? Supabase and Stripe serve the
+    application; Resend sends mail; Zoho receives support replies; Sentry
+    receives explicitly reported server errors. PostHog exists in the code but
+    its live delivery remains unverified. Netlify is a protected staging
+    preview, not the production host. A proposed scanner has not been connected
+    to production. Recheck this inventory after infrastructure decisions.
+18. Does clearing user foreign keys meet the deletion wording when retained
+    JSON, support text, external provider records and backup copies may still
+    identify a member? Specify the necessary retention and removal process.
 
 ---
 
 ## Suggested order
 
-1. **Owner decides** the open gap (§5) — publish the export limits on the
-   pricing page, or reword the Acceptable Use Policy. Counsel cannot usefully
-   review a document whose factual basis is about to change.
-2. Counsel reviews all twelve, answering the questions above.
+1. Record the exact source revision and document versions supplied to counsel.
+   The export-limit decision (§5) was already made on September 25; do not ask
+   the owner to repeat it. Resolve the payment-grace mismatch and confirm the
+   actual processor and retention arrangements.
+2. Counsel reviews all twelve, answering the questions above. Record reviewer,
+   review date, approved document versions and any conditions for each of the
+   nine flagged documents.
 3. Corrections applied to `src/lib/legal/documents.ts`.
 4. `requiresReview` flipped to `false` per document as each is signed off, and
    the date and reviewer recorded. `tests/unit/legal/documents.test.ts` pins
