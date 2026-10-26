@@ -96,6 +96,16 @@ See [ClamD replies](https://docs.clamav.net/manual/Usage/ClamdProtocol.html#read
 Use a private scanner with current signatures; do not send private uploads to
 public sample-sharing services. No hosted scanner has been provisioned yet.
 
+`npm run preflight` sends two synthetic files through the application's scanner
+client: a harmless text control that must return `clean`, and EICAR that must
+return `infected`. Both must pass. A service that rejects every file cannot pass
+readiness. Unknown providers, invalid endpoints and production HTTP URLs fail
+configuration before a request is sent. Unusable responses, oversized verdicts
+and transport failures remain `unknown`; endpoint credentials and response text
+are omitted from the report. These probes establish the adapter's behavior for
+two samples, not signature freshness, 25 MiB capacity or the upload/download
+workflow. Verify those separately against the deployed private scanner.
+
 Verify it end to end with the EICAR test string — a harmless file every scanner
 recognises. Upload it through `/admin/opportunities/{id}` and the endpoint
 should quarantine it; after the scanner job, the final object should be gone and the row should
@@ -417,11 +427,9 @@ sitemap. What it marks `you` is what no machine can close.
       browser that requested the link. Recovery's HttpOnly session handling is
       repaired and covered at the browser/API boundary, but those tests do not
       establish inbox placement or a completed password update.
-- [ ] A real mailbox behind `EMAIL_REPLY_TO`, or a reply-to that has one. The
-      address is currently `support@georgiaopportunityledger.com` and no mailbox
-      exists there; a provider that sends does not necessarily receive, so a
-      member replying to an alert bounces. The owner chose on 2026-10-12 to
-      keep this address and arrange its mailbox separately.
+- [x] A real mailbox behind `EMAIL_REPLY_TO`: Zoho Free now receives mail at
+      `support@georgiaopportunityledger.com`. The owner-authorized two-way test
+      passed October 13, and the approved Sentry alert reached it October 26.
 - [ ] Database backups enabled with point-in-time recovery.
 - [ ] Administrator multi-factor enrolment for every staff account. The gate is
       enforced in code; each person still has to enrol at `/admin/security`.
@@ -433,8 +441,10 @@ sitemap. What it marks `you` is what no machine can close.
 - [ ] Security review: the test list in spec 26 — unauthorised API access,
       access-rank bypass, direct URL access, ID enumeration, invalid webhooks,
       file-upload attacks, XSS, SQL injection, rate-limit enforcement.
-- [ ] `FILE_SCANNER_URL` set and verified with the EICAR test file. Without it
-      every attachment stores as `skipped` — readable, and unscanned.
+- [ ] `FILE_SCANNER_URL` set; harmless and EICAR controls verified, followed by
+      the deployed upload/download workflow. Without a scanner, production
+      scans fail and downloads stay blocked; development `skipped` files are
+      also withheld. The absence of a scanner is not a safe-to-launch state.
 - [ ] At least two super administrators enrolled, so a lost authenticator has an
       in-product recovery path rather than a Supabase one.
 - [ ] Confirm no sample data reached production:
@@ -443,7 +453,10 @@ sitemap. What it marks `you` is what no machine can close.
 ### Required before opening to customers
 
 - [ ] Domain connected with Cloudflare in front.
-- [ ] Sentry DSN configured and an error verified end to end.
+- [x] Sentry DSN configured for production. One approved synthetic error reached
+      issue `NODE-1` and the support mailbox on October 26. The malformed-JSON
+      defect that produced that test error was repaired in `3698525`; the issue
+      was resolved after deployment while server-error reporting stayed enabled.
 - [ ] PostHog configured and the subscription funnel verified.
 - [ ] Cron schedules confirmed firing; check `job_runs` after 24 hours.
 - [ ] A real weekly report published, emailed, and read at each tier.

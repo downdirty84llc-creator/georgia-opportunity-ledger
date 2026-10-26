@@ -29,8 +29,6 @@
  * remaining work is a list rather than a feeling.
  */
 
-import { parseScanResponse } from '../src/lib/files/scanner';
-
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
 import { LEGAL_DOCUMENTS } from '../src/lib/legal/documents';
@@ -38,6 +36,10 @@ import { emailConfigurationCheck } from './email-configuration';
 import { emailDnsCheck } from './email-dns';
 import { modeOf } from './stripe-mode';
 import { sentryConfigurationCheck } from './sentry-configuration';
+import {
+  scannerConfigurationCheck,
+  scannerReadinessChecks,
+} from './scanner-readiness';
 import {
   probeUrl,
   redirectCheckRow,
@@ -140,17 +142,16 @@ function checkConfiguration(): void {
         : 'distinct',
   );
 
-  const scannerUrl = env('FILE_SCANNER_URL');
-  const scannerProvider = env('FILE_SCANNER_PROVIDER');
+  const scanner = scannerConfigurationCheck(
+    process.env.FILE_SCANNER_PROVIDER,
+    env('FILE_SCANNER_URL'),
+    isProduction,
+  );
   record(
     'blocking',
     'FILE_SCANNER_URL configured',
-    scannerUrl && scannerProvider !== 'none' ? 'pass' : 'fail',
-    scannerUrl
-      ? scannerProvider === 'none'
-        ? 'URL set but provider is "none" — nothing will be scanned'
-        : `${scannerProvider} at ${scannerUrl}`
-      : 'unset — attachments cannot receive a clean verdict and member downloads stay blocked',
+    scanner.status,
+    scanner.detail,
   );
 
   // sendEmail() rejects missing keys and console sending in production.
@@ -390,66 +391,25 @@ async function checkDatabase(): Promise<void> {
 // distinguished from "did not look".
 // ---------------------------------------------------------------------------
 
-/** The EICAR test string, assembled so this file is not itself quarantined. */
-const EICAR =
-  'X5O!P%@AP[4\\PZX54(P^)7CC)7}$' + 'EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*';
-
 async function checkScanner(): Promise<void> {
-  const url = env('FILE_SCANNER_URL');
-  if (!url || env('FILE_SCANNER_PROVIDER') === 'none') {
-    record(
-      'blocking',
-      'Scanner detects the EICAR test file',
-      'unknown',
-      'no scanner configured to test',
-    );
-    return;
-  }
-
-  const boundary = `----preflight${Date.now()}`;
-  const body =
-    `--${boundary}\r\n` +
-    'Content-Disposition: form-data; name="file"; filename="eicar.com"\r\n' +
-    'Content-Type: application/octet-stream\r\n\r\n' +
-    `${EICAR}\r\n` +
-    `--${boundary}--\r\n`;
-
-  try {
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': `multipart/form-data; boundary=${boundary}`,
-        ...(env('FILE_SCANNER_API_KEY')
-          ? { Authorization: `Bearer ${env('FILE_SCANNER_API_KEY')}` }
-          : {}),
-      },
-      redirect: 'error',
-      body,
-      signal: AbortSignal.timeout(20_000),
-    });
-    const text = await response.text();
-
-    // clamav-rest answers 406 with FOUND on a hit. Anything that is not an
-    // explicit detection is treated as a failure: a scanner that returns 200
-    // "clean" for EICAR is worse than none, because it is believed.
-    const detected =
-      parseScanResponse(response.status, text).verdict === 'infected';
-    record(
-      'blocking',
-      'Scanner detects the EICAR test file',
-      detected ? 'pass' : 'fail',
-      detected
-        ? `detected (HTTP ${response.status})`
-        : `NOT detected — HTTP ${response.status}: ${text.slice(0, 120)}`,
-    );
-  } catch (error) {
-    record(
-      'blocking',
-      'Scanner detects the EICAR test file',
-      'unknown',
-      `could not reach the scanner: ${error instanceof Error ? error.message : String(error)}`,
-    );
-  }
+  const configuration = scannerConfigurationCheck(
+    process.env.FILE_SCANNER_PROVIDER,
+    env('FILE_SCANNER_URL'),
+    isProduction,
+  );
+  const result = await scannerReadinessChecks(configuration);
+  record(
+    'blocking',
+    'Scanner accepts a harmless control file',
+    result.clean.status,
+    result.clean.detail,
+  );
+  record(
+    'blocking',
+    'Scanner detects the EICAR test file',
+    result.eicar.status,
+    result.eicar.detail,
+  );
 }
 
 async function checkEmailDns(): Promise<void> {
