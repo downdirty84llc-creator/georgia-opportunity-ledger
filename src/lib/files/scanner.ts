@@ -7,20 +7,22 @@ import { isProduction } from '@/lib/env';
  * provider does: which engine runs is a deployment decision, and the calling
  * code should not change when it changes.
  *
- * Two providers ship:
+ * Providers:
  *
  *   - `clamav`, which posts the bytes to a ClamAV REST front end (clamav-rest,
  *     clamd's HTTP wrapper, or any service with the same shape). This is the
  *     one to run in production; a scanner is not something to reimplement.
  *   - `none`, which returns `failed` in production and `skipped` in development.
  *     Neither state permits a download.
+ *   - `bouncer` uses the durable background worker, never this inline adapter.
  *
  * Anything unexpected returns `failed`, never `clean`. A `failed` file is not
  * downloadable and the rescan job retries it, so a scanner outage delays
  * attachments instead of waving them through.
  */
 
-export type ScanVerdict = 'clean' | 'infected' | 'failed' | 'skipped';
+export type ScanVerdict =
+  'clean' | 'infected' | 'failed' | 'skipped' | 'pending';
 
 export interface ScanOutcome {
   verdict: ScanVerdict;
@@ -30,7 +32,7 @@ export interface ScanOutcome {
 }
 
 export interface ScannerConfig {
-  provider: 'clamav' | 'none';
+  provider: 'clamav' | 'bouncer' | 'none';
   url: string;
   apiKey: string;
   timeoutMs: number;
@@ -42,9 +44,17 @@ export function scannerConfig(): ScannerConfig {
     process.env.FILE_SCANNER_PROVIDER ?? (url ? 'clamav' : 'none');
 
   return {
-    provider: declared === 'clamav' && url ? 'clamav' : 'none',
+    provider:
+      declared === 'bouncer'
+        ? 'bouncer'
+        : declared === 'clamav' && url
+          ? 'clamav'
+          : 'none',
     url,
-    apiKey: process.env.FILE_SCANNER_API_KEY ?? '',
+    apiKey:
+      declared === 'bouncer'
+        ? (process.env.BOUNCER_API_KEY ?? '')
+        : (process.env.FILE_SCANNER_API_KEY ?? ''),
     timeoutMs: scanTimeout(
       Number(process.env.FILE_SCANNER_TIMEOUT_MS ?? 20_000),
     ),
@@ -150,6 +160,13 @@ export async function scanBytes(
   fileName: string,
   config: ScannerConfig = scannerConfig(),
 ): Promise<ScanOutcome> {
+  if (config.provider === 'bouncer') {
+    return {
+      verdict: 'failed',
+      detail: 'Bouncer scans require the durable attachment worker.',
+      scanner: 'bouncer',
+    };
+  }
   if (config.provider === 'none') {
     if (isProduction) {
       // Loud, because the runbook's launch checklist has a line for this and

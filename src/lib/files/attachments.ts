@@ -169,7 +169,16 @@ export async function uploadAttachment(
     throw new Error(insertError.message);
   }
 
-  const outcome = await scanAndRecord(row.id, path, fileName, bytes);
+  // The asynchronous provider is only invoked by its durable worker. Upload
+  // requests must not create an uncheckpointed scan or hold a serverless request.
+  const outcome: ScanOutcome =
+    process.env.FILE_SCANNER_PROVIDER === 'bouncer'
+      ? {
+          verdict: 'pending',
+          detail: 'Queued for scanner verification.',
+          scanner: 'bouncer',
+        }
+      : await scanAndRecord(row.id, path, fileName, bytes);
 
   return {
     id: row.id,

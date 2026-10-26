@@ -2,6 +2,7 @@ import { createAdminClient } from '@/lib/db/admin';
 import { serverEnv } from '@/lib/env';
 import { cleanupAttachmentUploads } from '@/lib/files/direct-uploads';
 import { scanAndRecord } from '@/lib/files/attachments';
+import { scanBouncerAttachments } from '@/lib/files/bouncer-worker';
 import type { JobDefinition } from '@/lib/jobs/runner';
 
 /**
@@ -37,7 +38,13 @@ interface PendingRow {
 export const scanAttachmentsJob: JobDefinition = {
   name: 'scan-attachments',
   description: 'Rescans attachments whose scan did not complete.',
-  handler: async ({ note, now }) => {
+  handler: async (context) => {
+    if (process.env.FILE_SCANNER_PROVIDER === 'bouncer') {
+      const uploadsCleaned = await cleanupAttachmentUploads(Date.now() + 3_000);
+      const result = await scanBouncerAttachments(context);
+      return { ...result, detail: { ...result.detail, uploadsCleaned } };
+    }
+    const { note, now } = context;
     const env = serverEnv();
     const supabase = createAdminClient();
 

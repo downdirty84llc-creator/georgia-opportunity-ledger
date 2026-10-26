@@ -94,7 +94,43 @@ record for infection. Newline or NUL termination is accepted. Unknown, empty,
 HTML, multiple-result and error replies fail closed; redirects are refused.
 See [ClamD replies](https://docs.clamav.net/manual/Usage/ClamdProtocol.html#reading-replies).
 Use a private scanner with current signatures; do not send private uploads to
-public sample-sharing services. No hosted scanner has been provisioned yet.
+public sample-sharing services. Production scanning remains unconfigured.
+
+An optional Bouncer worker uses the provider's asynchronous v2 API. Before
+selecting `FILE_SCANNER_PROVIDER=bouncer`, apply
+`20261026140000_durable_attachment_scans.sql`, configure the server-only
+`BOUNCER_API_KEY`, and obtain approval for production file processing. Bouncer
+does not use `FILE_SCANNER_URL`. Do not change providers while work is in flight.
+The October 26 Free evaluation used synthetic files only: harmless, EICAR and
+25 MiB controls passed. This is not approval to send customer files. The reviewed
+policy allows storage in India for up to 24 hours and retains scan metadata;
+signature freshness and the deployed workflow still require verification.
+
+The worker saves a provider scan ID before sending bytes. Subsequent runs poll
+that ID without downloading or uploading the file again. Signed upload fields
+stay in memory and never enter the database or logs. A lost creation response
+has no safe automatic retry because the provider documents no creation
+idempotency key. Such tasks enter `attachment_scan_jobs.phase=review` and stay
+blocked. Reconcile the provider's history before arranging a new submission;
+do not simply delete the task to bypass this guard. Quota/authentication errors
+and missing or suspicious results also require operator attention. Polling
+outages retain the saved ID. A 25-hour recovery limit prevents endless polling.
+
+Claims expire after two minutes. Only the current lease can checkpoint a scan
+or record a verdict, and the attachment's path, size and checksum must still
+match. Quarantine is saved before infected object removal; failed removals
+remain queued and retry without another scan. The job result reports pending,
+infected and review counts. Only an explicit clean result for the expected hash
+and size, with both engines clean and no threats, permits downloads.
+
+Provider operations share at most 20 seconds per worker turn. A synthetic
+25 MiB round trip from the owner's computer took 53 seconds, including transfer,
+versus 1.6 seconds reported scanning time. That does not measure deployed worker
+performance. Verify maximum-size uploads on the chosen host before activation;
+an interrupted transfer keeps its scan ID and cannot silently pass or resubmit.
+`npm run preflight` with Bouncer selected consumes two scan credits for its
+synthetic controls. Passing them does not verify database migration, current
+definitions, maximum-size hosted transfers or quarantine/download recovery.
 
 `npm run preflight` sends two synthetic files through the application's scanner
 client: a harmless text control that must return `clean`, and EICAR that must

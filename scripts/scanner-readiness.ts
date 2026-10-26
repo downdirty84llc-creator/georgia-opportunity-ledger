@@ -3,6 +3,12 @@ import {
   scannerConfig,
   type ScannerConfig,
 } from '../src/lib/files/scanner';
+import { createHash } from 'node:crypto';
+import {
+  createBouncerScan,
+  pollBouncerScan,
+  uploadBouncerFile,
+} from '../src/lib/files/bouncer';
 
 interface ScannerCheck {
   status: 'pass' | 'fail' | 'unknown';
@@ -14,7 +20,20 @@ export function scannerConfigurationCheck(
   provider: string | undefined,
   url: string,
   production: boolean,
+  bouncerKey = process.env.BOUNCER_API_KEY ?? '',
 ): ScannerCheck {
+  if (provider === 'bouncer') {
+    return /^bnc_live_[A-Za-z0-9_-]+$/.test(bouncerKey)
+      ? {
+          status: 'pass',
+          detail:
+            'Bouncer credential configured. Probes spend two scan credits; durable migration and deployed workflow still require verification.',
+        }
+      : {
+          status: 'fail',
+          detail: 'BOUNCER_API_KEY is missing or invalid; no probe was sent.',
+        };
+  }
   if (!url || !url.trim()) {
     return {
       status: 'fail',
@@ -73,7 +92,10 @@ export async function scannerReadinessChecks(
   configuration: ScannerCheck,
   config: ScannerConfig = scannerConfig(),
 ): Promise<{ clean: ScannerCheck; eicar: ScannerCheck }> {
-  if (configuration.status !== 'pass' || config.provider !== 'clamav') {
+  if (
+    configuration.status !== 'pass' ||
+    !['clamav', 'bouncer'].includes(config.provider)
+  ) {
     const skipped: ScannerCheck = {
       status: 'unknown',
       detail: 'Scanner configuration is not usable; no probe was sent.',
@@ -86,12 +108,38 @@ export async function scannerReadinessChecks(
     name: string,
     expected: 'clean' | 'infected',
   ): Promise<ScannerCheck> => {
-    const outcome = await scanBytes(
-      new TextEncoder().encode(body),
-      name,
-      config,
-    );
-    if (outcome.verdict === 'failed' || outcome.verdict === 'skipped') {
+    let outcome;
+    if (config.provider === 'bouncer') {
+      try {
+        const bytes = new TextEncoder().encode(body);
+        const file = {
+          size: bytes.length,
+          sha256: createHash('sha256').update(bytes).digest('hex'),
+        };
+        const signal = AbortSignal.timeout(20_000);
+        const ticket = await createBouncerScan(config.apiKey, file, signal);
+        await uploadBouncerFile(ticket, bytes, signal);
+        do {
+          outcome = await pollBouncerScan(
+            config.apiKey,
+            ticket.id,
+            file,
+            signal,
+          );
+          if (outcome.verdict === 'pending')
+            await new Promise<void>((resolve) => setTimeout(resolve, 2000));
+        } while (outcome.verdict === 'pending' && !signal.aborted);
+      } catch {
+        outcome = { verdict: 'failed' };
+      }
+    } else {
+      outcome = await scanBytes(new TextEncoder().encode(body), name, config);
+    }
+    if (
+      outcome.verdict === 'failed' ||
+      outcome.verdict === 'skipped' ||
+      outcome.verdict === 'pending'
+    ) {
       return {
         status: 'unknown',
         detail:
