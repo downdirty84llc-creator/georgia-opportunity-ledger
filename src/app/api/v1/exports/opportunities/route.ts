@@ -23,7 +23,7 @@ export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
 const bodySchema = z.object({
-  filters: z.record(z.unknown()).optional(),
+  filters: z.record(z.string(), z.unknown()).optional(),
   savedSearchId: z.string().uuid().optional(),
   opportunityIds: z.array(z.string().uuid()).min(1).max(5000).optional(),
   format: z.enum(['csv']).default('csv'),

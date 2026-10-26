@@ -37,6 +37,7 @@ import { LEGAL_DOCUMENTS } from '../src/lib/legal/documents';
 import { emailConfigurationCheck } from './email-configuration';
 import { emailDnsCheck } from './email-dns';
 import { modeOf } from './stripe-mode';
+import { sentryConfigurationCheck } from './sentry-configuration';
 import {
   probeUrl,
   redirectCheckRow,
@@ -161,17 +162,14 @@ function checkConfiguration(): void {
   );
   record('blocking', 'Email delivery configured', email.status, email.detail);
 
-  for (const [name, variable] of [
-    ['Sentry configured', 'SENTRY_DSN'],
-    ['PostHog configured', 'NEXT_PUBLIC_POSTHOG_KEY'],
-  ] as const) {
-    record(
-      'customers',
-      name,
-      env(variable) ? 'pass' : 'fail',
-      env(variable) ? 'set' : `${variable} unset`,
-    );
-  }
+  const sentry = sentryConfigurationCheck(env('SENTRY_DSN'));
+  record('customers', 'Sentry configured', sentry.status, sentry.detail);
+  record(
+    'customers',
+    'PostHog configured',
+    env('NEXT_PUBLIC_POSTHOG_KEY') ? 'pass' : 'fail',
+    env('NEXT_PUBLIC_POSTHOG_KEY') ? 'set' : 'NEXT_PUBLIC_POSTHOG_KEY unset',
+  );
 }
 
 // ---------------------------------------------------------------------------

@@ -77,7 +77,7 @@ vi.mock('@/lib/http/rate-limit', () => ({
 
 const { POST } = await import('@/app/api/v1/auth/register/route');
 
-function register(): Promise<Response> {
+function register(overrides: Record<string, unknown> = {}): Promise<Response> {
   // `withErrorHandling` passes a route context through; this route ignores it.
   return POST(
     new Request('https://georgiaopportunityledger.com/api/v1/auth/register', {
@@ -88,6 +88,7 @@ function register(): Promise<Response> {
         password: 'a-sufficiently-long-password',
         companyName: 'Example Holdings',
         acceptedTerms: true,
+        ...overrides,
       }),
     }),
     undefined as never,
@@ -117,6 +118,29 @@ describe('registration recording terms acceptance', () => {
     expect(adminUpdate).toHaveBeenCalledTimes(1);
     expect(requestUpdate).not.toHaveBeenCalled();
   });
+
+  it.each([false, undefined])(
+    'refuses missing consent (%s) with the intended validation message',
+    async (acceptedTerms) => {
+      const response = await register({ acceptedTerms });
+      expect(response.status).toBe(422);
+      expect(await response.json()).toMatchObject({
+        error: {
+          code: 'validation_failed',
+          details: {
+            issues: [
+              {
+                path: 'acceptedTerms',
+                message: 'You must accept the terms to continue.',
+              },
+            ],
+          },
+        },
+      });
+      expect(signUp).not.toHaveBeenCalled();
+      expect(adminUpdate).not.toHaveBeenCalled();
+    },
+  );
 
   it('records both acceptances and the company name', async () => {
     await register();

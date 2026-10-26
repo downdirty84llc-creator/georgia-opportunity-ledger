@@ -107,7 +107,7 @@ export const ADVANCED_FILTER_KEYS = [
 
 const csvList = <T extends readonly [string, ...string[]]>(values: T) =>
   z
-    .union([z.string(), z.array(z.enum(values))])
+    .union([z.string(), z.array(z.enum(values)).max(20)])
     .transform((input) =>
       Array.isArray(input)
         ? input
@@ -120,7 +120,7 @@ const csvList = <T extends readonly [string, ...string[]]>(values: T) =>
     .optional();
 
 const uuidList = z
-  .union([z.string(), z.array(z.string().uuid())])
+  .union([z.string(), z.array(z.string().uuid()).max(50)])
   .transform((input) =>
     Array.isArray(input)
       ? input

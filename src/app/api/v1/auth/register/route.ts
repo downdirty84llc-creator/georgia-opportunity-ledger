@@ -25,7 +25,7 @@ const bodySchema = z.object({
   lastName: z.string().trim().max(80).optional(),
   companyName: z.string().trim().max(160).optional(),
   acceptedTerms: z.literal(true, {
-    errorMap: () => ({ message: 'You must accept the terms to continue.' }),
+    error: 'You must accept the terms to continue.',
   }),
 });
 

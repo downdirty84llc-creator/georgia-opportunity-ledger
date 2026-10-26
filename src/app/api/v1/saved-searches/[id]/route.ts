@@ -21,7 +21,7 @@ type RouteContext = { params: Promise<{ id: string }> };
 const patchSchema = z
   .object({
     name: z.string().trim().min(1).max(120).optional(),
-    filters: z.record(z.unknown()).optional(),
+    filters: z.record(z.string(), z.unknown()).optional(),
     minimumScore: z.number().int().min(0).max(100).optional(),
     alertEnabled: z.boolean().optional(),
     alertFrequency: z

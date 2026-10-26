@@ -33,6 +33,20 @@ describe('filter parsing', () => {
     expect(result.success).toBe(false);
   });
 
+  it.each(['category', 'countyIds'])(
+    'rejects oversized %s arrays before building errors for every element',
+    (field) => {
+      const result = filterSchema.safeParse({
+        [field]: Array(10_000).fill('invalid'),
+      });
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        // Bounded diagnostic output is the observable security requirement.
+        expect(JSON.stringify(result.error.issues).length).toBeLessThan(2_000);
+      }
+    },
+  );
+
   it('stored documents that predate the schema degrade to empty, not throw', () => {
     expect(parseStoredFilters({ category: 'yachts' }).category).toBeUndefined();
     expect(parseStoredFilters(null).sort).toBe('score_desc');

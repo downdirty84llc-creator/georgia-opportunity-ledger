@@ -13,6 +13,72 @@ const { captureToPostHog } = await import('@/lib/analytics/posthog');
 
 const fetchMock = vi.fn();
 
+describe('Sentry destination configuration', () => {
+  beforeEach(() => {
+    fetchMock
+      .mockReset()
+      .mockResolvedValue(new Response('{}', { status: 200 }));
+    vi.stubGlobal('fetch', fetchMock);
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.unstubAllEnvs();
+    vi.restoreAllMocks();
+  });
+
+  it.each([
+    'ftp://public@errors.example.invalid/123',
+    'https://public@errors.example.invalid/project',
+    'https://public@errors.example.invalid/123?unexpected=value',
+    'https://public@errors.example.invalid/123#unexpected',
+    'https://public@errors.example.invalid/123\n',
+  ])(
+    'refuses a malformed destination without sending or exposing it: %s',
+    async (dsn) => {
+      vi.stubEnv('SENTRY_DSN', dsn);
+      await expect(
+        reportError(new Error('Synthetic error')),
+      ).resolves.toBeUndefined();
+      expect(fetchMock).not.toHaveBeenCalled();
+      expect(console.warn).toHaveBeenCalledWith(
+        '[error] SENTRY_DSN is set but could not be parsed',
+      );
+      expect(JSON.stringify(vi.mocked(console.warn).mock.calls)).not.toContain(
+        dsn,
+      );
+    },
+  );
+
+  it('routes a prefixed Sentry installation to the project envelope endpoint', async () => {
+    vi.stubEnv(
+      'SENTRY_DSN',
+      'https://public@errors.example.invalid/monitoring/123',
+    );
+    await reportError(new Error('Synthetic error'));
+    expect(fetchMock).toHaveBeenCalledWith(
+      'https://errors.example.invalid/monitoring/api/123/envelope/',
+      expect.objectContaining({ method: 'POST' }),
+    );
+  });
+
+  it('does not transmit a deprecated DSN password in the envelope', async () => {
+    vi.stubEnv(
+      'SENTRY_DSN',
+      'https://public:legacy-secret@errors.example.invalid/123',
+    );
+    await reportError(new Error('Synthetic error'));
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const request = fetchMock.mock.calls[0]![1];
+    expect(JSON.parse(request.body.split('\n')[0]).dsn).toBe(
+      'https://public@errors.example.invalid/123',
+    );
+    expect(JSON.stringify(fetchMock.mock.calls)).not.toContain('legacy-secret');
+  });
+});
+
 describe.each([
   {
     service: 'Sentry',

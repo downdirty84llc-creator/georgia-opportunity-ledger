@@ -19,7 +19,7 @@ export const dynamic = 'force-dynamic';
 
 const createSchema = z.object({
   name: z.string().trim().min(1).max(120),
-  filters: z.record(z.unknown()).default({}),
+  filters: z.record(z.string(), z.unknown()).default({}),
   minimumScore: z.number().int().min(0).max(100).default(0),
   alertEnabled: z.boolean().default(true),
   alertFrequency: z

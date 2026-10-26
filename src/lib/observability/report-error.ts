@@ -15,25 +15,7 @@
  */
 
 import { publicEnv } from '@/lib/env';
-
-interface ParsedDsn {
-  endpoint: string;
-  publicKey: string;
-}
-
-function parseDsn(dsn: string): ParsedDsn | null {
-  try {
-    const url = new URL(dsn);
-    const projectId = url.pathname.replace(/^\//, '');
-    if (!projectId || !url.username) return null;
-    return {
-      endpoint: `${url.protocol}//${url.host}/api/${projectId}/envelope/`,
-      publicKey: url.username,
-    };
-  } catch {
-    return null;
-  }
-}
+import { parseSentryDsn } from './sentry-dsn';
 
 export interface ErrorContext {
   /** Where it happened: a route, a job name, a handler. */
@@ -64,7 +46,7 @@ export async function reportError(
   const dsn = process.env.SENTRY_DSN;
   if (!dsn) return;
 
-  const parsed = parseDsn(dsn);
+  const parsed = parseSentryDsn(dsn);
   if (!parsed) {
     console.warn('[error] SENTRY_DSN is set but could not be parsed');
     return;
@@ -74,7 +56,7 @@ export async function reportError(
     const eventId = crypto.randomUUID().replace(/-/g, '');
     const sentAt = new Date().toISOString();
 
-    const header = { event_id: eventId, sent_at: sentAt, dsn };
+    const header = { event_id: eventId, sent_at: sentAt, dsn: parsed.dsn };
     const itemHeader = { type: 'event' };
     const payload = {
       event_id: eventId,
