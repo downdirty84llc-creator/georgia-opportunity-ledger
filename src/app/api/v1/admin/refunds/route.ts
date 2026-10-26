@@ -1,3 +1,4 @@
+import { readJsonBody } from '@/lib/http/request-body';
 import { withAdminHandling } from '@/lib/http/admin-handler';
 import type { NextResponse } from 'next/server';
 import { z } from 'zod';
@@ -55,7 +56,7 @@ export const POST = withAdminHandling(
       );
     }
 
-    const parsed = refundSchema.safeParse(await request.json());
+    const parsed = refundSchema.safeParse(await readJsonBody(request));
     if (!parsed.success) return validationFailed(parsed.error);
 
     const limit = await checkRateLimit(

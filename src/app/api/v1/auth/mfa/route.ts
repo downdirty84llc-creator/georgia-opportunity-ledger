@@ -1,3 +1,4 @@
+import { readJsonBody } from '@/lib/http/request-body';
 import { z } from 'zod';
 import { getViewer } from '@/lib/auth/session';
 import { mfaRequiredForRole } from '@/lib/auth/mfa';
@@ -36,7 +37,7 @@ export const POST = withErrorHandling(async (request: Request) => {
   ) {
     return apiError('forbidden', 'Active staff access required.');
   }
-  const parsed = schema.safeParse(await request.json());
+  const parsed = schema.safeParse(await readJsonBody(request));
   if (!parsed.success) return validationFailed(parsed.error);
   const limit = await checkRateLimit(
     'mfa',

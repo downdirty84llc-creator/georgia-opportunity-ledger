@@ -1,3 +1,4 @@
+import { readJsonBody } from '@/lib/http/request-body';
 import type { NextResponse } from 'next/server';
 import { z } from 'zod';
 
@@ -30,7 +31,7 @@ const bodySchema = z.discriminatedUnion('method', [
 /** POST /api/v1/auth/login — password or magic link. */
 export const POST = withErrorHandling(
   async (request: Request): Promise<NextResponse> => {
-    const parsed = bodySchema.safeParse(await request.json());
+    const parsed = bodySchema.safeParse(await readJsonBody(request));
     if (!parsed.success) return validationFailed(parsed.error);
 
     const limit = await checkAuthRateLimit('login', request, parsed.data.email);

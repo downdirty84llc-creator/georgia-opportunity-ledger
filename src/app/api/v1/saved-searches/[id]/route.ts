@@ -1,3 +1,4 @@
+import { readJsonBody } from '@/lib/http/request-body';
 import type { NextResponse } from 'next/server';
 import { z } from 'zod';
 
@@ -42,7 +43,7 @@ export const PATCH = withErrorHandling(
       return apiError('unauthorized', 'Sign in to update a saved search.');
     }
 
-    const parsed = patchSchema.safeParse(await request.json());
+    const parsed = patchSchema.safeParse(await readJsonBody(request));
     if (!parsed.success) return validationFailed(parsed.error);
 
     // Turning alerting back on is a Premium capability, so it is re-checked

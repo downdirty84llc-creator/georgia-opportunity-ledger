@@ -1,3 +1,4 @@
+import { readJsonBody } from '@/lib/http/request-body';
 import type { NextResponse } from 'next/server';
 import { z } from 'zod';
 
@@ -74,7 +75,7 @@ export const POST = withErrorHandling(
       return apiError('unauthorized', 'Sign in to save a search.');
     }
 
-    const parsed = createSchema.safeParse(await request.json());
+    const parsed = createSchema.safeParse(await readJsonBody(request));
     if (!parsed.success) return validationFailed(parsed.error);
 
     // Normalise the filter document through the same schema the search page

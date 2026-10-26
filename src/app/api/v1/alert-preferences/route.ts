@@ -1,3 +1,4 @@
+import { readJsonBody } from '@/lib/http/request-body';
 import type { NextResponse } from 'next/server';
 import { z } from 'zod';
 
@@ -105,7 +106,7 @@ export const PUT = withErrorHandling(
       );
     }
 
-    const parsed = putSchema.safeParse(await request.json());
+    const parsed = putSchema.safeParse(await readJsonBody(request));
     if (!parsed.success) return validationFailed(parsed.error);
 
     const supabase = await createServerSupabaseClient();

@@ -1,3 +1,4 @@
+import { readJsonBody } from '@/lib/http/request-body';
 import { withAdminHandling } from '@/lib/http/admin-handler';
 import type { NextResponse } from 'next/server';
 import { z } from 'zod';
@@ -158,7 +159,7 @@ export const PATCH = withAdminHandling(
       return apiError('forbidden', 'You cannot edit opportunity records.');
     }
 
-    const parsed = patchSchema.safeParse(await request.json());
+    const parsed = patchSchema.safeParse(await readJsonBody(request));
     if (!parsed.success) return validationFailed(parsed.error);
     const body = parsed.data;
 

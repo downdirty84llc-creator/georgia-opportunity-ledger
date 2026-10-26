@@ -1,3 +1,4 @@
+import { readJsonBody } from '@/lib/http/request-body';
 import type { NextResponse } from 'next/server';
 import { z } from 'zod';
 
@@ -101,7 +102,7 @@ export const POST = withErrorHandling(
       return apiError('unauthorized', 'Sign in to save an opportunity.');
     }
 
-    const parsed = createSchema.safeParse(await request.json());
+    const parsed = createSchema.safeParse(await readJsonBody(request));
     if (!parsed.success) return validationFailed(parsed.error);
 
     const supabase = await createServerSupabaseClient();

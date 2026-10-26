@@ -1,3 +1,4 @@
+import { readJsonBody } from '@/lib/http/request-body';
 import type { NextResponse } from 'next/server';
 import { z } from 'zod';
 
@@ -45,7 +46,7 @@ export const POST = withErrorHandling(
       return apiError('forbidden', 'Your account is not active.');
     }
 
-    const parsed = bodySchema.safeParse(await request.json());
+    const parsed = bodySchema.safeParse(await readJsonBody(request));
     if (!parsed.success) return validationFailed(parsed.error);
 
     const supabase = await createServerSupabaseClient();

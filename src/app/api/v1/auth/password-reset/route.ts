@@ -1,3 +1,4 @@
+import { readJsonBody } from '@/lib/http/request-body';
 import type { NextResponse } from 'next/server';
 import { z } from 'zod';
 
@@ -26,7 +27,7 @@ const passwordSchema = z.object({ password: z.string().min(12).max(200) });
  */
 export const POST = withErrorHandling(
   async (request: Request): Promise<NextResponse> => {
-    const parsed = bodySchema.safeParse(await request.json());
+    const parsed = bodySchema.safeParse(await readJsonBody(request));
     if (!parsed.success) return validationFailed(parsed.error);
 
     const limit = await checkAuthRateLimit(
@@ -72,7 +73,7 @@ export const PUT = withErrorHandling(
       return apiError('forbidden', 'Open the password form on this site.');
     }
 
-    const parsed = passwordSchema.safeParse(await request.json());
+    const parsed = passwordSchema.safeParse(await readJsonBody(request));
     if (!parsed.success) return validationFailed(parsed.error);
 
     const supabase = await createServerSupabaseClient();

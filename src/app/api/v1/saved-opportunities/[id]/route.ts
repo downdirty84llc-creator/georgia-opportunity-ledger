@@ -1,3 +1,4 @@
+import { readJsonBody } from '@/lib/http/request-body';
 import type { NextResponse } from 'next/server';
 import { z } from 'zod';
 
@@ -48,7 +49,7 @@ export const PATCH = withErrorHandling(
       return apiError('unauthorized', 'Sign in to update a saved opportunity.');
     }
 
-    const parsed = patchSchema.safeParse(await request.json());
+    const parsed = patchSchema.safeParse(await readJsonBody(request));
     if (!parsed.success) return validationFailed(parsed.error);
 
     const update: Record<string, unknown> = {};

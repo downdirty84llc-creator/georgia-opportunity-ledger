@@ -1,3 +1,4 @@
+import { readJsonBody } from '@/lib/http/request-body';
 import { withAdminHandling } from '@/lib/http/admin-handler';
 import type { NextResponse } from 'next/server';
 import { z } from 'zod';
@@ -38,7 +39,9 @@ export const POST = withAdminHandling(
       return apiError('forbidden', 'Administrator access required.');
     }
 
-    const parsed = bodySchema.safeParse(await request.json().catch(() => ({})));
+    const parsed = bodySchema.safeParse(
+      await readJsonBody(request, { allowEmpty: true }),
+    );
     if (!parsed.success) return validationFailed(parsed.error);
 
     try {

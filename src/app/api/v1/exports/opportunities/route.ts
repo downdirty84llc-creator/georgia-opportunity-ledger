@@ -1,3 +1,4 @@
+import { readJsonBody } from '@/lib/http/request-body';
 import type { NextResponse } from 'next/server';
 import { z } from 'zod';
 
@@ -49,7 +50,9 @@ export const POST = withErrorHandling(
     );
     if (!limit.allowed) return rateLimited(limit.resetAt);
 
-    const parsed = bodySchema.safeParse(await request.json().catch(() => ({})));
+    const parsed = bodySchema.safeParse(
+      await readJsonBody(request, { allowEmpty: true }),
+    );
     if (!parsed.success) return validationFailed(parsed.error);
 
     const supabase = await createServerSupabaseClient();

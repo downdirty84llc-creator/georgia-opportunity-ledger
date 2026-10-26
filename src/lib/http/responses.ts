@@ -3,6 +3,7 @@ import { ZodError } from 'zod';
 
 import type { Decision } from '@/lib/access/entitlements';
 import { reportError } from '@/lib/observability/report-error';
+import { InvalidJsonBodyError } from './request-body';
 
 /**
  * One response shape for the whole API, so a client never has to guess where
@@ -129,6 +130,9 @@ export function withErrorHandling(
     try {
       return await handler(request, context);
     } catch (error) {
+      if (error instanceof InvalidJsonBodyError) {
+        return apiError('bad_request', error.message);
+      }
       if (error instanceof ZodError) return validationFailed(error);
 
       // Reported rather than only logged: an unhandled API error is the class

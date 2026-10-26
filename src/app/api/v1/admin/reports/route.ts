@@ -1,3 +1,4 @@
+import { readJsonBody } from '@/lib/http/request-body';
 import { withAdminHandling } from '@/lib/http/admin-handler';
 import type { NextResponse } from 'next/server';
 import { z } from 'zod';
@@ -67,7 +68,7 @@ export const POST = withAdminHandling(
       return apiError('forbidden', 'Only an editor can create reports.');
     }
 
-    const parsed = createSchema.safeParse(await request.json());
+    const parsed = createSchema.safeParse(await readJsonBody(request));
     if (!parsed.success) return validationFailed(parsed.error);
 
     const supabase = await createServerSupabaseClient();
