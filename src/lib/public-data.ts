@@ -51,7 +51,25 @@ export interface PublicStats {
   upcomingDeadlines: number;
 }
 
-export async function loadPublicStats(): Promise<PublicStats> {
+/** Exact counts only: a failed HEAD request is not evidence of an empty table. */
+function exactCount(result: {
+  count: number | null;
+  error: { message: string } | null;
+}): number {
+  if (result.error) throw new Error(result.error.message);
+  if (
+    result.count === null ||
+    !Number.isSafeInteger(result.count) ||
+    result.count < 0
+  ) {
+    throw new Error(
+      'Public statistics response did not include an exact count.',
+    );
+  }
+  return result.count;
+}
+
+export async function loadPublicStats(): Promise<PublicStats | null> {
   try {
     const supabase = createPublicSupabaseClient();
     const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
@@ -83,19 +101,16 @@ export async function loadPublicStats(): Promise<PublicStats> {
     ]);
 
     return {
-      activeOpportunities: active.count ?? 0,
-      countiesCovered: counties.count ?? 0,
-      verifiedThisWeek: verified.count ?? 0,
-      upcomingDeadlines: deadlines.count ?? 0,
+      activeOpportunities: exactCount(active),
+      countiesCovered: exactCount(counties),
+      verifiedThisWeek: exactCount(verified),
+      upcomingDeadlines: exactCount(deadlines),
     };
   } catch (error) {
     softFail('stats unavailable', error);
-    return {
-      activeOpportunities: 0,
-      countiesCovered: 0,
-      verifiedThisWeek: 0,
-      upcomingDeadlines: 0,
-    };
+    // Keep the page available without publishing invented zeroes or a partial
+    // set of figures. Production/staging prerenders still fail in softFail.
+    return null;
   }
 }
 

@@ -269,20 +269,32 @@ export default async function HomePage() {
       >
         <div className="mx-auto grid max-w-7xl grid-cols-2 gap-6 px-4 py-8 sm:px-6 lg:grid-cols-4">
           {[
-            { label: 'Active opportunities', value: stats.activeOpportunities },
-            { label: 'Georgia counties covered', value: stats.countiesCovered },
+            {
+              label: 'Active opportunities',
+              value: stats?.activeOpportunities,
+            },
+            {
+              label: 'Georgia counties in directory',
+              value: stats?.countiesCovered,
+            },
             {
               label: 'Records verified this week',
-              value: stats.verifiedThisWeek,
+              value: stats?.verifiedThisWeek,
             },
             {
               label: 'Deadlines in the next 14 days',
-              value: stats.upcomingDeadlines,
+              value: stats?.upcomingDeadlines,
             },
           ].map((stat) => (
             <div key={stat.label}>
-              <p className="text-3xl font-semibold tabular-nums">
-                {stat.value}
+              <p
+                className={
+                  stat.value === undefined
+                    ? 'text-lg font-semibold'
+                    : 'text-3xl font-semibold tabular-nums'
+                }
+              >
+                {stat.value ?? 'Unavailable'}
               </p>
               <p className="mt-1 text-sm text-ink-300">{stat.label}</p>
             </div>
