@@ -123,7 +123,7 @@ export function PlanGrid({
           aria-label="Confirm subscription change"
           className="surface mx-auto mb-6 max-w-xl p-5"
         >
-          <h3 className="font-semibold">Change to {confirmPlan.name}?</h3>
+          <h2 className="font-semibold">Change to {confirmPlan.name}?</h2>
           <p className="mt-2 text-sm">
             The recurring price is $
             {interval === 'annual'
@@ -178,7 +178,7 @@ export function PlanGrid({
               )}
             >
               <div className="flex items-start justify-between gap-2">
-                <h3 className="text-lg font-semibold">{plan.name}</h3>
+                <h2 className="text-lg font-semibold">{plan.name}</h2>
                 {plan.isRecommended ? (
                   <Pill tone="positive">Recommended</Pill>
                 ) : null}

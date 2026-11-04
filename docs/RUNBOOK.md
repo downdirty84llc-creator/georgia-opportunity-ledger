@@ -512,6 +512,12 @@ sitemap. What it marks `you` is what no machine can close.
 - [ ] Core Web Vitals measured on the public pages. The landing pages are
       prerendered with `revalidate` windows; confirm the cache is actually being
       hit rather than every request revalidating.
+      November 4 PageSpeed lab measurements: home mobile performance 98,
+      desktop 100; pricing mobile performance 100. Mobile LCP was 1.1 seconds
+      and CLS 0 on both pages. No CrUX field data was available. Home and funding
+      returned `PRERENDER`, robots `HIT`; pricing correctly remained private
+      because it reflects the signed-in member's billing state. These results
+      do not establish real-user INP or replace the manual accessibility audit.
 
 ### Verify after launch
 
