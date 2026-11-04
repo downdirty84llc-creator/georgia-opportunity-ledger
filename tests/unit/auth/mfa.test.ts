@@ -3,6 +3,7 @@ const m = vi.hoisted(() => ({
   factors: vi.fn(),
   assurance: vi.fn(),
   enroll: vi.fn(),
+  unenroll: vi.fn(),
   verify: vi.fn(),
   viewer: vi.fn(),
   rate: vi.fn(),
@@ -14,6 +15,7 @@ vi.mock('@/lib/db/server', () => ({
         listFactors: m.factors,
         getAuthenticatorAssuranceLevel: m.assurance,
         enroll: m.enroll,
+        unenroll: m.unenroll,
         challengeAndVerify: m.verify,
       },
     },
@@ -58,6 +60,7 @@ beforeEach(() => {
     data: { id: factorId, totp: { qr_code: 'qr', secret: 'fixture' } },
     error: null,
   });
+  m.unenroll.mockResolvedValue({ data: { id: factorId }, error: null });
   m.verify.mockResolvedValue({
     data: { access_token: 'must-not-return', refresh_token: 'must-not-return' },
     error: null,
@@ -131,6 +134,7 @@ describe('staff MFA fails closed', () => {
 });
 describe('MFA uses the server-owned session', () => {
   it('enrols the session owner and prevents caching the setup secret', async () => {
+    m.factors.mockResolvedValue({ data: { all: [], totp: [] }, error: null });
     const response = await POST(
       request({ action: 'enroll' }),
       undefined as never,
@@ -141,7 +145,101 @@ describe('MFA uses the server-owned session', () => {
       factorType: 'totp',
       friendlyName: 'Ledger staff',
     });
+    expect(m.unenroll).not.toHaveBeenCalled();
   });
+  it('restarts only the owner’s unfinished Ledger TOTP setup after a reload', async () => {
+    m.factors.mockResolvedValue({
+      data: {
+        all: [
+          {
+            id: factorId,
+            status: 'unverified',
+            factor_type: 'totp',
+            friendly_name: 'Ledger staff',
+          },
+          {
+            id: 'another-setup',
+            status: 'unverified',
+            factor_type: 'totp',
+            friendly_name: 'Other device',
+          },
+          {
+            id: 'phone-setup',
+            status: 'unverified',
+            factor_type: 'phone',
+            friendly_name: 'Ledger staff',
+          },
+        ],
+        totp: [],
+      },
+      error: null,
+    });
+    const response = await POST(
+      request({ action: 'enroll' }),
+      undefined as never,
+    );
+    expect(response.status).toBe(200);
+    expect(m.unenroll).toHaveBeenCalledExactlyOnceWith({ factorId });
+    expect(m.unenroll.mock.invocationCallOrder[0]).toBeLessThan(
+      m.enroll.mock.invocationCallOrder[0]!,
+    );
+  });
+  it('never replaces a verified authenticator, even when unfinished factors exist', async () => {
+    m.factors.mockResolvedValue({
+      data: {
+        all: [
+          {
+            id: factorId,
+            status: 'unverified',
+            factor_type: 'totp',
+            friendly_name: 'Ledger staff',
+          },
+          { id: 'active-device', status: 'verified', factor_type: 'totp' },
+        ],
+        totp: [{ id: 'active-device', status: 'verified' }],
+      },
+      error: null,
+    });
+    const response = await POST(
+      request({ action: 'enroll' }),
+      undefined as never,
+    );
+    expect(response.status).toBe(400);
+    expect(m.unenroll).not.toHaveBeenCalled();
+    expect(m.enroll).not.toHaveBeenCalled();
+  });
+  it.each(['list', 'cleanup'])(
+    'does not create another factor when %s fails',
+    async (failure) => {
+      m.factors.mockResolvedValue(
+        failure === 'list'
+          ? { data: null, error: { message: 'unavailable' } }
+          : {
+              data: {
+                all: [
+                  {
+                    id: factorId,
+                    status: 'unverified',
+                    factor_type: 'totp',
+                    friendly_name: 'Ledger staff',
+                  },
+                ],
+                totp: [],
+              },
+              error: null,
+            },
+      );
+      m.unenroll.mockResolvedValue({
+        data: null,
+        error: { message: 'verification raced with cleanup' },
+      });
+      expect(
+        (await POST(request({ action: 'enroll' }), undefined as never)).status,
+      ).toBe(400);
+      expect(m.enroll).not.toHaveBeenCalled();
+      if (failure === 'list') expect(m.unenroll).not.toHaveBeenCalled();
+    },
+  );
   it('verifies with the session client without exposing session tokens', async () => {
     const response = await POST(
       request({ action: 'verify', factorId, code: '123456' }),

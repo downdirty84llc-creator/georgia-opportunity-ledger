@@ -173,6 +173,10 @@ export function MfaSetup({
             Authenticator or your password manager&rsquo;s built-in one. This
             takes about a minute and only has to be done once.
           </p>
+          <p className="mt-2 text-sm text-ink-700">
+            Restarting replaces any unfinished Ledger setup. Scan the newest QR
+            code and use the code from that entry in your authenticator.
+          </p>
           {error ? (
             <p role="alert" className="mt-3 text-sm text-red-800">
               {error}
