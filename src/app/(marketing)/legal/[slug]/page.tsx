@@ -62,18 +62,13 @@ export default async function LegalPage({ params }: PageProps) {
           <h1 className="text-3xl">{document.title}</h1>
           <p className="mt-3 text-lg text-ink-700">{document.summary}</p>
 
-          {document.requiresReview ? (
-            <p className="mt-5 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-              <strong className="font-semibold">Awaiting legal review.</strong>{' '}
-              This document accurately describes how the service behaves, but it
-              has not yet been reviewed by counsel. Production launch is blocked
-              on that review.
-            </p>
-          ) : (
-            <div className="mt-5">
-              <Pill tone="positive">Published standard</Pill>
-            </div>
-          )}
+          <div className="mt-5">
+            <Pill tone="positive">
+              {document.requiresReview
+                ? 'Published policy'
+                : 'Published standard'}
+            </Pill>
+          </div>
 
           <div className="mt-10 space-y-10">
             {document.sections.map((section) => (

@@ -1,5 +1,13 @@
 # Legal review packet
 
+**Owner decision, 2026-11-04:** the owner explicitly instructed us to bypass
+the legal consultant and publish. Attorney review is therefore waived as a
+launch prerequisite. No attorney review has occurred, and the nine
+`requiresReview` flags remain true as an accurate review record. This waiver
+does not certify the policies or clear the separate operational checks below.
+Public policies no longer say that launch must wait for counsel. The historical
+review packet and questions are retained for any future review.
+
 **This is not legal advice, and nothing here clears the review.** It was
 prepared by an engineer, not a lawyer, to make an attorney's time cheaper: the
 documents in `src/lib/legal/documents.ts` are compared against what the code
@@ -39,7 +47,8 @@ Production backup/restore, an operational scanner, staging billing checks,
 verified launch content and a human accessibility review remain open. The owner
 has no existing always-on server and has retained a no-cost service limit.
 These constraints must be resolved before describing the service as ready for
-paid launch. The engineering findings and counsel's review are separate gates.
+paid launch. The engineering findings remain open; counsel's review is no longer
+a launch prerequisite under the owner's November 4 decision.
 
 ### 1. Account deletion — ~~promised, not built~~ **built**
 
@@ -358,5 +367,5 @@ Grouped so they can be answered in one pass.
    the date and reviewer recorded. `tests/unit/legal/documents.test.ts` pins
    the current split, so it must be updated in the same change — which is the
    point: the flag cannot move by accident.
-5. The launch checklist item in `RUNBOOK.md` is ticked only when all nine
-   flagged documents are cleared.
+5. Record any later counsel approval separately from the owner's November 4
+   launch waiver. The waiver does not clear the nine review flags.

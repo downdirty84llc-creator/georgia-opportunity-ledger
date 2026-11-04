@@ -1,7 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
 import { FOOTER_LEGAL_HREFS } from '@/components/site/footer';
-import { LEGAL_DOCUMENTS, findLegalDocument } from '@/lib/legal/documents';
+import {
+  LEGAL_DOCUMENTS,
+  LEGAL_LAUNCH_REVIEW_WAIVER,
+  findLegalDocument,
+} from '@/lib/legal/documents';
 
 /**
  * The legal set is exactly what specification 25 lists.
@@ -100,24 +104,23 @@ describe('the legal document set', () => {
     ).toEqual([...EDITORIAL_POLICY].sort());
   });
 
-  it('carries the review notice on every document awaiting counsel', () => {
-    // The banner and the flag must agree. A document flagged for review that
-    // does not say so reads as finished to whoever opens it.
+  it('records the owner waiver without treating it as counsel approval', () => {
+    expect(LEGAL_LAUNCH_REVIEW_WAIVER).toEqual({
+      decidedAt: '2026-11-04',
+      decidedBy: 'owner',
+      counselReviewCompleted: false,
+    });
+    expect(LEGAL_DOCUMENTS.filter((doc) => doc.requiresReview)).toHaveLength(9);
     for (const document of LEGAL_DOCUMENTS) {
       const text = document.sections
         .flatMap((section) => section.body)
         .join(' ');
-
-      if (document.requiresReview) {
-        expect(text, `${document.slug} has no review notice`).toContain(
-          'has not yet been reviewed by counsel',
-        );
-      } else {
-        expect(
-          text,
-          `${document.slug} carries a review notice but is not flagged`,
-        ).not.toContain('has not yet been reviewed by counsel');
-      }
+      expect(text, document.slug).not.toContain(
+        'must be before the service accepts live payments',
+      );
+      expect(text, document.slug).not.toMatch(
+        /(?:approved|reviewed) by (?:a lawyer|counsel)/i,
+      );
     }
   });
 

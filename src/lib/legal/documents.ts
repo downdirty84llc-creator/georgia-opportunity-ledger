@@ -3,9 +3,8 @@
  *
  * These are drafted to describe how the product actually behaves — the access
  * rules, the billing behaviour, the retention posture — so that a lawyer is
- * reviewing an accurate description rather than writing from scratch. Every
- * document is marked as requiring review, and the launch checklist blocks
- * production on that review being signed off.
+ * reviewing an accurate description rather than writing from scratch. Pending
+ * counsel review is tracked separately from the owner's launch decision.
  */
 
 export interface LegalSection {
@@ -17,15 +16,17 @@ export interface LegalDocument {
   slug: string;
   title: string;
   summary: string;
-  /** True until counsel has signed the document off. */
+  /** Counsel review remains pending, even when the owner waives the launch gate. */
   requiresReview: boolean;
   sections: readonly LegalSection[];
 }
 
-const REVIEW_NOTICE =
-  'This document describes how the service currently operates. It has not yet ' +
-  'been reviewed by counsel and must be before the service accepts live ' +
-  'payments.';
+/** Owner instruction on 2026-11-04; this is not attorney approval. */
+export const LEGAL_LAUNCH_REVIEW_WAIVER = {
+  decidedAt: '2026-11-04',
+  decidedBy: 'owner',
+  counselReviewCompleted: false,
+} as const;
 
 export const LEGAL_DOCUMENTS: readonly LegalDocument[] = [
   {
@@ -66,7 +67,6 @@ export const LEGAL_DOCUMENTS: readonly LegalDocument[] = [
         heading: 'Limitation of liability',
         body: [
           'To the fullest extent permitted by law, our aggregate liability arising out of the service is limited to the amount you paid us in the twelve months preceding the claim.',
-          REVIEW_NOTICE,
         ],
       },
     ],
@@ -96,7 +96,6 @@ export const LEGAL_DOCUMENTS: readonly LegalDocument[] = [
         body: [
           'From your account you can update email preferences, opt out of marketing, opt out of alerts, request an export of your data, request deletion of your account, and manage cookie preferences.',
           'A deletion request removes your profile, preferences, saved records and saved searches. Billing records are retained where we are required to keep them for tax and accounting purposes.',
-          REVIEW_NOTICE,
         ],
       },
     ],
@@ -133,7 +132,6 @@ export const LEGAL_DOCUMENTS: readonly LegalDocument[] = [
         heading: 'Cancellation',
         body: [
           'Cancel at any time from the billing portal. Access continues to the end of the period you have paid for, then the account returns to the free tier.',
-          REVIEW_NOTICE,
         ],
       },
     ],
@@ -162,7 +160,6 @@ export const LEGAL_DOCUMENTS: readonly LegalDocument[] = [
         heading: 'How to request one',
         body: [
           'Email support or open a ticket from your account. Refunds are approved by a billing manager and every refund action is recorded in the audit log.',
-          REVIEW_NOTICE,
         ],
       },
     ],
@@ -269,7 +266,6 @@ export const LEGAL_DOCUMENTS: readonly LegalDocument[] = [
         heading: 'Analytics',
         body: [
           'Product analytics tell us which features are used and where members get stuck. You can opt out from your account without losing any functionality.',
-          REVIEW_NOTICE,
         ],
       },
     ],
@@ -290,7 +286,6 @@ export const LEGAL_DOCUMENTS: readonly LegalDocument[] = [
         heading: 'Takedown',
         body: [
           'If you believe material published here infringes your copyright, contact us with the specific URL, a description of the work, and your contact details. We will review promptly and remove material where the claim is well founded.',
-          REVIEW_NOTICE,
         ],
       },
     ],
@@ -323,7 +318,6 @@ export const LEGAL_DOCUMENTS: readonly LegalDocument[] = [
           'We are not a lender, a loan broker, a grant writer or a financial adviser. We do not originate, arrange, guarantee or influence any funding decision.',
           'Eligibility criteria, amounts, rates and deadlines are reported from program documentation and change without notice. Only the program administrator can tell you whether you qualify, and only their published terms govern.',
           'No funding outcome is promised, implied or guaranteed by anything published here.',
-          REVIEW_NOTICE,
         ],
       },
     ],
@@ -371,7 +365,6 @@ export const LEGAL_DOCUMENTS: readonly LegalDocument[] = [
           'Most breaches get a warning and a conversation, because most are misunderstandings about seat sharing rather than bad faith.',
           'Redistribution at scale, automated extraction, and attempts to reach another member\u2019s data do not get a warning. We suspend the account and, where the terms provide for it, end the subscription without a refund for the remaining period.',
           'A suspended account keeps everything it has saved and may contact support to appeal. Suspension is not deletion.',
-          REVIEW_NOTICE,
         ],
       },
     ],
@@ -412,7 +405,6 @@ export const LEGAL_DOCUMENTS: readonly LegalDocument[] = [
           'If any part of this service is unusable for you, tell us through the support form or by email and we will treat it as a defect rather than a request. Say what you were trying to do, what page you were on, and what assistive technology you use if any.',
           'We aim to respond within two working days and to fix or offer a workable alternative. If a fix will take time, we will say so and say when.',
           'If you need information that is locked behind an inaccessible document or interface, ask and we will supply it in another format at no cost. That applies whether or not you are a subscriber.',
-          REVIEW_NOTICE,
         ],
       },
     ],

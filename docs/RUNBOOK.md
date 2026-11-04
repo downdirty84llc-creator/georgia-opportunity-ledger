@@ -418,14 +418,13 @@ sitemap. What it marks `you` is what no machine can close.
 
 ### Blocking
 
-- [ ] **Legal review of the nine documents marked `requiresReview`** in
-      `src/lib/legal/documents.ts`. Each renders an "awaiting legal review"
-      banner until cleared. This is the hard blocker. The other three —
-      editorial standards, corrections, data sources — state our own practice
-      and do not need counsel; the split is pinned in
-      `tests/unit/legal/documents.test.ts`. Send counsel
-      `docs/LEGAL-REVIEW.md` — it compares every document against what this
-      code actually does, so the review starts from an accurate description.
+- [x] **Owner decision on attorney review before launch:** waived by explicit
+      owner instruction on 2026-11-04. `LEGAL_LAUNCH_REVIEW_WAIVER` records the
+      decision; preflight reports the waiver as satisfied. The nine
+      `requiresReview` flags remain true because no counsel review occurred.
+      Public policy pages are published without the former launch-blocking
+      notice. This is an owner waiver, not legal approval, and does not clear
+      billing, hosting, security, content or other operational checks.
 - [ ] Stripe live mode: `npm run stripe:setup` with the live key, then the
       webhook endpoint. Confirm `subscription_plans` carries all six price ids.
 - [ ] Tier-by-tier test payment verifying each plan grants the correct access

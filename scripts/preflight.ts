@@ -31,7 +31,10 @@
 
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
-import { LEGAL_DOCUMENTS } from '../src/lib/legal/documents';
+import {
+  LEGAL_DOCUMENTS,
+  LEGAL_LAUNCH_REVIEW_WAIVER,
+} from '../src/lib/legal/documents';
 import { emailConfigurationCheck } from './email-configuration';
 import { emailDnsCheck } from './email-dns';
 import { modeOf } from './stripe-mode';
@@ -174,19 +177,17 @@ function checkConfiguration(): void {
 }
 
 // ---------------------------------------------------------------------------
-// Legal. Decidable from the source: the flag is what renders the banner.
+// Legal. The owner's launch waiver does not change counsel-review history.
 // ---------------------------------------------------------------------------
 
 function checkLegal(): void {
   const awaiting = LEGAL_DOCUMENTS.filter((doc) => doc.requiresReview);
   record(
     'blocking',
-    'Legal review of the documents that need counsel',
-    awaiting.length === 0 ? 'pass' : 'human',
-    awaiting.length === 0
-      ? `all ${LEGAL_DOCUMENTS.length} cleared`
-      : `${awaiting.length} of ${LEGAL_DOCUMENTS.length} awaiting counsel: ` +
-          awaiting.map((doc) => doc.slug).join(', '),
+    'Owner decision on legal review before launch',
+    'pass',
+    `Owner waived the attorney-review launch requirement on ${LEGAL_LAUNCH_REVIEW_WAIVER.decidedAt}. ` +
+      `${awaiting.length} of ${LEGAL_DOCUMENTS.length} documents remain unreviewed by counsel; this is not legal approval.`,
   );
 }
 
