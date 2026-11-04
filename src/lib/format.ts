@@ -58,11 +58,48 @@ const dateFormatter = new Intl.DateTimeFormat('en-US', {
   timeZone: 'America/New_York',
 });
 
+const calendarDateFormatter = new Intl.DateTimeFormat('en-US', {
+  year: 'numeric',
+  month: 'short',
+  day: 'numeric',
+  timeZone: 'UTC',
+});
+const newYorkDay = new Intl.DateTimeFormat('en-CA', {
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+  timeZone: 'America/New_York',
+});
+const dateOnly = /^\d{4}-\d{2}-\d{2}$/;
+const dayMs = 86_400_000;
+
+function parseDisplayDate(value: string | Date): Date | null {
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  if (
+    typeof value === 'string' &&
+    dateOnly.test(value) &&
+    date.toISOString().slice(0, 10) !== value
+  )
+    return null;
+  return date;
+}
+
+function localDayNumber(date: Date): number {
+  const parts = newYorkDay.formatToParts(date);
+  const part = (type: string) =>
+    Number(parts.find((item) => item.type === type)?.value);
+  return Date.UTC(part('year'), part('month') - 1, part('day')) / dayMs;
+}
+
 export function formatDate(value: string | Date | null | undefined): string {
   if (!value) return '—';
-  const date = value instanceof Date ? value : new Date(value);
-  if (Number.isNaN(date.getTime())) return '—';
-  return dateFormatter.format(date);
+  const date = parseDisplayDate(value);
+  if (!date) return '—';
+  // A SQL DATE is a calendar label, not midnight UTC shifted into Georgia time.
+  return typeof value === 'string' && dateOnly.test(value)
+    ? calendarDateFormatter.format(date)
+    : dateFormatter.format(date);
 }
 
 /**
@@ -75,18 +112,19 @@ export function formatDeadline(
   now: Date = new Date(),
 ): string {
   if (!value) return 'No stated deadline';
-  const date = value instanceof Date ? value : new Date(value);
-  if (Number.isNaN(date.getTime())) return 'No stated deadline';
+  const date = parseDisplayDate(value);
+  if (!date || Number.isNaN(now.getTime())) return 'No stated deadline';
+  const isDateOnly = typeof value === 'string' && dateOnly.test(value);
+  const days =
+    (isDateOnly ? date.getTime() / dayMs : localDayNumber(date)) -
+    localDayNumber(now);
 
-  const days = Math.floor(
-    (date.getTime() - now.getTime()) / (24 * 60 * 60 * 1000),
-  );
-
-  if (days < 0) return `Closed ${formatDate(date)}`;
+  if (days < 0 || (!isDateOnly && date.getTime() < now.getTime()))
+    return `Closed ${formatDate(value)}`;
   if (days === 0) return 'Closes today';
   if (days === 1) return 'Closes tomorrow';
   if (days <= 14) return `Closes in ${days} days`;
-  return `Closes ${formatDate(date)}`;
+  return `Closes ${formatDate(value)}`;
 }
 
 export function titleCase(value: string): string {
