@@ -24,12 +24,13 @@ export const distributeWeeklyReportJob: JobDefinition = {
       .from('reports')
       .select(
         `id,title,slug,report_type,reporting_period_start,reporting_period_end,
-    executive_summary,minimum_access_rank,published_at,email_queued_at,
+    executive_summary,minimum_access_rank,published_at,email_queued_at,email_distribution_enabled,
     report_opportunities(display_order,minimum_access_rank,
       opportunities(id,slug,title,score,county_id,minimum_access_rank,workflow_status,is_restricted,published_at,counties(name)))`,
       )
       .in('report_type', ['weekly', 'premium_briefing'])
       .eq('status', 'published')
+      .eq('email_distribution_enabled', true)
       .lte('published_at', context.now.toISOString())
       .is('email_queued_at', null)
       .is('distributed_at', null)
@@ -39,7 +40,7 @@ export const distributeWeeklyReportJob: JobDefinition = {
     if (progress.reportId) query = query.eq('id', progress.reportId);
     const { data: report, error } = await query.maybeSingle();
     if (error) throw new Error(error.message);
-    if (!report) {
+    if (!report || report.email_distribution_enabled !== true) {
       if (progress.reportId) await checkpoint({});
       return {
         processed: 0,

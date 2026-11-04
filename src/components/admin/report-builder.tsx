@@ -8,6 +8,10 @@ import { Button, Card, Pill, ScoreBadge, cx } from '@/components/ui/primitives';
 import { ACCESS_RANK, planCodeForRank } from '@/lib/access/ranks';
 import { formatDate, formatDeadline, titleCase } from '@/lib/format';
 import type { ScoreClassification } from '@/lib/scoring/score';
+import {
+  createEditorSaveQueue,
+  saveThenRunWorkflow,
+} from '@/lib/opportunities/editor-persistence';
 
 export interface CandidateRecord {
   id: string;
@@ -102,6 +106,7 @@ export function ReportBuilder({
 
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const firstRender = useRef(true);
+  const saveQueue = useRef(createEditorSaveQueue());
 
   const byId = new Map(candidates.map((record) => [record.id, record]));
   const selectedIds = new Set(
@@ -121,41 +126,44 @@ export function ReportBuilder({
     .slice(0, 12);
 
   const persist = useCallback(
-    async (current: typeof initial) => {
-      setSaveState('saving');
-      setSaveMessage('');
-      try {
-        const response = await fetch(`/api/v1/admin/reports/${reportId}`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            title: current.title,
-            reportType: current.reportType,
-            periodStart: current.periodStart || null,
-            periodEnd: current.periodEnd || null,
-            minimumAccessRank: current.minimumAccessRank,
-            executiveSummary: current.executiveSummary || null,
-            marketCommentary: current.marketCommentary || null,
-            scheduledAt: current.scheduledAt || null,
-            sections: current.sections,
-            opportunities: current.opportunities,
-          }),
-        });
+    (current: typeof initial): Promise<string | null> =>
+      saveQueue.current(async () => {
+        setSaveState('saving');
+        setSaveMessage('');
+        try {
+          const response = await fetch(`/api/v1/admin/reports/${reportId}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              title: current.title,
+              reportType: current.reportType,
+              periodStart: current.periodStart || null,
+              periodEnd: current.periodEnd || null,
+              minimumAccessRank: current.minimumAccessRank,
+              executiveSummary: current.executiveSummary || null,
+              marketCommentary: current.marketCommentary || null,
+              scheduledAt: current.scheduledAt || null,
+              sections: current.sections,
+              opportunities: current.opportunities,
+            }),
+          });
 
-        const payload = await response.json().catch(() => null);
-        if (!response.ok) {
+          const payload = await response.json().catch(() => null);
+          if (!response.ok) {
+            setSaveState('error');
+            setSaveMessage(
+              payload?.error?.message ?? 'Changes could not be saved.',
+            );
+            return null;
+          }
+          setSaveState('saved');
+          return reportId;
+        } catch {
           setSaveState('error');
-          setSaveMessage(
-            payload?.error?.message ?? 'Changes could not be saved.',
-          );
-          return;
+          setSaveMessage('Changes could not be saved. Try again.');
+          return null;
         }
-        setSaveState('saved');
-      } catch {
-        setSaveState('error');
-        setSaveMessage('Changes could not be saved. Try again.');
-      }
-    },
+      }),
     [reportId],
   );
 
@@ -186,19 +194,27 @@ export function ReportBuilder({
     body?: Record<string, unknown>,
   ) {
     if (timer.current) clearTimeout(timer.current);
-    await persist(draft);
     setActionMessage(null);
     setActionIsError(false);
 
     try {
-      const response = await fetch(
-        `/api/v1/admin/reports/${reportId}/${path}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(body ?? {}),
-        },
+      const savedAction = await saveThenRunWorkflow(
+        () => persist(draft),
+        (savedId) =>
+          fetch(`/api/v1/admin/reports/${savedId}/${path}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body ?? {}),
+          }),
       );
+      if (!savedAction.saved) {
+        setActionIsError(true);
+        setActionMessage(
+          'This action was stopped because the latest changes were not saved. Fix the save error and try again.',
+        );
+        return;
+      }
+      const response = savedAction.result;
       const payload = await response.json().catch(() => null);
 
       if (!response.ok) {

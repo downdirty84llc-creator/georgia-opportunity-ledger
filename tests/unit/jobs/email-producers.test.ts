@@ -82,6 +82,7 @@ const source = {
   counties: null,
 };
 const report = {
+  email_distribution_enabled: true,
   id: 'report',
   title: 'Weekly',
   slug: 'weekly',
@@ -127,6 +128,31 @@ describe('resumable email producers', () => {
       query(table === 'reports' ? report : []),
     );
   });
+
+  it.each([false, undefined])(
+    'never queues a report without explicit editor email approval (%s)',
+    async (enabled) => {
+      const reportQuery = query({
+        ...report,
+        email_distribution_enabled: enabled,
+      });
+      from.mockReturnValue(reportQuery);
+      const result = await distributeWeeklyReportJob.handler({
+        now,
+        note: vi.fn(),
+        checkpoint,
+        state: { reportId: report.id },
+      });
+      expect(result.skipped).toBe(true);
+      expect(reportQuery.eq).toHaveBeenCalledWith(
+        'email_distribution_enabled',
+        true,
+      );
+      expect(recipients).not.toHaveBeenCalled();
+      expect(enqueue).not.toHaveBeenCalled();
+      expect(checkpoint).toHaveBeenLastCalledWith({});
+    },
+  );
 
   it('continues past a full page with no confirmed addresses and never emails paid summaries to free members', async () => {
     recipients

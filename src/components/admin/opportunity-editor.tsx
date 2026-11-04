@@ -24,6 +24,10 @@ import {
 } from '@/lib/opportunities/editor-schema';
 import { buildScore } from '@/lib/scoring/score';
 import {
+  createEditorSaveQueue,
+  saveThenRunWorkflow,
+} from '@/lib/opportunities/editor-persistence';
+import {
   FUNDING_TYPES,
   OPPORTUNITY_CATEGORIES,
   OPPORTUNITY_STATUSES,
@@ -113,6 +117,8 @@ export function OpportunityEditor({
   const storageKey = `ledger:draft:${initialId ?? 'new'}`;
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const firstRender = useRef(true);
+  const saveQueue = useRef(createEditorSaveQueue());
+  const persistedId = useRef(initialId);
 
   const step = EDITOR_STEPS[stepIndex] ?? EDITOR_STEPS[0]!;
   const missing = useMemo(() => incompleteFields(draft), [draft]);
@@ -152,175 +158,184 @@ export function OpportunityEditor({
   // --- Autosave ------------------------------------------------------------
 
   const persist = useCallback(
-    async (current: EditorDraft) => {
-      setSaveState('saving');
-      setSaveMessage('');
+    (current: EditorDraft): Promise<string | null> =>
+      saveQueue.current(async () => {
+        if (current.summary.trim().length < 20) {
+          setSaveState('dirty');
+          setSaveMessage(
+            'Add an executive summary of at least 20 characters to save this draft. Your changes are kept in this browser.',
+          );
+          return null;
+        }
+        setSaveState('saving');
+        setSaveMessage('');
 
-      const body: Record<string, unknown> = {
-        title: current.title,
-        category: current.category,
-        subtype: current.subtype || 'general',
-        summary: current.summary,
-        status: current.status,
-        stateId: current.stateId || stateId || null,
-        countyId: current.countyId || null,
-        cityId: current.cityId || null,
-        industryId: current.industryId || null,
-        streetAddress: current.streetAddress || null,
-        originalSourceUrl: current.originalSourceUrl,
-        verificationStatus: current.verificationStatus,
-        internalNotes: current.internalNotes || null,
-        isFeatured: current.isFeatured,
-        riskSummary: current.riskSummary,
-        recommendedNextAction: current.recommendedNextAction,
-        eligibilitySummary: current.eligibilitySummary || null,
-        restrictions: current.restrictions || null,
-      };
-
-      if (current.sourceId) body.sourceId = current.sourceId;
-      if (current.dateVerified) body.dateVerified = current.dateVerified;
-      if (current.openingDate) body.openingDate = current.openingDate;
-      if (current.closingDate) body.closingDate = current.closingDate;
-      if (current.scheduledAt) body.scheduledAt = current.scheduledAt;
-      if (current.fullAnalysis) body.fullAnalysis = current.fullAnalysis;
-      if (current.requiredDocuments) {
-        body.requiredDocuments = current.requiredDocuments
-          .split('\n')
-          .map((line) => line.trim())
-          .filter(Boolean);
-      }
-
-      const numeric = (value: string) =>
-        value.trim() === '' ? null : Number(value);
-      body.estimatedValueMin = numeric(current.estimatedValueMin);
-      body.estimatedValueMax = numeric(current.estimatedValueMax);
-      body.capitalRequiredMin = numeric(current.capitalRequiredMin);
-      body.capitalRequiredMax = numeric(current.capitalRequiredMax);
-      body.depositRequired = numeric(current.depositRequired);
-
-      // Access rank and scoring are reviewer-level changes; only send them when
-      // this user may make them, so a researcher's autosave is not rejected
-      // wholesale for touching a field they cannot change.
-      if (canApprove) {
-        body.minimumAccessRank = current.minimumAccessRank;
-        body.score = {
-          ...current.score,
-          manualAdjustment: current.manualAdjustment,
-          adjustmentReason: current.adjustmentReason || undefined,
+        const body: Record<string, unknown> = {
+          title: current.title,
+          category: current.category,
+          subtype: current.subtype || 'general',
+          summary: current.summary,
+          status: current.status,
+          stateId: current.stateId || stateId || null,
+          countyId: current.countyId || null,
+          cityId: current.cityId || null,
+          industryId: current.industryId || null,
+          streetAddress: current.streetAddress || null,
+          originalSourceUrl: current.originalSourceUrl,
+          verificationStatus: current.verificationStatus,
+          internalNotes: current.internalNotes || null,
+          isFeatured: current.isFeatured,
+          riskSummary: current.riskSummary,
+          recommendedNextAction: current.recommendedNextAction,
+          eligibilitySummary: current.eligibilitySummary || null,
+          restrictions: current.restrictions || null,
         };
-      }
 
-      if (current.category === 'commercial_property') {
-        body.propertyDetails = {
-          propertyType: current.propertyType,
-          saleType: current.saleType,
-          parcelNumber: current.parcelNumber || null,
-          askingPrice: numeric(current.askingPrice),
-          startingBid: numeric(current.startingBid),
-          buildingSizeSqft: numeric(current.buildingSizeSqft),
-          lotSizeAcres: numeric(current.lotSizeAcres),
-          zoning: current.zoning || null,
-          knownLiens: current.knownLiens || null,
-        };
-      }
-      if (current.category === 'business_funding') {
-        body.fundingDetails = {
-          fundingType: current.fundingType,
-          fundingOrganization: current.fundingOrganization || null,
-          minimumAmount: numeric(current.minimumAmount),
-          maximumAmount: numeric(current.maximumAmount),
-          applicationComplexity: current.applicationComplexity,
-          applicationUrl: current.applicationUrl || null,
-        };
-      }
+        if (current.sourceId) body.sourceId = current.sourceId;
+        if (current.dateVerified) body.dateVerified = current.dateVerified;
+        if (current.openingDate) body.openingDate = current.openingDate;
+        if (current.closingDate) body.closingDate = current.closingDate;
+        if (current.scheduledAt) body.scheduledAt = current.scheduledAt;
+        if (current.fullAnalysis) body.fullAnalysis = current.fullAnalysis;
+        if (current.requiredDocuments) {
+          body.requiredDocuments = current.requiredDocuments
+            .split('\n')
+            .map((line) => line.trim())
+            .filter(Boolean);
+        }
 
-      try {
-        let id = opportunityId;
+        const numeric = (value: string) =>
+          value.trim() === '' ? null : Number(value);
+        body.estimatedValueMin = numeric(current.estimatedValueMin);
+        body.estimatedValueMax = numeric(current.estimatedValueMax);
+        body.capitalRequiredMin = numeric(current.capitalRequiredMin);
+        body.capitalRequiredMax = numeric(current.capitalRequiredMax);
+        body.depositRequired = numeric(current.depositRequired);
 
-        // The first save of a new record creates the draft; everything after
-        // patches it.
-        if (!id) {
-          if (
-            !current.title ||
-            !current.sourceId ||
-            !current.originalSourceUrl
-          ) {
-            setSaveState('dirty');
-            setSaveMessage(
-              'Add a title, a primary source and a source URL to start saving.',
-            );
-            return;
+        // Access rank and scoring are reviewer-level changes; only send them when
+        // this user may make them, so a researcher's autosave is not rejected
+        // wholesale for touching a field they cannot change.
+        if (canApprove) {
+          body.minimumAccessRank = current.minimumAccessRank;
+          body.score = {
+            ...current.score,
+            manualAdjustment: current.manualAdjustment,
+            adjustmentReason: current.adjustmentReason || undefined,
+          };
+        }
+
+        if (current.category === 'commercial_property') {
+          body.propertyDetails = {
+            propertyType: current.propertyType,
+            saleType: current.saleType,
+            parcelNumber: current.parcelNumber || null,
+            askingPrice: numeric(current.askingPrice),
+            startingBid: numeric(current.startingBid),
+            buildingSizeSqft: numeric(current.buildingSizeSqft),
+            lotSizeAcres: numeric(current.lotSizeAcres),
+            zoning: current.zoning || null,
+            knownLiens: current.knownLiens || null,
+          };
+        }
+        if (current.category === 'business_funding') {
+          body.fundingDetails = {
+            fundingType: current.fundingType,
+            fundingOrganization: current.fundingOrganization || null,
+            minimumAmount: numeric(current.minimumAmount),
+            maximumAmount: numeric(current.maximumAmount),
+            applicationComplexity: current.applicationComplexity,
+            applicationUrl: current.applicationUrl || null,
+          };
+        }
+
+        try {
+          let id = persistedId.current;
+
+          // The first save of a new record creates the draft; everything after
+          // patches it.
+          if (!id) {
+            if (
+              !current.title ||
+              !current.sourceId ||
+              !current.originalSourceUrl
+            ) {
+              setSaveState('dirty');
+              setSaveMessage(
+                'Add a title, a primary source and a source URL to start saving.',
+              );
+              return null;
+            }
+
+            const response = await fetch('/api/v1/admin/opportunities', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                title: current.title,
+                category: current.category,
+                subtype: current.subtype || 'general',
+                summary: current.summary,
+                sourceId: current.sourceId,
+                originalSourceUrl: current.originalSourceUrl,
+                stateId: current.stateId || stateId || undefined,
+                countyId: current.countyId || undefined,
+                cityId: current.cityId || undefined,
+                industryId: current.industryId || undefined,
+                minimumAccessRank: current.minimumAccessRank,
+                riskSummary: current.riskSummary,
+                recommendedNextAction: current.recommendedNextAction,
+              }),
+            });
+
+            const payload = await response.json().catch(() => null);
+            if (!response.ok) {
+              setSaveState('error');
+              setSaveMessage(
+                payload?.error?.message ?? 'The draft could not be created.',
+              );
+              return null;
+            }
+
+            id = payload.data.id as string;
+            persistedId.current = id;
+            setOpportunityId(id);
+            window.history.replaceState(null, '', `/admin/opportunities/${id}`);
           }
 
-          const response = await fetch('/api/v1/admin/opportunities', {
-            method: 'POST',
+          const response = await fetch(`/api/v1/admin/opportunities/${id}`, {
+            method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              title: current.title,
-              category: current.category,
-              subtype: current.subtype || 'general',
-              summary:
-                current.summary ||
-                'Draft record. The executive summary has not been written yet.',
-              sourceId: current.sourceId,
-              originalSourceUrl: current.originalSourceUrl,
-              stateId: current.stateId || stateId || undefined,
-              countyId: current.countyId || undefined,
-              cityId: current.cityId || undefined,
-              industryId: current.industryId || undefined,
-              minimumAccessRank: current.minimumAccessRank,
-              riskSummary: current.riskSummary,
-              recommendedNextAction: current.recommendedNextAction,
-            }),
+            body: JSON.stringify(body),
           });
 
           const payload = await response.json().catch(() => null);
           if (!response.ok) {
             setSaveState('error');
+            const issues = payload?.error?.details?.issues as
+              Array<{ path: string; message: string }> | undefined;
             setSaveMessage(
-              payload?.error?.message ?? 'The draft could not be created.',
+              issues
+                ?.map((issue) => `${issue.path}: ${issue.message}`)
+                .join('; ') ??
+                payload?.error?.message ??
+                'Changes could not be saved.',
             );
-            return;
+            return null;
           }
 
-          id = payload.data.id as string;
-          setOpportunityId(id);
-          window.history.replaceState(null, '', `/admin/opportunities/${id}`);
-        }
-
-        const response = await fetch(`/api/v1/admin/opportunities/${id}`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(body),
-        });
-
-        const payload = await response.json().catch(() => null);
-        if (!response.ok) {
+          setSaveState('saved');
+          setSaveMessage('');
+          window.localStorage.removeItem(storageKey);
+          setRecovered(false);
+          return id;
+        } catch {
           setSaveState('error');
-          const issues = payload?.error?.details?.issues as
-            Array<{ path: string; message: string }> | undefined;
           setSaveMessage(
-            issues
-              ?.map((issue) => `${issue.path}: ${issue.message}`)
-              .join('; ') ??
-              payload?.error?.message ??
-              'Changes could not be saved.',
+            'Changes could not be saved. Your work is kept in this browser until they are.',
           );
-          return;
+          return null;
         }
-
-        setSaveState('saved');
-        setSaveMessage('');
-        window.localStorage.removeItem(storageKey);
-        setRecovered(false);
-      } catch {
-        setSaveState('error');
-        setSaveMessage(
-          'Changes could not be saved. Your work is kept in this browser until they are.',
-        );
-      }
-    },
-    [canApprove, opportunityId, stateId, storageKey],
+      }),
+    [canApprove, stateId, storageKey],
   );
 
   useEffect(() => {
@@ -357,22 +372,25 @@ export function OpportunityEditor({
 
   async function runAction(action: string, label: string) {
     if (timer.current) clearTimeout(timer.current);
-    await persist(draft);
-
-    if (!opportunityId) {
-      setActionIsError(true);
-      setActionMessage('Save the draft before moving it through the workflow.');
-      return;
-    }
-
     setActionMessage(null);
     setActionIsError(false);
 
     try {
-      const response = await fetch(
-        `/api/v1/admin/opportunities/${opportunityId}/${action}`,
-        { method: 'POST' },
+      const savedAction = await saveThenRunWorkflow(
+        () => persist(draft),
+        (savedId) =>
+          fetch(`/api/v1/admin/opportunities/${savedId}/${action}`, {
+            method: 'POST',
+          }),
       );
+      if (!savedAction.saved) {
+        setActionIsError(true);
+        setActionMessage(
+          'This action was stopped because the latest changes were not saved. Fix the save error and try again.',
+        );
+        return;
+      }
+      const response = savedAction.result;
       const payload = await response.json().catch(() => null);
 
       if (!response.ok) {
@@ -1390,6 +1408,10 @@ export function OpportunityEditor({
                     'One per line\nThree years of tax returns\nProof of funds'
                   }
                 />
+                <p className="mt-1 text-xs text-ink-500">
+                  One document per line, up to 240 characters per line and 50
+                  documents.
+                </p>
               </div>
             </div>
           </Card>

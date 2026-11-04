@@ -468,11 +468,14 @@ sitemap. What it marks `you` is what no machine can close.
 - [ ] Database backups enabled with point-in-time recovery. The encrypted
       export/recovery procedure is in [BACKUP-RECOVERY.md](BACKUP-RECOVERY.md).
       A local round trip does not satisfy production restore or PITR coverage.
-- [ ] Administrator multi-factor enrolment for every staff account. The gate is
-      enforced in code; each person still has to enrol at `/admin/security`.
+- [x] Administrator multi-factor enrolment for every current staff account.
+      On November 4 the confirmed owner had one verified factor, no unfinished
+      factors, and working authenticated access to `/admin`. New staff must
+      enrol at `/admin/security` before using administrative functions.
 - [ ] `EMAIL_UNSUBSCRIBE_SECRET` set to its own value, not falling back to
       `CRON_SECRET`. Rotating one must not invalidate every unsubscribe link
-      already sitting in inboxes.
+      already sitting in inboxes. A separate production variable is configured;
+      distinct secret values and live link behavior still need verification.
 - [ ] Verify one-click unsubscribe end to end: the `List-Unsubscribe` header is
       present, and the link works while signed out.
 - [ ] Security review: the test list in spec 26 — unauthorised API access,
@@ -484,8 +487,8 @@ sitemap. What it marks `you` is what no machine can close.
       also withheld. The absence of a scanner is not a safe-to-launch state.
 - [ ] At least two super administrators enrolled, so a lost authenticator has an
       in-product recovery path rather than a Supabase one.
-- [ ] Confirm no sample data reached production:
-      `select count(*) from opportunities where is_sample;` must be 0.
+- [x] Confirm no sample data reached production: November 4 query of
+      `opportunities where is_sample` returned 0.
 
 ### Required before opening to customers
 
@@ -499,6 +502,10 @@ sitemap. What it marks `you` is what no machine can close.
       preceding 24 hours on 2026-11-04. Runs succeeded or intentionally skipped;
       none failed. Empty workloads do not verify delivery or scanner behavior.
 - [ ] A real weekly report published, emailed, and read at each tier.
+      The November 4 funding briefing is prepared from official DCA and SBA
+      sources. Report publication alone does not complete delivery or tier tests.
+      `email_distribution_enabled` defaults to false; the publishing route must
+      persist an explicit editor choice before the delivery job can queue email.
 - [ ] Administrator training on the review queue and correction workflow.
 - [ ] Accessibility audit against WCAG 2.1 AA. `docs/ACCESSIBILITY-AUDIT.md`
       is the brief; the automated third already runs on every push.
@@ -524,7 +531,7 @@ sitemap. What it marks `you` is what no machine can close.
 
 | Job          | What it proves                                                                                                |
 | ------------ | ------------------------------------------------------------------------------------------------------------- |
-| `static`     | Types, lint, formatting, 177 unit tests                                                                       |
+| `static`     | Types, lint, formatting, and the complete unit-test suite                                                     |
 | `migrations` | Every migration applies in order from an empty Postgres, and the reference seed is idempotent (it runs twice) |
 | `build`      | A production build succeeds                                                                                   |
 | `e2e`        | The security and accessibility suites against a built app                                                     |

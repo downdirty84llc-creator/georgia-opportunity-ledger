@@ -71,6 +71,7 @@ export const POST = withAdminHandling(
         scheduled_at: scheduled?.toISOString() ?? null,
         published_at: isFuture ? null : now.toISOString(),
         approved_by: viewer.userId,
+        email_distribution_enabled: parsed.data.distributeByEmail,
       })
       .eq('id', id)
       .select('id, slug, status, published_at, scheduled_at')
