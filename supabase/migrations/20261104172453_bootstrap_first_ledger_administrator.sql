@@ -1,0 +1,12 @@
+-- History marker for the owner-authorized production account bootstrap applied
+-- on 2026-11-04, version 20261104172453. This operation changed account data only;
+-- it did not change the final schema, grants, RLS policies or MFA enforcement.
+-- The exact one-time SQL is retained in the hosted migration history.
+--
+-- The operation required a confirmed, active, non-sample member and no existing
+-- super administrator. An exclusive profiles lock protected the brief privilege
+-- guard suspension; the guard was restored before commit and audit remained on.
+--
+-- Intentionally do not repeat an account-specific role grant in other databases.
+-- Every environment must establish its first administrator with explicit owner
+-- authorization and complete MFA enrollment through the application.

@@ -7,6 +7,8 @@
  * counsel review is tracked separately from the owner's launch decision.
  */
 
+import { PAST_DUE_GRACE_DAYS } from '@/lib/billing/subscription';
+
 export interface LegalSection {
   heading: string;
   body: readonly string[];
@@ -124,7 +126,7 @@ export const LEGAL_DOCUMENTS: readonly LegalDocument[] = [
       {
         heading: 'Failed payments',
         body: [
-          'If a payment fails, we retain your access while the card is retried and for three days afterwards, and email you a link to update your payment method.',
+          `If a renewal payment fails and your subscription is past due, paid access continues for ${PAST_DUE_GRACE_DAYS} days after the end of the period you have already paid for. Payment retries do not restart or extend this window. We email you a link to update your payment method.`,
           'After that window the account returns to the free tier. Saved opportunities, saved searches and notes are retained; paid features such as export and saved-search alerts stop.',
         ],
       },

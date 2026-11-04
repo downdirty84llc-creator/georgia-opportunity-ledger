@@ -29,3 +29,8 @@ blob-report/
 .playwright/
 
 .netlify/
+
+# Local database exports and encryption keys must never enter the repository.
+.backups/
+*.golbak
+*.backup-key

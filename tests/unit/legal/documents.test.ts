@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { FOOTER_LEGAL_HREFS } from '@/components/site/footer';
+import { PAST_DUE_GRACE_DAYS } from '@/lib/billing/subscription';
 import {
   LEGAL_DOCUMENTS,
   LEGAL_LAUNCH_REVIEW_WAIVER,
@@ -144,6 +145,22 @@ describe('the legal document set', () => {
         );
       }
     }
+  });
+
+  it('describes the enforced paid-through grace window without promising a retry extension', () => {
+    const section = findLegalDocument('subscription-terms')?.sections.find(
+      (entry) => entry.heading === 'Failed payments',
+    );
+    const text = section?.body.join(' ');
+    expect(text).toContain(
+      `${PAST_DUE_GRACE_DAYS} days after the end of the period you have already paid for`,
+    );
+    expect(text).toContain(
+      'Payment retries do not restart or extend this window.',
+    );
+    expect(text).not.toContain(
+      'while the card is retried and for three days afterwards',
+    );
   });
 
   it('links every document from the footer', () => {

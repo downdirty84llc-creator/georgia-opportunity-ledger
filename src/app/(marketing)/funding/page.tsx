@@ -19,13 +19,13 @@ export const metadata: Metadata = {
 const GRANT_VS_LOAN = [
   {
     title: 'Grants',
-    body: 'Money you do not repay, awarded against a published set of criteria. Competitive, slow, and usually attached to an outcome you must evidence afterwards — job creation, capital investment, a location, a hiring commitment.',
+    body: 'Awards with program-specific eligibility, permitted uses and reporting requirements. Read the conditions before deciding whether a grant fits your project.',
     watch:
       'Reporting obligations and clawback terms. A grant with a five-year job commitment is a contract, not a gift.',
   },
   {
     title: 'Loans and guarantees',
-    body: 'Money you repay, sometimes at a rate you would not get commercially because a public body carries part of the risk. Faster than grants, and available far more often.',
+    body: 'Financing that must be repaid. A public guarantee can share a lender’s risk, but the lender still evaluates the application and sets terms within the program rules.',
     watch:
       'Owner contribution, personal guarantees and collateral. The headline rate is rarely the whole cost.',
   },
@@ -33,7 +33,7 @@ const GRANT_VS_LOAN = [
     title: 'Tax credits and incentives',
     body: 'Value delivered through your tax position rather than as cash — job tax credits, investment credits, port activity credits, freeport exemptions.',
     watch:
-      'They are worth nothing without the tax liability to offset, and the filing deadline is often the binding one.',
+      'Confirm whether and when you can use a credit, and which filing deadlines and documentation requirements apply.',
   },
   {
     title: 'Procurement',
@@ -55,24 +55,29 @@ const ELIGIBILITY_EXAMPLES = [
 export default async function FundingPage() {
   const [samples, closingSoon] = await Promise.all([
     loadPreviewOpportunities({ limit: 6, category: 'business_funding' }),
-    loadPreviewOpportunities({ limit: 5, closingSoon: true }),
+    loadPreviewOpportunities({
+      limit: 5,
+      category: 'business_funding',
+      closingSoon: true,
+    }),
   ]);
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-14 sm:px-6">
       <div className="max-w-3xl">
         <h1 className="text-3xl sm:text-4xl">
-          Funding you can actually qualify for
+          Research funding for your Georgia business
         </h1>
         <p className="mt-5 text-lg leading-relaxed text-ink-700">
-          There is more public money available to Georgia businesses than most
-          owners realise, and most of it goes unclaimed because the programs are
-          scattered, the eligibility rules are buried, and the deadlines pass
-          quietly. We read the rules and tell you, in a sentence, whether this
-          is for you.
+          Compare program purposes, eligibility requirements and application
+          routes before spending time on an application. Start with our free
+          guide, then check the original source and discuss your circumstances
+          with the lender or program administrator.
         </p>
         <div className="mt-7 flex flex-wrap gap-3">
-          <ButtonLink href="/pricing">See membership plans</ButtonLink>
+          <ButtonLink href="/insights/georgia-business-funding-guide">
+            Read the free funding guide
+          </ButtonLink>
           <ButtonLink
             href="/opportunities?category=business_funding"
             variant="secondary"

@@ -36,8 +36,9 @@ set.
 
 This section records five original gaps and the implementation that addressed
 them. Implemented controls do not establish that every published promise is
-accurate or that live operations have been verified. In particular, the
-payment-grace wording identified below still differs from the access rule.
+accurate or that live operations have been verified. The payment-grace wording
+was reconciled with the existing access rule by owner decision on 2026-11-04;
+the deployed billing rehearsal remains open.
 
 Four were built (§1–§4). The fifth (§5) was closed by publishing figures the
 server already enforced, on an owner decision of 2026-09-25; no legal document
@@ -230,13 +231,14 @@ Offered so counsel can spend their time on the drafting rather than on
 confirming the engineering. Each of these was checked against the code in this
 repository on 2026-09-25:
 
-- **Payment-grace mismatch found October 26; unresolved.** Subscription Terms
-  describe access continuing "while the card is retried and for three days
-  afterwards". `subscriptionAccessRank` instead grants a past-due Stripe
-  subscription access through its settled `paidThrough` date plus three days;
-  it does not wait until Stripe finishes retrying. A longer retry schedule can
-  outlast paid access. Counsel and the owner must reconcile the wording with
-  this behavior. Do not treat the earlier claim that they match as sign-off.
+- **Payment-grace mismatch resolved by owner decision November 4.** The owner
+  selected the existing access rule: a past-due subscription retains paid
+  access for three days after its settled `paidThrough` date. Subscription
+  Terms now describe that boundary and say retries do not extend it. The
+  displayed day count imports `PAST_DUE_GRACE_DAYS` from the enforced rule.
+  Entitlements, Stripe retry settings and saved data were not changed. This
+  resolves the wording mismatch; the deployed failed-payment rehearsal remains
+  a separate check.
 - **Downgrades defer to period end.** `change-plan` sets the proration
   behaviour by direction and does not apply a downgrade mid-period.
 - **A suspended account can still appeal.** The `support_tickets_insert` policy
@@ -357,8 +359,8 @@ Grouped so they can be answered in one pass.
 
 1. Record the exact source revision and document versions supplied to counsel.
    The export-limit decision (§5) was already made on September 25; do not ask
-   the owner to repeat it. Resolve the payment-grace mismatch and confirm the
-   actual processor and retention arrangements.
+   the owner to repeat it. The November 4 payment-grace decision is also recorded
+   above; confirm the actual processor and retention arrangements.
 2. Counsel reviews all twelve, answering the questions above. Record reviewer,
    review date, approved document versions and any conditions for each of the
    nine flagged documents.

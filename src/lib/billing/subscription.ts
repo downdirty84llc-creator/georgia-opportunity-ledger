@@ -47,13 +47,13 @@ export function isStaffRole(role: UserRole): boolean {
 }
 
 /**
- * Days a past-due subscription keeps paid access while Stripe retries the
- * payment. Mirrors public.past_due_grace_period().
+ * Days a past-due subscription keeps paid access after its settled paid-through
+ * date. Retries do not extend this window. Mirrors public.past_due_grace_period()
+ * and supplies the number displayed in the Subscription Terms.
  *
- * Rationale: Stripe's smart retries run for up to a week, and cutting a paying
- * customer off on the first failed charge generates support load out of
- * proportion to the revenue at risk. After the grace window the account falls
- * back to free — it is not suspended, and nothing saved is lost.
+ * The owner confirmed this existing three-day rule on 2026-11-04. After the
+ * grace window the account falls back to free; it is not suspended, and
+ * nothing saved is lost.
  */
 export const PAST_DUE_GRACE_DAYS = 3;
 

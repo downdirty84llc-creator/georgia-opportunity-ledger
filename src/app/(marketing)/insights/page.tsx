@@ -34,6 +34,28 @@ export default async function InsightsPage() {
         </p>
       </div>
 
+      <section
+        className="surface mt-12 p-6 sm:p-8"
+        aria-labelledby="funding-guide-title"
+      >
+        <p className="text-sm font-semibold text-ink-600">
+          Free research guide · Sources checked November 4, 2026
+        </p>
+        <h2 id="funding-guide-title" className="mt-3 text-2xl">
+          Three SBA funding routes for Georgia businesses
+        </h2>
+        <p className="mt-3 max-w-3xl leading-relaxed text-ink-700">
+          Compare 7(a), 504 and Microloans by purpose, application route and key
+          restrictions. Includes original SBA sources and a Georgia resource for
+          preparing your financial information.
+        </p>
+        <div className="mt-5">
+          <ButtonLink href="/insights/georgia-business-funding-guide">
+            Read the funding guide
+          </ButtonLink>
+        </div>
+      </section>
+
       {previews.length > 0 ? (
         <section className="mt-12">
           <SectionHeading

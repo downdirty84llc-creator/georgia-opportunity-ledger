@@ -18,6 +18,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     '/funding',
     '/pricing-reports',
     '/insights',
+    '/insights/georgia-business-funding-guide',
     '/pricing',
     '/how-it-works',
     '/sample-report',

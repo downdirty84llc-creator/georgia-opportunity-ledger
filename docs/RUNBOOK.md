@@ -465,7 +465,9 @@ sitemap. What it marks `you` is what no machine can close.
 - [x] A real mailbox behind `EMAIL_REPLY_TO`: Zoho Free now receives mail at
       `support@georgiaopportunityledger.com`. The owner-authorized two-way test
       passed October 13, and the approved Sentry alert reached it October 26.
-- [ ] Database backups enabled with point-in-time recovery.
+- [ ] Database backups enabled with point-in-time recovery. The encrypted
+      export/recovery procedure is in [BACKUP-RECOVERY.md](BACKUP-RECOVERY.md).
+      A local round trip does not satisfy production restore or PITR coverage.
 - [ ] Administrator multi-factor enrolment for every staff account. The gate is
       enforced in code; each person still has to enrol at `/admin/security`.
 - [ ] `EMAIL_UNSUBSCRIBE_SECRET` set to its own value, not falling back to
@@ -493,7 +495,9 @@ sitemap. What it marks `you` is what no machine can close.
       defect that produced that test error was repaired in `3698525`; the issue
       was resolved after deployment while server-error reporting stayed enabled.
 - [ ] PostHog configured and the subscription funnel verified.
-- [ ] Cron schedules confirmed firing; check `job_runs` after 24 hours.
+- [x] All 16 production cron schedules confirmed in `job_runs` over the
+      preceding 24 hours on 2026-11-04. Runs succeeded or intentionally skipped;
+      none failed. Empty workloads do not verify delivery or scanner behavior.
 - [ ] A real weekly report published, emailed, and read at each tier.
 - [ ] Administrator training on the review queue and correction workflow.
 - [ ] Accessibility audit against WCAG 2.1 AA. `docs/ACCESSIBILITY-AUDIT.md`

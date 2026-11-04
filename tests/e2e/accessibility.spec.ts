@@ -24,6 +24,7 @@ const PUBLIC_PAGES = [
   { path: '/pricing-reports', name: 'pricing reports' },
   { path: '/how-it-works', name: 'how it works' },
   { path: '/insights', name: 'insights' },
+  { path: '/insights/georgia-business-funding-guide', name: 'funding guide' },
   { path: '/sample-report', name: 'sample report' },
   { path: '/login', name: 'sign in' },
   { path: '/register', name: 'register' },
