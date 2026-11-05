@@ -139,9 +139,11 @@ const BILLING_FAQ = [
   {
     question: 'What happens if a payment fails?',
     answer:
-      'We keep your access while the card is retried, plus a three-day grace ' +
-      'period, and email you a link to update your payment method. After that ' +
-      'the account returns to the free tier. Nothing you have saved is deleted.',
+      'If a renewal payment fails, paid access continues for three days after ' +
+      'the last successfully paid period ends. Card retries do not extend that ' +
+      'deadline. We email you a link to update your payment method. If payment ' +
+      'is still unpaid, your account returns to the free tier. Your saved items ' +
+      'are kept. A first payment must succeed before paid access begins.',
   },
   {
     question: 'Do you offer refunds?',

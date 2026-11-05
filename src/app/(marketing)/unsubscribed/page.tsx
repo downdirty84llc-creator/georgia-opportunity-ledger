@@ -21,9 +21,9 @@ export default async function UnsubscribedPage({ searchParams }: PageProps) {
         <>
           <h1 className="text-2xl sm:text-3xl">You are unsubscribed</h1>
           <p className="mt-4 text-ink-700">
-            We have switched off alert and marketing email for your account. You
-            will still receive essential account and billing messages — a failed
-            payment, a password reset — because those are not marketing.
+            We have switched off the emails covered by this unsubscribe link.
+            You will still receive essential account and billing messages — a
+            failed payment, a password reset — because those are not marketing.
           </p>
           <p className="mt-4 text-sm text-ink-600">
             Nothing else changed. Your subscription, saved opportunities, notes

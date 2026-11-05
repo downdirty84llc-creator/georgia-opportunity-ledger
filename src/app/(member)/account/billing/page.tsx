@@ -66,9 +66,11 @@ export default async function BillingPage() {
       {attention ? (
         <p className="mb-6 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
           <strong className="font-semibold">Your last payment failed.</strong>{' '}
-          We keep your access while the card is retried, plus three days. Update
-          your payment method in the billing portal to avoid interruption —
-          nothing you have saved will be lost either way.
+          After a failed renewal, paid access ends three days after the last
+          successfully paid period. Card retries do not extend that deadline.
+          Update your payment method in the billing portal to restore or keep
+          access. Your saved items are kept. A first payment must succeed before
+          paid access begins.
         </p>
       ) : null}
 
@@ -188,9 +190,10 @@ export default async function BillingPage() {
             returns to the free tier.
           </li>
           <li>
-            <strong className="font-semibold">Failed payments</strong> keep your
-            access through the paid period plus a three-day grace window while
-            the card is retried.
+            <strong className="font-semibold">Failed renewals</strong> allow
+            three days of access after the last successfully paid period ends.
+            Card retries do not extend that deadline. A first payment must
+            succeed before paid access begins.
           </li>
         </ul>
         <p className="mt-4 text-sm text-ink-600">
