@@ -21,6 +21,7 @@ import { scanAttachmentsJob } from '@/lib/jobs/file-jobs';
 import { distributeWeeklyReportJob } from '@/lib/jobs/report-jobs';
 import type { JobDefinition } from '@/lib/jobs/runner';
 import { closeAccountBillingJob } from '@/lib/billing/close-account';
+import { checkpointUnsubscribeTokensJob } from '@/lib/jobs/unsubscribe-recovery';
 
 /**
  * Every background job, and the cadence each expects (spec 17).
@@ -55,9 +56,14 @@ export const JOBS: readonly ScheduledJob[] = [
 ];
 
 export function findJob(name: string): JobDefinition | null {
+  if (name === checkpointUnsubscribeTokensJob.name)
+    return checkpointUnsubscribeTokensJob;
   return JOBS.find((job) => job.definition.name === name)?.definition ?? null;
 }
 
 export function jobNames(): string[] {
-  return JOBS.map((job) => job.definition.name);
+  return [
+    ...JOBS.map((job) => job.definition.name),
+    checkpointUnsubscribeTokensJob.name,
+  ];
 }

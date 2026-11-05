@@ -168,6 +168,7 @@ run "Killed-worker checkpoints and retry ownership" "supabase/verify-job-recover
 run "Durable email delivery and current recipient gates" "supabase/verify-email-outbox.sql"
 run "Complete analytics counts and lifecycle flags" "supabase/verify-background-counts.sql"
 run "Atomic email preferences and owner isolation" "supabase/verify-email-preferences.sql"
+run "Unsubscribe token recovery and restricted grants" "supabase/verify-unsubscribe-tokens.sql"
 run "Direct upload ownership, leases and scan quarantine" "supabase/verify-direct-uploads.sql"
 run "Staff MFA and direct database privilege gates" "supabase/verify-staff-mfa.sql"
 node scripts/verify-purge-concurrency.mjs

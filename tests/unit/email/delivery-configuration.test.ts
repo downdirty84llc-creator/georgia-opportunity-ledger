@@ -9,6 +9,10 @@ const { env, publicEnv } = vi.hoisted(() => ({
   },
   publicEnv: { environment: 'production', siteUrl: 'https://ledger.example' },
 }));
+const { remember } = vi.hoisted(() => ({ remember: vi.fn(async () => {}) }));
+vi.mock('@/lib/email/unsubscribe-registry', () => ({
+  rememberUnsubscribeToken: remember,
+}));
 vi.mock('@/lib/env', () => ({ publicEnv, serverEnv: () => env }));
 const { sendEmail } = await import('@/lib/email/client');
 const message = {
@@ -20,6 +24,7 @@ const message = {
 
 describe('email delivery configuration', () => {
   beforeEach(() => {
+    remember.mockReset().mockResolvedValue(undefined);
     env.emailProvider = 'resend';
     env.emailApiKey = '';
     publicEnv.environment = 'production';
@@ -84,6 +89,10 @@ describe('email delivery configuration', () => {
       unsubscribeToken: 'test-token',
     });
     const options = vi.mocked(fetch).mock.calls[0]?.[1];
+    expect(remember).toHaveBeenCalledWith('test-token');
+    expect(remember.mock.invocationCallOrder[0]).toBeLessThan(
+      Number(vi.mocked(fetch).mock.invocationCallOrder[0]),
+    );
     expect(options?.headers).toMatchObject({
       'Idempotency-Key': 'diagnostic-key',
     });
@@ -92,5 +101,14 @@ describe('email delivery configuration', () => {
         '<https://ledger.example/api/v1/unsubscribe?token=test-token>',
       'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
     });
+  });
+
+  it('does not send if the unsubscribe link cannot be preserved', async () => {
+    env.emailApiKey = 'test-only-key';
+    remember.mockRejectedValue(new Error('Recovery storage unavailable'));
+    expect(
+      (await sendEmail({ ...message, unsubscribeToken: 'test-token' })).ok,
+    ).toBe(false);
+    expect(fetch).not.toHaveBeenCalled();
   });
 });

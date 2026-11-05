@@ -680,8 +680,9 @@ missing assurance, password-only access, valid MFA and suspended accounts.
 
 ### Isolated Netlify preview
 
-The private `georgia-opportunity-ledger-preview` site uses only `gol-staging`
-(`bahdfxljazvegvgccvxy`). Production remains separate. CLI alias `launch-check`
+The private `georgia-opportunity-ledger-preview` site's preview/branch contexts use `gol-staging`
+(`bahdfxljazvegvgccvxy`). The production context is prepared separately for the hosting move;
+setting its variables does not deploy or switch the domain. CLI alias `launch-check`
 is a **branch deploy**, so runtime variables need that context as well as the
 deploy-preview build context. Manual uploads of an already-adapted build must
 publish `.netlify/static`; uploading `.next` directly breaks static asset URLs.
@@ -694,3 +695,27 @@ configuration through the API and a real runtime request: the CLI returned exit
 zero for rejected environment changes during this setup. The preview sends no
 email (`EMAIL_PROVIDER=console`) and has no live payment credentials or cron
 schedules. No production domain cutover has been made.
+
+### Preserving unsubscribe links during a key or host change
+
+Migration `20261105141432` adds a service-only registry of SHA-256 hashes of
+complete signed unsubscribe tokens. It stores neither signing keys nor usable
+tokens. Member and anonymous clients cannot read or write it. Rows are removed
+when their profile is deleted; otherwise old email links remain valid.
+
+Deploy this code on the existing host before replacing its signing key. Direct
+sends and durable queue insertion preserve each valid token before proceeding;
+a storage failure stops the send. Then invoke the authenticated operator-only
+job `checkpoint-unsubscribe-tokens` through `/api/v1/jobs/`, using the existing
+cron authorization. It has no recurring schedule and sends no email. Repeat
+until its response says `detail.complete: true`; an interrupted pass resumes
+after the last saved profile and a changed signer starts a fresh pass. This
+captures all three scopes for existing profiles under the old signing key.
+
+Keep the old host/key available until a known previously delivered token
+resolves against the registry while using the new host's signing key. Then
+configure an independent random `EMAIL_UNSUBSCRIBE_SECRET` on the new host,
+with a protected encrypted recovery copy. Both hosts accept registered tokens
+from either signer during the transition. Never export environment secrets
+through an HTTP endpoint or logs. A complete checkpoint and verified runtime
+lookup are required evidence; a successful build alone does not clear this gate.

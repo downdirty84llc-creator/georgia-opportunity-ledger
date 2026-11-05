@@ -1,4 +1,5 @@
 import { unsubscribeHeaders } from '@/lib/email/unsubscribe';
+import { rememberUnsubscribeToken } from '@/lib/email/unsubscribe-registry';
 import { publicEnv, serverEnv } from '@/lib/env';
 
 /**
@@ -154,6 +155,8 @@ export async function sendEmail(message: EmailMessage): Promise<SendResult> {
   };
 
   try {
+    if (message.unsubscribeToken)
+      await rememberUnsubscribeToken(message.unsubscribeToken);
     return env.emailProvider === 'postmark'
       ? await sendViaPostmark(withReplyTo, env.emailApiKey, from)
       : await sendViaResend(withReplyTo, env.emailApiKey, from);

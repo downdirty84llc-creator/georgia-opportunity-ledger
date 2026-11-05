@@ -43,7 +43,27 @@ export interface UnsubscribeClaim {
   scope: UnsubscribeScope;
 }
 
+/** Decode only; callers must verify the signature or a stored complete-token hash. */
+export function parseUnsubscribeClaim(token: string): UnsubscribeClaim | null {
+  if (token.length > 256 || !/^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]{43}$/.test(token))
+    return null;
+  const encoded = token.slice(0, token.lastIndexOf('.'));
+  const payload = Buffer.from(encoded, 'base64url').toString('utf8');
+  if (Buffer.from(payload, 'utf8').toString('base64url') !== encoded)
+    return null;
+  const parts = payload.split('.');
+  if (parts.length !== 2) return null;
+  const [userId, scope] = parts;
+  if (!userId || !/^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(userId))
+    return null;
+  if (scope !== 'alerts' && scope !== 'marketing' && scope !== 'all')
+    return null;
+  return { userId, scope };
+}
+
 export function verifyUnsubscribeToken(token: string): UnsubscribeClaim | null {
+  const claim = parseUnsubscribeClaim(token);
+  if (!claim) return null;
   const separator = token.lastIndexOf('.');
   if (separator <= 0) return null;
 
@@ -64,13 +84,7 @@ export function verifyUnsubscribeToken(token: string): UnsubscribeClaim | null {
   if (provided.length !== computed.length) return null;
   if (!timingSafeEqual(provided, computed)) return null;
 
-  const [userId, scope] = payload.split('.');
-  if (!userId) return null;
-  if (scope !== 'alerts' && scope !== 'marketing' && scope !== 'all') {
-    return null;
-  }
-
-  return { userId, scope };
+  return claim;
 }
 
 /**

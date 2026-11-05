@@ -1,5 +1,6 @@
 import { createAdminClient } from '@/lib/db/admin';
 import type { EmailMessage } from '@/lib/email/client';
+import { rememberUnsubscribeToken } from '@/lib/email/unsubscribe-registry';
 import {
   deliveryCredentials,
   prepareEmail,
@@ -26,6 +27,8 @@ export async function enqueueEmail(input: {
   opportunityIds?: string[];
   reportId?: string;
 }): Promise<string | null> {
+  if (input.message.unsubscribeToken)
+    await rememberUnsubscribeToken(input.message.unsubscribeToken);
   const { data, error } = await createAdminClient().rpc(
     'enqueue_notification_email',
     {
