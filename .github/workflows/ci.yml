@@ -108,7 +108,12 @@ jobs:
       - run: npm ci
       - name: Install Chromium and system dependencies
         timeout-minutes: 10
-        run: npx playwright install --with-deps chromium
+        run: |
+          # The Azure Ubuntu mirror stalled on font packages on both 24.04 and
+          # 26.04 runners. Use Ubuntu's archive; apt still verifies signatures.
+          sudo sed -i 's|http://azure.archive.ubuntu.com|https://archive.ubuntu.com|g' /etc/apt/apt-mirrors.txt
+          printf 'Acquire::http::Timeout "30";\nAcquire::https::Timeout "30";\nAcquire::Retries "2";\n' | sudo tee /etc/apt/apt.conf.d/99-ledger-download-timeout >/dev/null
+          npx playwright install --with-deps chromium
       - run: npx playwright test --project=desktop-chrome
         env:
           NEXT_PUBLIC_ENVIRONMENT: development
