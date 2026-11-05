@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { BillingReviewForm } from '@/components/admin/billing-review-form';
-import { Card, SectionHeading } from '@/components/ui/primitives';
+import { Card } from '@/components/ui/primitives';
 import { getViewer } from '@/lib/auth/session';
 import type { BillingRiskContext } from '@/lib/billing/risk';
 import { createServerSupabaseClient } from '@/lib/db/server';
@@ -60,11 +60,17 @@ export default async function BillingReviewsPage({
     `/admin/billing?status=${reviewed ? 'reviewed' : 'pending'}&page=${next}`;
   return (
     <div className="mx-auto max-w-4xl px-4 py-10 sm:px-6">
-      <SectionHeading
-        eyebrow="Administration"
-        title="Billing reviews"
-        description="Review refunds, disputes and early fraud warnings. Check Stripe for the current case status and any response deadline before recording your decision."
-      />
+      <header className="mb-6">
+        <p className="text-xs font-semibold uppercase tracking-[0.12em] text-ink-500">
+          Administration
+        </p>
+        <h1 className="mt-1 text-xl sm:text-2xl">Billing reviews</h1>
+        <p className="mt-2 max-w-prose text-sm text-ink-600">
+          Review refunds, disputes and early fraud warnings. Check Stripe for
+          the current case status and any response deadline before recording
+          your decision.
+        </p>
+      </header>
       <nav
         aria-label="Billing review status"
         className="mb-6 flex gap-6 text-sm"
