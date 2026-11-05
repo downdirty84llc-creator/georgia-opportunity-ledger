@@ -24,6 +24,8 @@ export interface EmailMessage {
    * — and what bulk senders are increasingly required to provide.
    */
   unsubscribeToken?: string;
+  /** Used by Resend to reconcile a repeated diagnostic send safely. */
+  idempotencyKey?: string;
 }
 
 export interface SendResult {
@@ -42,6 +44,9 @@ async function sendViaResend(
     headers: {
       Authorization: `Bearer ${apiKey}`,
       'Content-Type': 'application/json',
+      ...(message.idempotencyKey
+        ? { 'Idempotency-Key': message.idempotencyKey }
+        : {}),
     },
     body: JSON.stringify({
       from,

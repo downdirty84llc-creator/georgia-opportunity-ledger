@@ -6,6 +6,11 @@ database, enable point-in-time recovery, copy Storage objects or schedule a job.
 The production recovery gate stays open until an actual production export has
 been restored and an independent protected recovery copy exists.
 
+On 2026-11-05, the owner selected encrypted daily backups for the no-cost launch
+and accepted up to 24 hours of data loss between backups. Point-in-time recovery
+is no longer a launch prerequisite. A working daily schedule, failure reporting,
+independent protected retention and a verified production restore remain required.
+
 ## Export the hosted project
 
 Use Supabase's [current backup and restore procedure](https://supabase.com/docs/guides/platform/migrating-within-supabase/backup-restore).
@@ -70,5 +75,6 @@ be restored from it.
 The local rehearsal uses a disposable PostgreSQL database and synthetic/reference
 data. It exercises encrypted-file round trips and restored schema/access checks.
 It is not evidence of hosted Auth sessions, production backup coverage or PITR.
-Periodic logical exports also leave a data-loss window between exports; do not
-mark the existing PITR requirement satisfied by this workflow.
+Periodic logical exports leave a data-loss window between exports. The daily
+backup requirement is complete only after the production recovery and scheduling
+checks above pass; a synthetic rehearsal alone does not meet it.

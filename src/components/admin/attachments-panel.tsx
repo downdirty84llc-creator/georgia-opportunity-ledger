@@ -52,9 +52,11 @@ function formatSize(bytes: number): string {
 export function AttachmentsPanel({
   opportunityId,
   reportId,
+  enabled,
 }: {
   opportunityId?: string;
   reportId?: string;
+  enabled: boolean;
 }) {
   const [rows, setRows] = useState<AttachmentRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -69,6 +71,10 @@ export function AttachmentsPanel({
     : `reportId=${reportId}`;
 
   const load = useCallback(async () => {
+    if (!enabled) {
+      setLoading(false);
+      return;
+    }
     try {
       const response = await fetch(`/api/v1/admin/attachments?${query}`, {
         cache: 'no-store',
@@ -81,7 +87,7 @@ export function AttachmentsPanel({
     } finally {
       setLoading(false);
     }
-  }, [query]);
+  }, [query, enabled]);
 
   useEffect(() => {
     void load();
@@ -129,6 +135,17 @@ export function AttachmentsPanel({
       setBusy(false);
     }
   }
+
+  if (!enabled)
+    return (
+      <Card>
+        <h2 className="text-base font-semibold">Source documents</h2>
+        <p className="mt-1 text-sm text-ink-600">
+          File attachments are unavailable. Add the original document URL to the
+          record’s source or application link, or cite it in the report.
+        </p>
+      </Card>
+    );
 
   return (
     <Card>

@@ -38,6 +38,7 @@ import {
 import { emailConfigurationCheck } from './email-configuration';
 import { emailDnsCheck } from './email-dns';
 import { modeOf } from './stripe-mode';
+import { fileAttachmentsEnabled } from '../src/lib/files/availability';
 import { sentryConfigurationCheck } from './sentry-configuration';
 import {
   scannerConfigurationCheck,
@@ -152,9 +153,11 @@ function checkConfiguration(): void {
   );
   record(
     'blocking',
-    'FILE_SCANNER_URL configured',
-    scanner.status,
-    scanner.detail,
+    'Attachment delivery configuration',
+    fileAttachmentsEnabled() ? scanner.status : 'pass',
+    fileAttachmentsEnabled()
+      ? scanner.detail
+      : 'Attachments disabled; source links only. Scanner checks are required before enabling uploads.',
   );
 
   // sendEmail() rejects missing keys and console sending in production.
@@ -393,6 +396,7 @@ async function checkDatabase(): Promise<void> {
 // ---------------------------------------------------------------------------
 
 async function checkScanner(): Promise<void> {
+  if (!fileAttachmentsEnabled()) return;
   const configuration = scannerConfigurationCheck(
     process.env.FILE_SCANNER_PROVIDER,
     env('FILE_SCANNER_URL'),
@@ -559,8 +563,8 @@ function recordHumanWork(): void {
     ],
     [
       'blocking',
-      'Database backups with point-in-time recovery',
-      'enabled in the Supabase dashboard — not visible from the client API',
+      'Encrypted daily backups with a tested restore',
+      'owner accepted a 24-hour recovery point on 2026-11-05; verify a production export, independent protected copy and daily schedule',
     ],
     [
       'customers',

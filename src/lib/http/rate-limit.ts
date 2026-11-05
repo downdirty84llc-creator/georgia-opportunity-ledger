@@ -17,6 +17,7 @@ export const RATE_LIMITS = {
   export: { limit: 10, windowSeconds: 3600 },
   reportGeneration: { limit: 20, windowSeconds: 3600 },
   adminPublish: { limit: 60, windowSeconds: 3600 },
+  emailTest: { limit: 3, windowSeconds: 3600 },
   correction: { limit: 10, windowSeconds: 3600 },
   // Uploads are read whole into memory and posted to the scanner, so this
   // limit is about protecting the scanner and the function's memory, not
@@ -73,8 +74,10 @@ export async function checkRateLimit(
     .single();
 
   if (error || !data) {
-    if (action === 'mfa') {
-      console.error('[rate-limit] MFA limiter unavailable; request denied');
+    if (action === 'mfa' || action === 'emailTest') {
+      console.error(
+        '[rate-limit] sensitive-action limiter unavailable; request denied',
+      );
       return {
         allowed: false,
         remaining: 0,

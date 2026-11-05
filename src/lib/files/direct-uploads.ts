@@ -5,6 +5,10 @@ import { createServerSupabaseClient } from '@/lib/db/server';
 import { serverEnv } from '@/lib/env';
 import { safeFileName, UploadRejected } from '@/lib/files/attachments';
 import { isAllowedMimeType, sniffMimeType } from '@/lib/files/signatures';
+import {
+  fileAttachmentsEnabled,
+  ATTACHMENTS_UNAVAILABLE,
+} from '@/lib/files/availability';
 
 export const UPLOAD_BUCKET = 'attachment-uploads';
 export const uploadMetadataSchema = z
@@ -51,6 +55,8 @@ function maximumBytes(): number {
     : 26_214_400;
 }
 export async function beginAttachmentUpload(input: Metadata, owner: string) {
+  if (!fileAttachmentsEnabled())
+    throw new UploadRejected(ATTACHMENTS_UNAVAILABLE, 409);
   if (input.fileSize > maximumBytes())
     throw new UploadRejected('That file exceeds the configured upload limit.');
   const session = await createServerSupabaseClient();
@@ -96,6 +102,8 @@ async function checksum(bytes: Uint8Array): Promise<string> {
     .join('');
 }
 export async function finishAttachmentUpload(id: string, owner: string) {
+  if (!fileAttachmentsEnabled())
+    throw new UploadRejected(ATTACHMENTS_UNAVAILABLE, 409);
   const admin = createAdminClient();
   const { data: existing, error: readError } = await admin
     .from('attachment_uploads')

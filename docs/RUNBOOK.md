@@ -82,8 +82,10 @@ Two things the script cannot do for you:
 
 ### Virus scanning
 
-Only `clean` attachments can be downloaded. Production without a scanner stores
-files as `failed` and withholds them; development `skipped` files are withheld too.
+The source-links-only launch sets `FILE_ATTACHMENTS_ENABLED=false`, blocking
+uploads and attachment download links. When attachments are enabled, only `clean`
+attachments can be downloaded. Production without a scanner stores files as
+`failed` and withholds them; development `skipped` files are withheld too.
 Staff can inspect quarantine metadata but cannot mint download links for it.
 
 Configure `FILE_SCANNER_PROVIDER=clamav`, an HTTPS `FILE_SCANNER_URL`, and the
@@ -465,13 +467,17 @@ sitemap. What it marks `you` is what no machine can close.
 - [x] A real mailbox behind `EMAIL_REPLY_TO`: Zoho Free now receives mail at
       `support@georgiaopportunityledger.com`. The owner-authorized two-way test
       passed October 13, and the approved Sentry alert reached it October 26.
-- [ ] Database backups enabled with point-in-time recovery. The encrypted
+- [ ] Encrypted daily database backups, independent retained copies and a
+      tested production restore. The owner selected this no-cost plan on
+      November 5, accepting up to 24 hours of data loss between backups;
+      point-in-time recovery is not part of this launch. The encrypted
       export/recovery procedure is in [BACKUP-RECOVERY.md](BACKUP-RECOVERY.md).
-      A local round trip does not satisfy production restore or PITR coverage.
+      A local synthetic round trip does not satisfy production recovery.
 - [x] Administrator multi-factor enrolment for every current staff account.
-      On November 4 the confirmed owner had one verified factor, no unfinished
-      factors, and working authenticated access to `/admin`. New staff must
-      enrol at `/admin/security` before using administrative functions.
+      On November 5 both the confirmed owner and the selected backup
+      administrator were active super administrators with one verified
+      factor each. New staff must enrol at `/admin/security` before using
+      administrative functions.
 - [ ] `EMAIL_UNSUBSCRIBE_SECRET` set to its own value, not falling back to
       `CRON_SECRET`. Rotating one must not invalidate every unsubscribe link
       already sitting in inboxes. A separate production variable is configured;
@@ -481,10 +487,12 @@ sitemap. What it marks `you` is what no machine can close.
 - [ ] Security review: the test list in spec 26 — unauthorised API access,
       access-rank bypass, direct URL access, ID enumeration, invalid webhooks,
       file-upload attacks, XSS, SQL injection, rate-limit enforcement.
-- [ ] `FILE_SCANNER_URL` set; harmless and EICAR controls verified, followed by
-      the deployed upload/download workflow. Without a scanner, production
-      scans fail and downloads stay blocked; development `skipped` files are
-      also withheld. The absence of a scanner is not a safe-to-launch state.
+- [ ] Source-links-only launch: verify production upload, completion and
+      attachment-download paths are disabled. The owner selected this scope
+      on November 5. `FILE_ATTACHMENTS_ENABLED` defaults to false in production;
+      the editor explains how to cite original source documents instead.
+      Before enabling attachments later, obtain production processing approval,
+      configure scanning, and pass harmless/EICAR and hosted workflow tests.
 - [ ] At least two super administrators enrolled, so a lost authenticator has an
       in-product recovery path rather than a Supabase one.
 - [x] Confirm no sample data reached production: November 4 query of

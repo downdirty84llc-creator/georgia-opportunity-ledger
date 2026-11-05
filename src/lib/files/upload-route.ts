@@ -3,6 +3,10 @@ import { getViewer } from '@/lib/auth/session';
 import { UploadRejected } from '@/lib/files/attachments';
 import { apiError, rateLimited } from '@/lib/http/responses';
 import { checkRateLimit, rateLimitIdentity } from '@/lib/http/rate-limit';
+import {
+  fileAttachmentsEnabled,
+  ATTACHMENTS_UNAVAILABLE,
+} from '@/lib/files/availability';
 
 export async function uploadAuthority(
   request: Request,
@@ -17,6 +21,8 @@ export async function uploadAuthority(
     )
   )
     return apiError('forbidden', 'Editorial access required.');
+  if (!fileAttachmentsEnabled())
+    return apiError('conflict', ATTACHMENTS_UNAVAILABLE);
   const limit = await checkRateLimit(
     'upload',
     rateLimitIdentity(request, viewer.userId),

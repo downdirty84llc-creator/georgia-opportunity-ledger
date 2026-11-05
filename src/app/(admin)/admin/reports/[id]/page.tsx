@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { notFound, redirect } from 'next/navigation';
 
 import { AttachmentsPanel } from '@/components/admin/attachments-panel';
+import { fileAttachmentsEnabled } from '@/lib/files/availability';
 import {
   ReportBuilder,
   type CandidateRecord,
@@ -126,7 +127,10 @@ export default async function ComposeReportPage({ params }: PageProps) {
       {/* Supporting files for the report itself — source PDFs, data extracts.
           Separate from the generated report PDF, which the builder handles. */}
       <div className="mx-auto max-w-5xl px-4 pb-12 sm:px-6">
-        <AttachmentsPanel reportId={report.data.id} />
+        <AttachmentsPanel
+          reportId={report.data.id}
+          enabled={fileAttachmentsEnabled()}
+        />
       </div>
     </>
   );

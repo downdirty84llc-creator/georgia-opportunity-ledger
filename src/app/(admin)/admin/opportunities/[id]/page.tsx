@@ -8,6 +8,7 @@ import { createServerSupabaseClient } from '@/lib/db/server';
 import { loadEditorOptions } from '@/lib/opportunities/editor-options';
 import { draftFromRecord } from '@/lib/opportunities/editor-loader';
 import { roleMayPerform } from '@/lib/opportunities/workflow';
+import { fileAttachmentsEnabled } from '@/lib/files/availability';
 
 export const metadata: Metadata = { title: 'Edit opportunity' };
 export const dynamic = 'force-dynamic';
@@ -53,7 +54,10 @@ export default async function EditOpportunityPage({ params }: PageProps) {
           and irreversible, so they must not ride along with autosaved draft
           state that the editor may still discard. */}
       <div className="mx-auto max-w-5xl px-4 pb-12 sm:px-6">
-        <AttachmentsPanel opportunityId={id} />
+        <AttachmentsPanel
+          opportunityId={id}
+          enabled={fileAttachmentsEnabled()}
+        />
       </div>
     </>
   );

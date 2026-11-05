@@ -3,6 +3,10 @@ import { createServerSupabaseClient } from '@/lib/db/server';
 import { serverEnv } from '@/lib/env';
 import { isAllowedMimeType, sniffMimeType } from '@/lib/files/signatures';
 import {
+  fileAttachmentsEnabled,
+  ATTACHMENTS_UNAVAILABLE,
+} from '@/lib/files/availability';
+import {
   isDownloadable,
   scanBytes,
   type ScanOutcome,
@@ -86,6 +90,8 @@ function storagePath(request: UploadRequest, fileName: string): string {
 export async function uploadAttachment(
   request: UploadRequest,
 ): Promise<StoredAttachment> {
+  if (!fileAttachmentsEnabled())
+    throw new UploadRejected(ATTACHMENTS_UNAVAILABLE, 409);
   const env = serverEnv();
 
   if (!request.opportunityId && !request.reportId) {
@@ -265,6 +271,7 @@ export async function signedAttachmentUrl(
   attachmentId: string,
   expiresInSeconds = 300,
 ): Promise<{ url: string; fileName: string } | null> {
+  if (!fileAttachmentsEnabled()) return null;
   const env = serverEnv();
   const supabase = await createServerSupabaseClient();
 

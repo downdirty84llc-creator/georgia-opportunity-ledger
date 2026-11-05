@@ -72,4 +72,25 @@ describe('email delivery configuration', () => {
     });
     expect(fetch).toHaveBeenCalledOnce();
   });
+
+  it('preserves the diagnostic idempotency key and one-click headers for Resend', async () => {
+    env.emailApiKey = 'test-only-key';
+    vi.mocked(fetch).mockResolvedValue(
+      new Response(JSON.stringify({ id: 'provider-message-1' })),
+    );
+    await sendEmail({
+      ...message,
+      idempotencyKey: 'diagnostic-key',
+      unsubscribeToken: 'test-token',
+    });
+    const options = vi.mocked(fetch).mock.calls[0]?.[1];
+    expect(options?.headers).toMatchObject({
+      'Idempotency-Key': 'diagnostic-key',
+    });
+    expect(JSON.parse(String(options?.body)).headers).toEqual({
+      'List-Unsubscribe':
+        '<https://ledger.example/api/v1/unsubscribe?token=test-token>',
+      'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+    });
+  });
 });

@@ -6,6 +6,10 @@ import { createServerSupabaseClient } from '@/lib/db/server';
 import { UploadRejected, uploadAttachment } from '@/lib/files/attachments';
 import { apiError, created, ok, rateLimited } from '@/lib/http/responses';
 import { checkRateLimit, rateLimitIdentity } from '@/lib/http/rate-limit';
+import {
+  fileAttachmentsEnabled,
+  ATTACHMENTS_UNAVAILABLE,
+} from '@/lib/files/availability';
 
 export const dynamic = 'force-dynamic';
 
@@ -86,6 +90,9 @@ export const POST = withAdminHandling(
     ) {
       return apiError('forbidden', 'Editorial access required.');
     }
+
+    if (!fileAttachmentsEnabled())
+      return apiError('conflict', ATTACHMENTS_UNAVAILABLE);
 
     const limit = await checkRateLimit(
       'upload',

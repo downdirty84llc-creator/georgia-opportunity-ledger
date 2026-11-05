@@ -1,0 +1,1 @@
+-- History marker for the owner-authorized production backup administrator assignment on 2026-11-05. The operational transaction is retained in hosted migration history and private audit evidence. Fresh environments must assign their own administrators; this migration grants no roles.
