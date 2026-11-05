@@ -1,0 +1,1 @@
+-- Operational history marker: the dedicated production backup role was provisioned separately with a private credential. No reusable credential or environment-specific role is created by application migrations.

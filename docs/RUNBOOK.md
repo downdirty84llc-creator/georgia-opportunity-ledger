@@ -472,29 +472,41 @@ sitemap. What it marks `you` is what no machine can close.
       November 5, accepting up to 24 hours of data loss between backups;
       point-in-time recovery is not part of this launch. The encrypted
       export/recovery procedure is in [BACKUP-RECOVERY.md](BACKUP-RECOVERY.md).
-      A local synthetic round trip does not satisfy production recovery.
+      November 5: a real production export and a separately downloaded private
+      GitHub backup both restored all 81 application/Auth/Storage/migration
+      table counts, owners, effective grants and RLS policies. The private
+      `ledger-private-backups` workflow now has a daily 08:37 UTC schedule and
+      14-day encrypted artifact retention. Independent key custody, missed-run
+      alerts and full provider/service configuration recovery remain open.
 - [x] Administrator multi-factor enrolment for every current staff account.
       On November 5 both the confirmed owner and the selected backup
       administrator were active super administrators with one verified
       factor each. New staff must enrol at `/admin/security` before using
       administrative functions.
-- [ ] `EMAIL_UNSUBSCRIBE_SECRET` set to its own value, not falling back to
+- [x] `EMAIL_UNSUBSCRIBE_SECRET` set to its own value, not falling back to
       `CRON_SECRET`. Rotating one must not invalidate every unsubscribe link
-      already sitting in inboxes. A separate production variable is configured;
-      distinct secret values and live link behavior still need verification.
-- [ ] Verify one-click unsubscribe end to end: the `List-Unsubscribe` header is
-      present, and the link works while signed out.
+      already sitting in inboxes. The production launch-check API verified on
+      November 5 that it is at least 32 characters and differs from CRON_SECRET,
+      returning only a boolean result, never either secret.
+- [x] Verify one-click unsubscribe end to end. The approved November 5 test
+      reached the owner's Gmail inbox with SPF, DKIM and DMARC passing. A fresh
+      cookie-free process POSTed the real List-Unsubscribe URL and received 200;
+      SQL confirmed alerts disabled. GET returned 307 to the success page.
+      The owner's original alerts/marketing/frequency values were restored.
 - [ ] Security review: the test list in spec 26 — unauthorised API access,
       access-rank bypass, direct URL access, ID enumeration, invalid webhooks,
       file-upload attacks, XSS, SQL injection, rate-limit enforcement.
-- [ ] Source-links-only launch: verify production upload, completion and
+- [x] Source-links-only launch: verify production upload, completion and
       attachment-download paths are disabled. The owner selected this scope
       on November 5. `FILE_ATTACHMENTS_ENABLED` defaults to false in production;
       the editor explains how to cite original source documents instead.
+      Production explicitly sets the variable false; the November 5 release
+      and editor UI were verified. Route tests cover disabled begin, multipart,
+      completion and signed-download paths. No scanner approval is implied.
       Before enabling attachments later, obtain production processing approval,
       configure scanning, and pass harmless/EICAR and hosted workflow tests.
-- [ ] At least two super administrators enrolled, so a lost authenticator has an
-      in-product recovery path rather than a Supabase one.
+- [x] At least two active super administrators with verified MFA, confirmed
+      November 5 after the owner's backup-administrator setup.
 - [x] Confirm no sample data reached production: November 4 query of
       `opportunities where is_sample` returned 0.
 
@@ -510,8 +522,9 @@ sitemap. What it marks `you` is what no machine can close.
       preceding 24 hours on 2026-11-04. Runs succeeded or intentionally skipped;
       none failed. Empty workloads do not verify delivery or scanner behavior.
 - [ ] A real weekly report published, emailed, and read at each tier.
-      The November 4 funding briefing is prepared from official DCA and SBA
-      sources. Report publication alone does not complete delivery or tier tests.
+      The November 4 funding briefing is published from official DCA and SBA
+      sources. The approved owner delivery test passed November 5; tier-by-tier
+      reading checks remain part of the isolated billing rehearsal.
       `email_distribution_enabled` defaults to false; the publishing route must
       persist an explicit editor choice before the delivery job can queue email.
 - [ ] Administrator training on the review queue and correction workflow.
