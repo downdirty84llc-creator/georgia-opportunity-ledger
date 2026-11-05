@@ -50,7 +50,8 @@ export default async function BillingPage() {
       ? Number(plan?.annual_price ?? 0)
       : Number(plan?.monthly_price ?? 0);
 
-  const isPaid = viewer.planCode !== 'free';
+  // Staff access can unlock paid features without a paid billing plan.
+  const isPaid = Boolean(plan && plan.code !== 'free');
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-10 sm:px-6">
