@@ -5,6 +5,7 @@ import { stopSubscriptionForClosure } from '@/lib/billing/close-account';
 import { track } from '@/lib/analytics/events';
 import { planForPriceId } from '@/lib/billing/plans';
 import { subscriptionPaymentState } from '@/lib/billing/payment-state';
+import { isBillingRiskEvent, recordBillingRisk } from '@/lib/billing/risk';
 import { stripe, toDate } from '@/lib/billing/stripe';
 import { createAdminClient } from '@/lib/db/admin';
 import { serverEnv } from '@/lib/env';
@@ -100,6 +101,7 @@ export async function POST(request: Request): Promise<NextResponse> {
     event_type: event.type,
     event_payload: event as unknown as Record<string, unknown>,
     processed: false,
+    review_required: isBillingRiskEvent(event.type),
   });
 
   // Carried across deliveries so a permanently failing event reads as such
@@ -164,7 +166,11 @@ export async function POST(request: Request): Promise<NextResponse> {
     await handleEvent(event);
     const { error: processedError } = await supabase
       .from('billing_events')
-      .update({ processed: true, processed_at: new Date().toISOString() })
+      .update({
+        processed: true,
+        processed_at: new Date().toISOString(),
+        processing_error: null,
+      })
       .eq('stripe_event_id', event.id);
     if (processedError) throw new Error(processedError.message);
     return NextResponse.json({ received: true });
@@ -196,6 +202,10 @@ export async function POST(request: Request): Promise<NextResponse> {
 }
 
 async function handleEvent(event: Stripe.Event): Promise<void> {
+  if (isBillingRiskEvent(event.type)) {
+    await recordBillingRisk(event);
+    return;
+  }
   switch (event.type) {
     // `completed` fires when the customer finishes the session, which is not
     // the same as the money having arrived. `async_payment_succeeded` is the

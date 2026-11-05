@@ -147,7 +147,26 @@ export default async function AdminDashboardPage() {
   );
   const mrr = centsToDollars(mrrTotal.cents);
 
+  const canReviewBilling = ['billing_manager', 'super_administrator'].includes(
+    viewer.role,
+  );
+  const billingReviews = canReviewBilling
+    ? await head('billing_events')
+        .eq('review_required', true)
+        .is('reviewed_at', null)
+    : null;
+  if (billingReviews?.error) throw new Error('Could not load billing reviews.');
+
   const metrics = [
+    ...(canReviewBilling
+      ? [
+          {
+            label: 'Billing reviews pending',
+            value: billingReviews?.count ?? 0,
+            href: '/admin/billing',
+          },
+        ]
+      : []),
     {
       label: 'Drafts in progress',
       value: drafts,

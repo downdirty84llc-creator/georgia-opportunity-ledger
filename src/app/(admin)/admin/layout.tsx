@@ -55,6 +55,11 @@ export default async function AdminLayout({
             <ul className="flex items-center gap-1 whitespace-nowrap text-sm">
               {[
                 ...ADMIN_LINKS,
+                ...(['billing_manager', 'super_administrator'].includes(
+                  viewer.role,
+                )
+                  ? [{ href: '/admin/billing', label: 'Billing reviews' }]
+                  : []),
                 ...(viewer.role === 'super_administrator'
                   ? SUPER_ADMIN_LINKS
                   : []),

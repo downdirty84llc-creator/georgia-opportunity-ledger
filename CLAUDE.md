@@ -33,9 +33,11 @@ regenerated on a container reset and predate this decision. **This note is the
 newer instruction.** Do not silently fall back to the branch workflow, and do
 not take the branch's continued existence as a reason to use it.
 
-**A push to `main` deploys to production.** Vercel builds every push through
-the GitHub integration, with no staging gate in between — so the gate is the
-one in "Verify by running" below, and it runs _before_ the push, not after.
+**Production moved to Netlify Free on 2026-11-05.** The public domain is served
+by Netlify project `f4dedcdd-9ab1-4fec-9d67-6c1c8a12537d`. Git continuous
+deployment is not configured there; publish the verified production build
+explicitly. Vercel still builds pushes to `main` through its GitHub integration,
+so the gate in "Verify by running" runs _before_ the push, not after.
 Typecheck, lint, format, `schedules:check`, the tests and `npm run build` are
 seconds each; a production deploy of something that fails one of them is not.
 
