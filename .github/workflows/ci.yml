@@ -95,7 +95,9 @@ jobs:
   # themselves when the seed is absent rather than passing vacuously.
   e2e:
     name: Security and accessibility
-    runs-on: ubuntu-latest
+    # Keep browser dependencies stable during the ubuntu-latest 26.04 rollout.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
     needs: [static]
     steps:
       - uses: actions/checkout@v4
@@ -104,7 +106,9 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
       - run: npm ci
-      - run: npx playwright install --with-deps chromium
+      - name: Install Chromium and system dependencies
+        timeout-minutes: 10
+        run: npx playwright install --with-deps chromium
       - run: npx playwright test --project=desktop-chrome
         env:
           NEXT_PUBLIC_ENVIRONMENT: development
