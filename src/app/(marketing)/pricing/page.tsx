@@ -132,9 +132,10 @@ const BILLING_FAQ = [
   {
     question: 'Can I change plans later?',
     answer:
-      'Yes. Upgrades take effect immediately and are prorated, so you only pay ' +
-      'the difference for the rest of the period. Downgrades take effect at the ' +
-      'end of the period you have already paid for.',
+      'Yes. Upgrades are invoiced when you request them and activate after ' +
+      'payment succeeds, with credit for unused paid time. An upgrade to annual ' +
+      'billing starts a new annual period. Downgrades and changes of billing ' +
+      'interval within the same tier start at the end of your paid period.',
   },
   {
     question: 'What happens if a payment fails?',
