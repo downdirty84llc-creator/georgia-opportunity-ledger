@@ -89,5 +89,29 @@ begin
  update public.email_outbox set opportunity_ids=array['77777777-3333-4333-8333-333333333333']::uuid[] where email_outbox.id=queued_id;
  perform public.claim_email_delivery('resend','credential-fingerprint');
  perform pg_temp.expect((select state='skipped' from public.email_outbox where email_outbox.id=queued_id),'deleted source cannot leak from an old queued payload');
+
+ insert into public.sources(id,name,source_type,website_url)
+ values('77777777-4444-4444-8444-444444444444','Email source fixture','government','https://example.test');
+ insert into public.opportunities(id,title,slug,category,subtype,summary,source_id,original_source_url,
+   risk_summary,recommended_next_action,workflow_status,published_at,verification_status,minimum_access_rank)
+ values('77777777-3333-4333-8333-333333333333','Email opportunity fixture','email-source-identity-fixture','business_funding','grant','Fixture',
+   '77777777-4444-4444-8444-444444444444','https://example.test/opportunity','Fixture','Check source','published',now(),'verified',0);
+ queued_id:=pg_temp.queue('source-visible');
+ update public.email_outbox set opportunity_ids=array['77777777-3333-4333-8333-333333333333']::uuid[] where email_outbox.id=queued_id;
+ item:=public.claim_email_delivery('resend','credential-fingerprint');
+ perform pg_temp.expect(item.id=queued_id,'visible highlighted opportunity is checked by its own ID, not its source provider ID');
+ perform public.finish_email_delivery(item.id,item.lease_token,'sent','source-fixture-provider-id',null);
+
+ queued_id:=pg_temp.queue('source-now-restricted');
+ update public.email_outbox set opportunity_ids=array['77777777-3333-4333-8333-333333333333']::uuid[] where email_outbox.id=queued_id;
+ update public.opportunities set is_restricted=true,restriction_reason='Synthetic visibility change' where id='77777777-3333-4333-8333-333333333333';
+ perform public.claim_email_delivery('resend','credential-fingerprint');
+ perform pg_temp.expect((select state='skipped' from public.email_outbox where email_outbox.id=queued_id),'a formerly visible highlight is still suppressed after restriction');
+
+ update public.opportunities set is_restricted=false,restriction_reason=null,minimum_access_rank=20 where id='77777777-3333-4333-8333-333333333333';
+ queued_id:=pg_temp.queue('source-above-entitlement');
+ update public.email_outbox set opportunity_ids=array['77777777-3333-4333-8333-333333333333']::uuid[] where email_outbox.id=queued_id;
+ perform public.claim_email_delivery('resend','credential-fingerprint');
+ perform pg_temp.expect((select state='skipped' from public.email_outbox where email_outbox.id=queued_id),'highlight above current entitlement stays suppressed');
 end $$;
 rollback;
