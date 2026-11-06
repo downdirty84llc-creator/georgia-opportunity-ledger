@@ -11,6 +11,11 @@
 -- duplicating them.
 
 select public.schedule_ledger_job(
+  'refresh-market-data',
+  '10 13 * * *'
+);
+
+select public.schedule_ledger_job(
   'publish-scheduled',
   '*/15 * * * *'
 );

@@ -279,6 +279,42 @@ Available jobs: `publish-scheduled`, `premium-alerts`, `saved-search-matching`,
 `sync-subscriptions`, `aggregate-analytics`, `prune`, `scan-attachments`,
 `distribute-weekly-report`.
 
+### Automatic market observations
+
+`refresh-market-data` runs daily at 13:10 UTC. It fetches BLS series
+`SMS13000002000000001`: seasonally adjusted Georgia construction payroll
+employment, in thousands of jobs. It updates the existing matching indicator
+through a stable indicator/period key, including BLS revisions. Comparisons use
+the previous month from the same response; the oldest fetched month is omitted
+because its predecessor is unavailable. Preliminary estimates are labeled.
+
+The source must be active, explicitly permitted for automation after review,
+and bound to the exact indicator units/geography. Invalid, stale, incomplete or
+unexpected provider responses fail the job and preserve the previous data.
+The provider URL is fixed, redirects are refused, and requests/body size are
+bounded. No API key, paid service, user information or AI-generated values are
+involved. This updates one series; other indicators remain unavailable until
+their own source, units and reuse rights have been established.
+
+Source review: [BLS public-domain policy](https://www.bls.gov/bls/linksite.htm),
+[official API](https://www.bls.gov/developers/),
+[API limits](https://www.bls.gov/developers/api_faqs.htm), and
+[Georgia series metadata](https://www.bls.gov/sae/additional-resources/list-of-published-state-and-metropolitan-area-series/georgia.htm).
+The integration makes one unregistered request daily (25/day allowance), with
+manual retries counted against the same allowance. Recheck these policies when
+changing the feed or its cadence. BLS publication does not imply endorsement.
+
+### Independent unattended-operation checks
+
+The private `ledger-private-backups` repository runs an hourly read-only
+watchdog independently of the application and database scheduler. It checks
+required schedules, recent completed runs, stuck mail/billing queues and public
+page availability, and reports failures to the existing Sentry project. Keep
+its `expectedJobs` map aligned with this registry after schedule changes.
+Daily encrypted backups have their own Sentry missed-run monitor. Automatic
+retries and alerts reduce routine work; editorial verification, support replies,
+disputes and restore decisions still need an administrator.
+
 ---
 
 ## Operational procedures
