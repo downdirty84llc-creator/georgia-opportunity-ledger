@@ -64,6 +64,27 @@ describe('analytics consent', () => {
     expect(captureToPostHog).not.toHaveBeenCalled();
   });
 
+  it('reports a refused first-party insert without breaking the user request', async () => {
+    consent(true);
+    insert.mockResolvedValueOnce({ error: { message: 'storage refused' } });
+    const logged = vi.spyOn(console, 'error').mockImplementation(() => {});
+    try {
+      await expect(
+        track('checkout_started', { userId: 'user-1' }),
+      ).resolves.toBeUndefined();
+      expect(logged).toHaveBeenCalledWith(
+        '[analytics] failed to record event',
+        expect.objectContaining({
+          event: 'checkout_started',
+          error: 'storage refused',
+        }),
+      );
+      expect(captureToPostHog).not.toHaveBeenCalled();
+    } finally {
+      logged.mockRestore();
+    }
+  });
+
   it('treats a missing preferences row as consent, matching the column default', async () => {
     consent(null);
     await track('search_performed', { userId: 'user-1' });

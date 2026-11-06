@@ -170,12 +170,13 @@ export async function track(
     if (options.userId && !(await analyticsAllowedFor(options.userId))) return;
 
     const supabase = createAdminClient();
-    await supabase.from('analytics_events').insert({
+    const { error } = await supabase.from('analytics_events').insert({
       user_id: options.userId ?? null,
       anonymous_id: options.anonymousId ?? null,
       event_name: event,
       properties,
     });
+    if (error) throw new Error(error.message);
 
     // Forward the already-scrubbed properties to the analytics vendor, so a
     // future change to the scrubbing rules applies to both destinations at once.

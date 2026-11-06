@@ -14,9 +14,8 @@ export const revalidate = 900;
 export const metadata: Metadata = {
   title: 'Market pricing reports',
   description:
-    'Construction costs, materials, industrial rents, vacancy, lending rates, ' +
-    'labour, fuel and permit activity for Georgia — tracked monthly with the ' +
-    'source named.',
+    'Published Georgia market observations, with reporting periods and named ' +
+    'sources. Launch coverage begins with BLS construction employment.',
   alternates: { canonical: '/pricing-reports' },
 };
 
@@ -46,10 +45,15 @@ export default async function PricingReportsPage() {
           The numbers that decide whether the deal still works
         </h1>
         <p className="mt-5 text-lg leading-relaxed text-ink-700">
-          A property that penciled in March may not pencil now. We track the
-          input costs, rents, vacancy and lending conditions that move
-          underwriting in Georgia, publish the movement with the source named,
-          and say what it means rather than leaving you a chart.
+          Launch coverage begins with Georgia construction employment from the
+          Bureau of Labor Statistics. We show the reporting period and source
+          for each observation. Employment describes industry activity; it is
+          not a measure of wages, building costs or property values.
+        </p>
+        <p className="mt-4 text-sm leading-relaxed text-ink-600">
+          Rent, vacancy, materials, lending-rate, fuel and permit series are not
+          yet published. Membership includes the observations available below;
+          additional coverage has no promised release date.
         </p>
         <div className="mt-7 flex flex-wrap gap-3">
           <ButtonLink href="/pricing">See membership plans</ButtonLink>

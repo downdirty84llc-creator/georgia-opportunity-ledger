@@ -22,13 +22,12 @@ const CATEGORIES = [
     title: 'Commercial Property',
     href: '/commercial-property',
     description:
-      'Tax sales, sheriff sales, bank-owned inventory, development-authority ' +
-      'sites and off-market indications — with the liens, zoning and ' +
-      'registration deadlines attached.',
+      'Source-linked commercial property leads, with the published terms, ' +
+      'known facts and outstanding due-diligence questions kept together.',
     points: [
-      'Auction and registration dates',
-      'Zoning and current use',
-      'Known liens and title notes',
+      'Seller instructions and stated dates',
+      'Published building and site details',
+      'Title and inspection questions',
     ],
   },
   {
@@ -48,8 +47,8 @@ const CATEGORIES = [
     title: 'Market Pricing',
     href: '/pricing-reports',
     description:
-      'Construction inputs, industrial rents, vacancy, lending rates and ' +
-      'permit activity — the numbers that decide whether a deal still works.',
+      'Georgia construction employment from BLS, with reporting periods ' +
+      'and source links. See the market page for current coverage limits.',
     points: [
       'Month-over-month movement',
       'Named public sources',
@@ -63,9 +62,8 @@ const PROCESS = [
     step: '01',
     title: 'Sources monitored',
     body:
-      'We track named public bodies — state agencies, development authorities, ' +
-      'federal portals and economic data services — on a schedule, and record ' +
-      'when each was last checked.',
+      'BLS construction employment refreshes daily. Opportunity sources are ' +
+      'checked during research and flagged when another review is due.',
   },
   {
     step: '02',
@@ -79,17 +77,18 @@ const PROCESS = [
     step: '03',
     title: 'Records analysed',
     body:
-      'A researcher writes the analysis, a reviewer checks it and scores it ' +
-      'across seven weighted components, and an editor publishes it. No record ' +
-      'reaches you without all three.',
+      'Records pass through research, review and publication, with an audit ' +
+      'trail and seven scoring components. At launch these steps may be ' +
+      'performed by one administrator with AI assistance; they are not ' +
+      'independent professional verification.',
   },
   {
     step: '04',
     title: 'Subscribers alerted',
     body:
-      'Premium members are alerted the moment a matching record is published ' +
-      'or materially changes. Everyone gets the weekly report and deadline ' +
-      'reminders at fourteen, seven and two days.',
+      'Members who enable email alerts receive weekly report notices. ' +
+      'Matching opportunity alerts and deadline reminders follow plan ' +
+      'eligibility and account preferences.',
   },
 ];
 
@@ -107,9 +106,10 @@ const FAQ = [
   {
     question: 'How often is it updated?',
     answer:
-      'Continuously. Sources are checked on a per-source cadence, the weekly ' +
-      'report is published every Thursday, and deadline flags are recomputed ' +
-      'daily. Published records are reverified on a thirty-day cycle.',
+      'BLS observations refresh daily. A weekly digest compiles verified ' +
+      'records and observations after each Thursday–Wednesday period. ' +
+      'Research updates are separate; a digest does not mean every source ' +
+      'was checked again. Records carry their last verification date.',
   },
   {
     question: 'Do you give investment advice?',

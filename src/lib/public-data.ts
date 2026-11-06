@@ -251,6 +251,7 @@ export async function loadIndicatorPreviews(
     const { data, error } = await supabase
       .from('market_indicator_previews')
       .select('*')
+      .not('reporting_period_end', 'is', null)
       .order('display_order', { ascending: true })
       .limit(limit);
 

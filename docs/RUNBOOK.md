@@ -486,10 +486,18 @@ sitemap. What it marks `you` is what no machine can close.
       Public policy pages are published without the former launch-blocking
       notice. This is an owner waiver, not legal approval, and does not clear
       billing, hosting, security, content or other operational checks.
-- [ ] Stripe live mode: `npm run stripe:setup` with the live key, then the
-      webhook endpoint. Confirm `subscription_plans` carries all six price ids.
-- [ ] Tier-by-tier test payment verifying each plan grants the correct access
-      (spec 28, milestone 3 acceptance).
+- [x] Stripe live configuration: November 6 production preflight verified the
+      restricted live runtime key and all six plan price IDs. Provider setup
+      was retained during the Netlify move; no live test charge was made.
+- [x] Tier-by-tier sandbox payments: November 5 authenticated Checkout creation,
+      real test API settlement and automatic Stripe CLI webhook delivery granted
+      the correct ranks for Weekly, Detailed and Premium. Upgrade, downgrade,
+      declined-payment, cancellation and duplicate/retry checks also passed.
+      This used the production build on loopback with hosted staging Auth/data.
+- [ ] Repeat payment completion and incoming webhook delivery on the actual
+      Netlify staging deployment. The private preview protection prevents a
+      direct unauthenticated provider webhook; do not claim the loopback result
+      proves this hosting-specific path.
 - [x] Email domain authentication configured on 2026-10-12. Resend verified
       `georgiaopportunityledger.com`; the DKIM TXT, required `rsend` and `send`
       CNAMEs, and initial DMARC `p=none` record are visible in public DNS.
@@ -526,17 +534,19 @@ sitemap. What it marks `you` is what no machine can close.
 - [x] A real mailbox behind `EMAIL_REPLY_TO`: Zoho Free now receives mail at
       `support@georgiaopportunityledger.com`. The owner-authorized two-way test
       passed October 13, and the approved Sentry alert reached it October 26.
-- [ ] Encrypted daily database backups, independent retained copies and a
+- [x] Encrypted daily database backups, independent retained copies and a
       tested production restore. The owner selected this no-cost plan on
       November 5, accepting up to 24 hours of data loss between backups;
       point-in-time recovery is not part of this launch. The encrypted
       export/recovery procedure is in [BACKUP-RECOVERY.md](BACKUP-RECOVERY.md).
-      November 5: a real production export and a separately downloaded private
-      GitHub backup both restored all 81 application/Auth/Storage/migration
-      table counts, owners, effective grants and RLS policies. The private
-      `ledger-private-backups` workflow now has a daily 08:37 UTC schedule and
-      14-day encrypted artifact retention. Independent key custody, missed-run
-      alerts and full provider/service configuration recovery remain open.
+      November 6: cloud run `42269120897` exported and actually restored all 82
+      application/Auth/Storage/migration tables, including 55 migrations, with
+      matching counts, owners, effective grants and RLS policies. The private
+      workflow runs daily at 08:37 UTC, retains encrypted artifacts for 14 days
+      and tests the core restore on every run. A separate download authenticated.
+      The owner confirmed independent key custody; the missed-run alert and
+      recovery email drill passed. Running hosted Auth/API and full provider
+      reconstruction are outside this tested core-database restore scope.
 - [x] Administrator multi-factor enrolment for every current staff account.
       On November 5 both the confirmed owner and the selected backup
       administrator were active super administrators with one verified
@@ -571,14 +581,19 @@ sitemap. What it marks `you` is what no machine can close.
 
 ### Required before opening to customers
 
-- [ ] Domain connected with Cloudflare in front.
+- [x] Production domain connected to Netlify Free with HTTPS, verified
+      November 6. Cloudflare is not in the production routing path.
 - [x] Sentry DSN configured for production. One approved synthetic error reached
       issue `NODE-1` and the support mailbox on October 26. The malformed-JSON
       defect that produced that test error was repaired in `3698525`; the issue
       was resolved after deployment while server-error reporting stayed enabled.
-- [ ] PostHog configured and the subscription funnel verified.
-- [x] All 16 production cron schedules confirmed in `job_runs` over the
-      preceding 24 hours on 2026-11-04. Runs succeeded or intentionally skipped;
+- [x] First-party analytics is the launch provider. Existing consent controls
+      apply to `analytics_events`; no PostHog key is configured or required.
+      Preflight verifies storage availability separately from a complete funnel.
+- [ ] Confirm the first real subscriber's complete purchase funnel after launch.
+      Synthetic payments must not be counted as production conversions.
+- [x] All 18 production cron schedules confirmed in `job_runs` over the
+      preceding 24 hours on 2026-11-06. Runs succeeded or intentionally skipped;
       none failed. Empty workloads do not verify delivery or scanner behavior.
 - [ ] A real weekly report published, emailed, and read at each tier.
       The November 4 funding briefing is published from official DCA and SBA
@@ -586,7 +601,13 @@ sitemap. What it marks `you` is what no machine can close.
       reading checks remain part of the isolated billing rehearsal.
       `email_distribution_enabled` defaults to false; the publishing route must
       persist an explicit editor choice before the delivery job can queue email.
+      Recurring opted-in weekly delivery was authorized November 6. The two
+      administrator inboxes received the current report at 18:15 UTC after the
+      source-ID suppression repair. A five-record source-verified batch and
+      premium briefing were published later that day; premium email remains off.
 - [ ] Administrator training on the review queue and correction workflow.
+      [The launch operating guide](LAUNCH-OPERATING-GUIDE.md) is prepared;
+      availability of instructions does not mean the owner completed a drill.
 - [ ] Accessibility audit against WCAG 2.1 AA. `docs/ACCESSIBILITY-AUDIT.md`
       is the brief; the automated third already runs on every push.
 - [ ] Core Web Vitals measured on the public pages. The landing pages are

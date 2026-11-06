@@ -187,6 +187,19 @@ export default async function PricingPage() {
         <p className="mt-4 text-lg text-ink-700">
           Start free. Move up when the deadlines start mattering to you.
         </p>
+        <p className="mt-4 text-sm leading-relaxed text-ink-600">
+          Launch catalogue: a small, growing set of source-linked funding and
+          property records, weekly digests and a premium briefing. Market data
+          currently covers Georgia construction employment only. Review the{' '}
+          <a className="underline" href="/opportunities">
+            current records
+          </a>{' '}
+          and{' '}
+          <a className="underline" href="/pricing-reports">
+            available market coverage
+          </a>{' '}
+          before choosing a paid plan. No minimum record count is promised.
+        </p>
       </div>
 
       <div className="mt-10">

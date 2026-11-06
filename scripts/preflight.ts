@@ -171,12 +171,8 @@ function checkConfiguration(): void {
 
   const sentry = sentryConfigurationCheck(env('SENTRY_DSN'));
   record('customers', 'Sentry configured', sentry.status, sentry.detail);
-  record(
-    'customers',
-    'PostHog configured',
-    env('NEXT_PUBLIC_POSTHOG_KEY') ? 'pass' : 'fail',
-    env('NEXT_PUBLIC_POSTHOG_KEY') ? 'set' : 'NEXT_PUBLIC_POSTHOG_KEY unset',
-  );
+  // PostHog is optional. The administrator funnel reads first-party events;
+  // verify that store below instead of requiring a second analytics vendor.
 }
 
 // ---------------------------------------------------------------------------
@@ -212,6 +208,7 @@ async function checkDatabase(): Promise<void> {
       record('blocking', name, 'unknown', reason);
     }
     record('customers', 'Background jobs are firing', 'unknown', reason);
+    record('customers', 'First-party analytics available', 'unknown', reason);
   };
 
   if (!url || !key) {
@@ -233,6 +230,22 @@ async function checkDatabase(): Promise<void> {
     unknownAll(`database unreachable: ${reachError.message}`);
     return;
   }
+
+  const { count: analyticsCount, error: analyticsError } = await db
+    .from('analytics_events')
+    .select('id', { count: 'exact', head: true });
+  record(
+    'customers',
+    'First-party analytics available',
+    analyticsError ? 'unknown' : 'pass',
+    analyticsError
+      ? analyticsError.message
+      : `First-party event store reachable (${analyticsCount ?? 0} events). ` +
+          (env('NEXT_PUBLIC_POSTHOG_KEY')
+            ? 'Optional PostHog forwarding configured.'
+            : 'No external analytics vendor enabled.') +
+          ' This checks storage, not a completed conversion funnel.',
+  );
 
   // --- sample data ---------------------------------------------------------
   const sampleTables = [

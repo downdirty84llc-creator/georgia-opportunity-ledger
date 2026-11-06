@@ -127,8 +127,8 @@ export default function HowItWorksPage() {
       <section className="mt-14">
         <SectionHeading
           eyebrow="Editorial workflow"
-          title="Three people, three different jobs"
-          description="Separation of duties is enforced by the software, not by convention. Nobody can draft, approve and publish the same record alone."
+          title="Research, review and publication"
+          description="The software controls what each role may do and records publication changes. Editors and super administrators can perform multiple stages. At launch, one administrator may oversee the process with AI assistance; three independent reviewers are not promised."
         />
         <div className="grid gap-5 sm:grid-cols-3">
           {WORKFLOW.map((stage) => (
