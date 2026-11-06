@@ -23,6 +23,7 @@ import type { JobDefinition } from '@/lib/jobs/runner';
 import { closeAccountBillingJob } from '@/lib/billing/close-account';
 import { checkpointUnsubscribeTokensJob } from '@/lib/jobs/unsubscribe-recovery';
 import { refreshMarketDataJob } from '@/lib/jobs/market-data-jobs';
+import { generateWeeklyDigestJob } from '@/lib/jobs/weekly-digest';
 
 /**
  * Every background job, and the cadence each expects (spec 17).
@@ -38,6 +39,7 @@ export interface ScheduledJob {
 
 export const JOBS: readonly ScheduledJob[] = [
   { definition: refreshMarketDataJob, schedule: '10 13 * * *' },
+  { definition: generateWeeklyDigestJob, schedule: '0 14 * * *' },
   { definition: publishScheduledJob, schedule: '*/15 * * * *' },
   { definition: premiumAlertsJob, schedule: '*/15 * * * *' },
   { definition: savedSearchMatchingJob, schedule: '*/30 * * * *' },

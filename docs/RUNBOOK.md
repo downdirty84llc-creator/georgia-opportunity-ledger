@@ -304,6 +304,29 @@ The integration makes one unregistered request daily (25/day allowance), with
 manual retries counted against the same allowance. Recheck these policies when
 changing the feed or its cadence. BLS publication does not imply endorsement.
 
+### Automatic weekly source digest
+
+The owner authorized recurring report emails on November 6, 2026.
+`generate-weekly-digest` attempts publication daily at 14:00 UTC for the most
+recent completed Thursday–Wednesday period. Its period-based idempotency key
+means the first new digest publishes on Thursday, with later days available for
+retries. This is one weekly digest, not a daily mailing.
+
+The service-only `publish_automated_weekly_digest` function publishes the report
+and its composition atomically. It includes up to 60 published, unrestricted,
+non-sample opportunities whose verification is current, retaining each source's
+access rank and original verification date. The report says it is automatically
+compiled and does not invent new analysis or staff approval. The approved BLS
+series can be summarized only when recently retrieved, current and available at
+the report's access rank. An empty verified inventory fails visibly for review.
+
+A manual draft, scheduled or published weekly report for that same period takes
+priority; automation never overwrites it. An editor must finish such a draft and
+choose email distribution. Newly generated digests enable the existing durable
+outbox, member email preferences, current plan checks and unsubscribe controls.
+Retries deduplicate publication and delivery. Existing editorial content and
+premium briefings are not automatically rewritten or mailed again.
+
 ### Independent unattended-operation checks
 
 The private `ledger-private-backups` repository runs an hourly read-only

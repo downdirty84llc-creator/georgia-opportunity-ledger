@@ -16,6 +16,11 @@ select public.schedule_ledger_job(
 );
 
 select public.schedule_ledger_job(
+  'generate-weekly-digest',
+  '0 14 * * *'
+);
+
+select public.schedule_ledger_job(
   'publish-scheduled',
   '*/15 * * * *'
 );
