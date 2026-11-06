@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 
 import {
   ANONYMOUS_HEADER_SESSION,
-  HeaderActions,
+  HeaderAccountArea,
   HeaderNav,
   type HeaderSession,
 } from '@/components/site/header-actions';
@@ -104,13 +104,11 @@ export function HeaderSessionArea() {
     <>
       <nav
         aria-label="Primary"
-        className="order-last w-full overflow-x-auto sm:order-none sm:w-auto sm:flex-1"
+        className="order-last w-full min-w-0 sm:order-none sm:w-auto sm:flex-1"
       >
         <HeaderNav session={session} />
       </nav>
-      <div className="ml-auto flex min-h-[2.5rem] items-center gap-3">
-        <HeaderActions session={session} />
-      </div>
+      <HeaderAccountArea session={session} />
     </>
   );
 }

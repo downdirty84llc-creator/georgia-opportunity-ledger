@@ -48,12 +48,12 @@ export function HeaderNav({ session }: { session: HeaderSession }) {
   const links = session.authenticated ? MEMBER_LINKS : PUBLIC_LINKS;
 
   return (
-    <ul className="flex items-center gap-1 whitespace-nowrap text-sm">
+    <ul className="flex flex-wrap items-center gap-1 text-sm">
       {links.map((link) => (
         <li key={link.href}>
           <Link
             href={link.href}
-            className="rounded-md px-2.5 py-1.5 text-ink-700 hover:bg-ink-100 hover:text-ink-900"
+            className="inline-flex rounded-md px-2.5 py-1.5 text-ink-700 hover:bg-ink-100 hover:text-ink-900"
           >
             {link.label}
           </Link>
@@ -63,7 +63,7 @@ export function HeaderNav({ session }: { session: HeaderSession }) {
         <li>
           <Link
             href={session.needsStaffVerification ? '/admin/security' : '/admin'}
-            className="rounded-md bg-clay-50 px-2.5 py-1.5 font-medium text-clay-800 hover:bg-clay-100"
+            className="inline-flex rounded-md bg-clay-50 px-2.5 py-1.5 font-medium text-clay-800 hover:bg-clay-100"
           >
             {session.needsStaffVerification ? 'Verify staff access' : 'Admin'}
           </Link>
@@ -101,5 +101,23 @@ export function HeaderActions({ session }: { session: HeaderSession }) {
         </ButtonLink>
       ) : null}
     </>
+  );
+}
+
+/** Keep a hidden plan label from reserving a whole empty row on small screens. */
+export function HeaderAccountArea({ session }: { session: HeaderSession }) {
+  const hasMobileAction =
+    !session.authenticated ||
+    (!session.isStaff && session.planCode !== 'premium');
+  return (
+    <div
+      className={
+        hasMobileAction
+          ? 'ml-auto flex min-h-[2.5rem] items-center gap-3'
+          : 'ml-auto hidden min-h-[2.5rem] items-center gap-3 sm:flex'
+      }
+    >
+      <HeaderActions session={session} />
+    </div>
   );
 }

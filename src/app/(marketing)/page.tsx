@@ -225,7 +225,7 @@ export default async function HomePage() {
                       ))
                     ) : (
                       <li className="text-sm text-ink-500">
-                        Nothing closing in the next fortnight.
+                        No confirmed calendar deadlines in the next fortnight.
                       </li>
                     )}
                   </ul>
@@ -282,7 +282,7 @@ export default async function HomePage() {
               value: stats?.verifiedThisWeek,
             },
             {
-              label: 'Deadlines in the next 14 days',
+              label: 'Confirmed deadlines in the next 14 days',
               value: stats?.upcomingDeadlines,
             },
           ].map((stat) => (

@@ -111,9 +111,9 @@ export function formatDeadline(
   value: string | Date | null | undefined,
   now: Date = new Date(),
 ): string {
-  if (!value) return 'No stated deadline';
+  if (!value) return 'Check source for dates';
   const date = parseDisplayDate(value);
-  if (!date || Number.isNaN(now.getTime())) return 'No stated deadline';
+  if (!date || Number.isNaN(now.getTime())) return 'Check source for dates';
   const isDateOnly = typeof value === 'string' && dateOnly.test(value);
   const days =
     (isDateOnly ? date.getTime() / dayMs : localDayNumber(date)) -

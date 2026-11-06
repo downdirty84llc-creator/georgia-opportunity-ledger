@@ -234,7 +234,7 @@ export function premiumAlertEmail(input: {
   const label = classificationLabel(opportunity.classification);
   const deadline = opportunity.closingDate
     ? new Date(opportunity.closingDate).toISOString().slice(0, 10)
-    : 'No stated deadline';
+    : 'Check source for dates';
 
   return {
     subject:

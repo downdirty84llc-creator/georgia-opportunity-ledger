@@ -13,7 +13,7 @@ describe('Georgia calendar dates', () => {
   });
   it('does not normalize an impossible date into a different day', () => {
     expect(formatDate('2026-02-30')).toBe('—');
-    expect(formatDeadline('2026-02-30')).toBe('No stated deadline');
+    expect(formatDeadline('2026-02-30')).toBe('Check source for dates');
     expect(formatDate('invalid')).toBe('—');
   });
   it('keeps a date-only deadline open for its whole local calendar day', () => {
