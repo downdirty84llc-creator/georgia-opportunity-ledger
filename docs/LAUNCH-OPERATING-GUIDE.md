@@ -32,6 +32,11 @@ mislead a customer, restrict or unpublish the record while checking it. Preserve
 the audit trail and explain material corrections. Only mark a support or
 correction item resolved after the underlying issue is handled.
 
+The Corrections queue is available to reviewers, editors and super
+administrators. Accept a verified correction, update its linked record or
+report, then mark the request published. Rejected and published requests move
+to Completed requests. Notes must be safe for the requester to read.
+
 Launch research may use AI assistance under the owner's direction. Do not imply
 that a separate researcher, reviewer, appraiser or attorney approved a record
 unless that actually occurred.
@@ -57,6 +62,14 @@ extend that deadline. Cancellation retains access through the paid period.
 Use `support@georgiaopportunityledger.com` for customer replies. Attachments are
 disabled at launch; use original source links. Obtain authorization before a
 refund or other money movement that the customer or owner has not requested.
+
+Open `/admin/support` to handle submitted tickets. Support representatives,
+billing managers and super administrators can review them. The queue shows the
+requester's current email address for a manual reply from the support mailbox.
+Saving a review assigns it to the reviewer and records the status and note in
+the audit log; it does not send email. Resolve or close only after handling the
+issue. Reopening clears the resolution date. If another reviewer changed the
+request, reload before saving; stale reviews cannot overwrite newer work.
 
 ## Backups and an incident
 

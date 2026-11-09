@@ -39,6 +39,8 @@ const ADMIN_PAGES = [
   '/admin/sources',
   '/admin/audit',
   '/admin/staff',
+  '/admin/corrections',
+  '/admin/support',
 ];
 
 async function signIn(page: Page, email: string): Promise<boolean> {

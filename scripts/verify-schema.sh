@@ -174,6 +174,7 @@ run "Atomic email preferences and owner isolation" "supabase/verify-email-prefer
 run "Unsubscribe token recovery and restricted grants" "supabase/verify-unsubscribe-tokens.sql"
 run "Direct upload ownership, leases and scan quarantine" "supabase/verify-direct-uploads.sql"
 run "Staff MFA and direct database privilege gates" "supabase/verify-staff-mfa.sql"
+run "Member request reviews, role gates and audit atomicity" "supabase/verify-member-requests.sql"
 node scripts/verify-purge-concurrency.mjs
 echo
 echo "${count} migrations applied, reference data idempotent, ${checks} schema/RLS checks, 17 deletion checks, 16 purge checks, 15 billing checks, 6 settlement checks and 3 concurrency checks passed."

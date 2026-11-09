@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 
 import { SiteFooter } from '@/components/site/footer';
+import { canReviewRequests } from '@/lib/admin/member-requests';
 import { getMfaStatus, mfaRequiredForRole } from '@/lib/auth/mfa';
 import { getSessionContext } from '@/lib/auth/session';
 import { PATHNAME_HEADER } from '@/middleware';
@@ -55,6 +56,12 @@ export default async function AdminLayout({
             <ul className="flex items-center gap-1 whitespace-nowrap text-sm">
               {[
                 ...ADMIN_LINKS,
+                ...(canReviewRequests('corrections', viewer.role)
+                  ? [{ href: '/admin/corrections', label: 'Corrections' }]
+                  : []),
+                ...(canReviewRequests('support', viewer.role)
+                  ? [{ href: '/admin/support', label: 'Support requests' }]
+                  : []),
                 ...(['billing_manager', 'super_administrator'].includes(
                   viewer.role,
                 )
