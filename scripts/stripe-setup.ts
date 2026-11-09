@@ -83,7 +83,7 @@ const PLANS: readonly PlanSpec[] = [
     code: 'weekly',
     name: 'Georgia Opportunity Ledger — Weekly',
     description:
-      'The full weekly report, searchable database access and the deadline calendar.',
+      'The full weekly report, summary-level opportunity details, up to 25 saved opportunities and the deadline calendar.',
     accessRank: 10,
     monthly: 1500,
     annual: 15000,
@@ -92,7 +92,7 @@ const PLANS: readonly PlanSpec[] = [
     code: 'detailed',
     name: 'Georgia Opportunity Ledger — Detailed',
     description:
-      'Everything in Weekly plus detailed record analysis, saved searches and CSV export.',
+      'Everything in Weekly plus complete record analysis, score explanations, risk factors, recommended next actions, the full report archive and the pricing dashboard.',
     accessRank: 20,
     monthly: 3900,
     annual: 39000,
@@ -101,7 +101,7 @@ const PLANS: readonly PlanSpec[] = [
     code: 'premium',
     name: 'Georgia Opportunity Ledger — Premium',
     description:
-      'Everything in Detailed plus immediate alerts, premium briefings and the full archive.',
+      'Everything in Detailed plus immediate alerts on matching records, unlimited saved searches, CSV export and premium briefings.',
     accessRank: 30,
     monthly: 9900,
     annual: 99000,
@@ -154,14 +154,17 @@ async function ensureProduct(
         ? existing.tax_code
         : (existing.tax_code?.id ?? null);
 
-    if (currentTaxCode !== PRODUCT_TAX_CODE) {
-      await stripe.products.update(existing.id, {
-        tax_code: PRODUCT_TAX_CODE,
-      });
+    const updates: Stripe.ProductUpdateParams = {};
+    if (currentTaxCode !== PRODUCT_TAX_CODE)
+      updates.tax_code = PRODUCT_TAX_CODE;
+    if (existing.description !== plan.description)
+      updates.description = plan.description;
+    if (Object.keys(updates).length > 0) {
+      const updated = await stripe.products.update(existing.id, updates);
       console.log(
-        `  product ${plan.code}: reusing ${existing.id}, tax code ` +
-          `${currentTaxCode ?? 'unset'} -> ${PRODUCT_TAX_CODE}`,
+        `  product ${plan.code}: reusing ${existing.id}, synchronized ${Object.keys(updates).join(', ')}`,
       );
+      return updated;
     } else {
       console.log(`  product ${plan.code}: reusing ${existing.id}`);
     }

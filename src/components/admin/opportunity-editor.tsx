@@ -107,6 +107,9 @@ export function OpportunityEditor({
   const [workflowStatus, setWorkflowStatus] = useState(initialWorkflowStatus);
   const [draft, setDraft] = useState<EditorDraft>(initialDraft);
   const [stepIndex, setStepIndex] = useState(0);
+  const stepHeading = useRef<HTMLHeadingElement>(null);
+  const previousStepIndex = useRef(0);
+  const requestedField = useRef<string | null>(null);
   const [saveState, setSaveState] = useState<SaveState>('idle');
   const [saveMessage, setSaveMessage] = useState('');
   const [recovered, setRecovered] = useState(false);
@@ -122,6 +125,16 @@ export function OpportunityEditor({
 
   const step = EDITOR_STEPS[stepIndex] ?? EDITOR_STEPS[0]!;
   const missing = useMemo(() => incompleteFields(draft), [draft]);
+
+  useEffect(() => {
+    if (previousStepIndex.current === stepIndex) return;
+    previousStepIndex.current = stepIndex;
+    const field = requestedField.current
+      ? document.getElementById(requestedField.current)
+      : null;
+    requestedField.current = null;
+    (field ?? stepHeading.current)?.focus();
+  }, [stepIndex]);
 
   const scoreResult = useMemo(
     () =>
@@ -557,7 +570,14 @@ export function OpportunityEditor({
         </ol>
       </nav>
 
-      <p className="mt-4 max-w-prose text-sm text-ink-600">{step.purpose}</p>
+      <h2
+        ref={stepHeading}
+        tabIndex={-1}
+        className="mt-6 text-lg font-semibold"
+      >
+        Step {stepIndex + 1} of {EDITOR_STEPS.length}: {step.title}
+      </h2>
+      <p className="mt-2 max-w-prose text-sm text-ink-600">{step.purpose}</p>
 
       <div className="mt-6 space-y-6">
         {/* ---------------------------------------------------------------- */}
@@ -1564,7 +1584,10 @@ export function OpportunityEditor({
                           {owner >= 0 ? (
                             <button
                               type="button"
-                              onClick={() => setStepIndex(owner)}
+                              onClick={() => {
+                                requestedField.current = field;
+                                setStepIndex(owner);
+                              }}
                               className="text-xs font-medium underline"
                             >
                               go to {EDITOR_STEPS[owner]!.title}

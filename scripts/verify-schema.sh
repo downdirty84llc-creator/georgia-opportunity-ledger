@@ -167,6 +167,7 @@ run "Attachment scan and parent access gates" "supabase/verify-attachment-scans.
 run "Durable scanner leases, verdicts and recovery" "supabase/verify-durable-scans.sql"
 run "Export recovery, filters and download gates" "supabase/verify-export-jobs.sql"
 run "Killed-worker checkpoints and retry ownership" "supabase/verify-job-recovery.sql"
+run "Idle queue gates, failure retries and endpoint probes" "supabase/verify-job-dispatch.sql"
 run "Durable email delivery and current recipient gates" "supabase/verify-email-outbox.sql"
 run "Complete analytics counts and lifecycle flags" "supabase/verify-background-counts.sql"
 run "Atomic email preferences and owner isolation" "supabase/verify-email-preferences.sql"

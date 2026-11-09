@@ -190,7 +190,9 @@ test.describe('admin area', () => {
       if ((await next.count()) === 0) break;
       if (!(await next.isEnabled())) break;
       await next.click();
-      await page.waitForTimeout(200);
+      await expect(
+        page.getByRole('heading', { name: new RegExp(`^Step ${step + 1} of`) }),
+      ).toBeFocused();
     }
 
     expect(failures.join('\n\n'), 'editor accessibility violations').toBe('');
