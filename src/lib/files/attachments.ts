@@ -9,6 +9,7 @@ import {
 import {
   isDownloadable,
   scanBytes,
+  usesDurableScanner,
   type ScanOutcome,
 } from '@/lib/files/scanner';
 
@@ -177,14 +178,13 @@ export async function uploadAttachment(
 
   // The asynchronous provider is only invoked by its durable worker. Upload
   // requests must not create an uncheckpointed scan or hold a serverless request.
-  const outcome: ScanOutcome =
-    process.env.FILE_SCANNER_PROVIDER === 'bouncer'
-      ? {
-          verdict: 'pending',
-          detail: 'Queued for scanner verification.',
-          scanner: 'bouncer',
-        }
-      : await scanAndRecord(row.id, path, fileName, bytes);
+  const outcome: ScanOutcome = usesDurableScanner()
+    ? {
+        verdict: 'pending',
+        detail: 'Queued for scanner verification.',
+        scanner: 'bouncer',
+      }
+    : await scanAndRecord(row.id, path, fileName, bytes);
 
   return {
     id: row.id,
