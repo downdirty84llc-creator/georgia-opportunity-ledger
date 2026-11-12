@@ -42,10 +42,17 @@ export function scannerConfig(): ScannerConfig {
   const url = process.env.FILE_SCANNER_URL ?? '';
   const declared =
     process.env.FILE_SCANNER_PROVIDER ?? (url ? 'clamav' : 'none');
+  const bouncerKey = process.env.BOUNCER_API_KEY ?? '';
 
   return {
+    // `bouncer` requires its key for the same reason `clamav` requires its
+    // URL: a provider that cannot reach its service is not a provider. Without
+    // the key this falls to `none`, which is loud in production — an upload
+    // then fails a scan it can never pass, rather than being queued for a
+    // worker that rejects every call. Silently unservable is the worse failure
+    // of the two, because nothing reports it.
     provider:
-      declared === 'bouncer'
+      declared === 'bouncer' && bouncerKey
         ? 'bouncer'
         : declared === 'clamav' && url
           ? 'clamav'
@@ -53,12 +60,28 @@ export function scannerConfig(): ScannerConfig {
     url,
     apiKey:
       declared === 'bouncer'
-        ? (process.env.BOUNCER_API_KEY ?? '')
+        ? bouncerKey
         : (process.env.FILE_SCANNER_API_KEY ?? ''),
     timeoutMs: scanTimeout(
       Number(process.env.FILE_SCANNER_TIMEOUT_MS ?? 20_000),
     ),
   };
+}
+
+/**
+ * Whether the asynchronous provider is in charge of scanning.
+ *
+ * The upload path and the scan job both need this answer, and both used to ask
+ * `process.env.FILE_SCANNER_PROVIDER` directly. That left three independent
+ * readings of one decision: once the provider also depends on its key being
+ * present, a raw env check says `bouncer` where `scannerConfig()` says `none`,
+ * and an upload is queued for a worker the job never runs. One source of truth
+ * instead.
+ */
+export function usesDurableScanner(
+  config: ScannerConfig = scannerConfig(),
+): boolean {
+  return config.provider === 'bouncer';
 }
 
 function scanTimeout(value: number): number {

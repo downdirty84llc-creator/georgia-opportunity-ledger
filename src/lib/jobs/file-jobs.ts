@@ -3,6 +3,7 @@ import { serverEnv } from '@/lib/env';
 import { cleanupAttachmentUploads } from '@/lib/files/direct-uploads';
 import { scanAndRecord } from '@/lib/files/attachments';
 import { scanBouncerAttachments } from '@/lib/files/bouncer-worker';
+import { usesDurableScanner } from '@/lib/files/scanner';
 import type { JobDefinition } from '@/lib/jobs/runner';
 
 /**
@@ -39,7 +40,7 @@ export const scanAttachmentsJob: JobDefinition = {
   name: 'scan-attachments',
   description: 'Rescans attachments whose scan did not complete.',
   handler: async (context) => {
-    if (process.env.FILE_SCANNER_PROVIDER === 'bouncer') {
+    if (usesDurableScanner()) {
       const uploadsCleaned = await cleanupAttachmentUploads(Date.now() + 3_000);
       const result = await scanBouncerAttachments(context);
       return { ...result, detail: { ...result.detail, uploadsCleaned } };
