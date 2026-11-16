@@ -129,8 +129,21 @@ export async function fetchBlsEmployment(now: Date, fetchImpl = fetch) {
   } finally {
     await reader.cancel();
   }
-  return parseBlsEmployment(
-    JSON.parse(Buffer.concat(chunks).toString('utf8')),
-    now,
-  );
+  const payload: unknown = JSON.parse(Buffer.concat(chunks).toString('utf8'));
+  // BLS also returns HTTP 200 for refused requests. Preserve its bounded
+  // public explanation so operations can distinguish quota or source errors
+  // from malformed employment observations. Never accept them as fresh data.
+  const envelope = z
+    .object({ status: z.string(), message: z.array(z.string()).optional() })
+    .safeParse(payload);
+  if (envelope.success && envelope.data.status !== 'REQUEST_SUCCEEDED') {
+    const status = envelope.data.status.replace(/[^A-Z_]/g, '').slice(0, 60);
+    const message = (envelope.data.message ?? [])
+      .slice(0, 3)
+      .join(' ')
+      .replace(/[\u0000-\u001f\u007f]/g, ' ')
+      .slice(0, 400);
+    throw new Error(`BLS data request refused (${status}): ${message}`);
+  }
+  return parseBlsEmployment(payload, now);
 }

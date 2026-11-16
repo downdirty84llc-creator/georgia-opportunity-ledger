@@ -94,6 +94,22 @@ describe('BLS employment feed', () => {
     expect(parseBlsEmployment(data, now)).toHaveLength(2);
   });
 
+  it('reports HTTP-200 provider refusals without accepting them as observations', async () => {
+    const fetcher = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          status: 'REQUEST_NOT_PROCESSED',
+          message: ['Daily query limit reached.'],
+          Results: {},
+        }),
+      ),
+    );
+    await expect(fetchBlsEmployment(now, fetcher)).rejects.toThrow(
+      'BLS data request refused (REQUEST_NOT_PROCESSED): Daily query limit reached.',
+    );
+    expect(fetcher).toHaveBeenCalledTimes(1);
+  });
+
   it('uses only the official fixed API with bounded requests and rejects provider failures', async () => {
     const fetcher = vi.fn().mockResolvedValue(response());
     await fetchBlsEmployment(now, fetcher);
