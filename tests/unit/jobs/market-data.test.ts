@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   BLS_SERIES,
+  BLS_REGISTERED_URL,
   BLS_URL,
   fetchBlsEmployment,
   parseBlsEmployment,
@@ -108,6 +109,36 @@ describe('BLS employment feed', () => {
       'BLS data request refused (REQUEST_NOT_PROCESSED): Daily query limit reached.',
     );
     expect(fetcher).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps the registered key out of URLs and redacts provider echoes', async () => {
+    const key = 'synthetic-registration-key';
+    const fetcher = vi.fn().mockResolvedValue(response());
+    await expect(fetchBlsEmployment(now, fetcher, key)).resolves.toHaveLength(
+      2,
+    );
+    expect(fetcher).toHaveBeenCalledWith(
+      BLS_REGISTERED_URL,
+      expect.objectContaining({ method: 'POST', redirect: 'error' }),
+    );
+    expect(JSON.parse(fetcher.mock.calls[0]![1].body)).toEqual({
+      seriesid: [BLS_SERIES],
+      startyear: '2024',
+      endyear: '2026',
+      registrationkey: key,
+    });
+    fetcher.mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          status: 'REQUEST_NOT_PROCESSED',
+          message: [`Invalid key ${key}`],
+          Results: {},
+        }),
+      ),
+    );
+    await expect(fetchBlsEmployment(now, fetcher, key)).rejects.toThrow(
+      'Invalid key [redacted]',
+    );
   });
 
   it('uses only the official fixed API with bounded requests and rejects provider failures', async () => {

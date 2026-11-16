@@ -2,6 +2,8 @@ import { z } from 'zod';
 
 export const BLS_SERIES = 'SMS13000002000000001';
 export const BLS_URL = `https://api.bls.gov/publicAPI/v1/timeseries/data/${BLS_SERIES}`;
+export const BLS_REGISTERED_URL =
+  'https://api.bls.gov/publicAPI/v2/timeseries/data/';
 export const BLS_SOURCE_URL = `https://data.bls.gov/timeseries/${BLS_SERIES}`;
 
 const responseSchema = z.object({
@@ -104,13 +106,34 @@ export function parseBlsEmployment(payload: unknown, now: Date) {
   }));
 }
 
-export async function fetchBlsEmployment(now: Date, fetchImpl = fetch) {
-  const response = await fetchImpl(BLS_URL, {
-    redirect: 'error',
-    cache: 'no-store',
-    signal: AbortSignal.timeout(10000),
-    headers: { Accept: 'application/json' },
-  });
+export async function fetchBlsEmployment(
+  now: Date,
+  fetchImpl = fetch,
+  registrationKey?: string,
+) {
+  const response = await fetchImpl(
+    registrationKey ? BLS_REGISTERED_URL : BLS_URL,
+    {
+      redirect: 'error',
+      cache: 'no-store',
+      signal: AbortSignal.timeout(10000),
+      headers: {
+        Accept: 'application/json',
+        ...(registrationKey ? { 'Content-Type': 'application/json' } : {}),
+      },
+      ...(registrationKey
+        ? {
+            method: 'POST',
+            body: JSON.stringify({
+              seriesid: [BLS_SERIES],
+              startyear: String(now.getUTCFullYear() - 2),
+              endyear: String(now.getUTCFullYear()),
+              registrationkey: registrationKey,
+            }),
+          }
+        : {}),
+    },
+  );
   if (!response.ok)
     throw new Error(`BLS data request failed (HTTP ${response.status}).`);
   const reader = response.body?.getReader();
@@ -138,11 +161,11 @@ export async function fetchBlsEmployment(now: Date, fetchImpl = fetch) {
     .safeParse(payload);
   if (envelope.success && envelope.data.status !== 'REQUEST_SUCCEEDED') {
     const status = envelope.data.status.replace(/[^A-Z_]/g, '').slice(0, 60);
-    const message = (envelope.data.message ?? [])
-      .slice(0, 3)
-      .join(' ')
-      .replace(/[\u0000-\u001f\u007f]/g, ' ')
-      .slice(0, 400);
+    let message = (envelope.data.message ?? []).slice(0, 3).join(' ');
+    // Refusals can echo the supplied key. Redact it before logs and Sentry.
+    if (registrationKey)
+      message = message.replaceAll(registrationKey, '[redacted]');
+    message = message.replace(/[\u0000-\u001f\u007f]/g, ' ').slice(0, 400);
     throw new Error(`BLS data request refused (${status}): ${message}`);
   }
   return parseBlsEmployment(payload, now);

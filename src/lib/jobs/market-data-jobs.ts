@@ -57,7 +57,11 @@ export const refreshMarketDataJob: JobDefinition = {
         'BLS source automation requires a recorded permitted review.',
       );
     }
-    const observations = await fetchBlsEmployment(now);
+    const observations = await fetchBlsEmployment(
+      now,
+      fetch,
+      process.env.BLS_API_KEY?.trim() || undefined,
+    );
     const { error: writeError } = await client
       .from('market_indicator_values')
       .upsert(
